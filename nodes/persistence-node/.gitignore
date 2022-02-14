@@ -1,0 +1,12 @@
+node_modules
+bin
+build
+dist
+
+storage.json
+
+# Environment
+.env
+
+# Logging
+*.log
