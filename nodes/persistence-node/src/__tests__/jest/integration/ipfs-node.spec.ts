@@ -7,9 +7,9 @@ import * as IPFS from 'ipfs-core'
 import { buildDependencyContainer } from "../../../di/buildDependencyContainer";
 import * as awilix from "awilix";
 
-jest.setTimeout(360000);
+jest.setTimeout(30000);
 
-describe("Sanity", () => {
+describe("ipfs-node", () => {
   let ipfsProvider: string;
   let ensAddress: string;
   let ipfsNode: IPFS.IPFS;
@@ -42,9 +42,12 @@ describe("Sanity", () => {
     ipfsNode = dependencyContainer.cradle.ipfsNode;
   });
 
-  it("should be able to start node and get id", async () => {
+  afterEach(async () => {
+    await ipfsNode.stop();
+  });
+
+  it("can start an IPFS node", async () => {
     const id = await ipfsNode.id();
-    console.log(id);
     
     expect(id).toBeTruthy();
   });
