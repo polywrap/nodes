@@ -1,10 +1,3 @@
-import express from "express";
-import multer, { memoryStorage } from "multer";
-import { MulterFile } from "../MulterFile";
-import { HttpConfig } from "../api-server/HttpConfig";
-import { HttpsConfig } from "../api-server/HttpsConfig";
-import { runServer } from "../api-server/runServer";
-import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
 import { LoggerConfig } from "../config/LoggerConfig";
 
 interface IDependencies {
