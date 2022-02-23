@@ -14,7 +14,6 @@ import { Logger } from "../services/Logger";
 export const buildDependencyContainer = async(
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<any>> => {
-  const ipfsNode = await createIpfsNode();
 
   const storage = new Storage();
   await storage.load();
@@ -37,8 +36,10 @@ export const buildDependencyContainer = async(
       })
       .singleton(),
     ipfsNode: awilix
-      .asFunction(({ }) => {
-        return ipfsNode;
+      .asFunction(({ ipfsConfig }) => {
+        return createIpfsNode(ipfsConfig.ipfsUrl).then(res => {
+          return res;
+        })
       })
       .singleton(),
     ensPublicResolver: awilix
