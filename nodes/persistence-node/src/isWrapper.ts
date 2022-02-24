@@ -1,15 +1,17 @@
 import * as IPFS from 'ipfs-core';
 import { IpfsConfig } from './config/IpfsConfig';
 import { nudgeIpfsHash } from './nudgeIpfsHash';
+import { isValidWrapperManifestName } from './isValidWrapperManifestName';
 import { sleep } from './sleep';
+import { Logger } from './services/Logger';
 
-export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, cid: string): Promise<"yes" | "no" | "timeout"> => {
+export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, logger: Logger, cid: string): Promise<"yes" | "no" | "timeout"> => {
   try {
     const info = await ipfs.object.get(IPFS.CID.parse(cid), {
       timeout: ipfsConfig.objectGetTimeout,
     });
 
-    return info.Links.some(x => x.Name === 'web3api.yaml')
+    return info.Links.some(x => x.Name && isValidWrapperManifestName(x.Name))
       ? "yes"
       : "no";
   } catch (e) {
@@ -27,11 +29,11 @@ export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, cid: st
         timeout: ipfsConfig.objectGetTimeout,
       });
   
-      return info.Links.some(x => x.Name === 'web3api.yaml')
+      return info.Links.some(x => x.Name && isValidWrapperManifestName(x.Name))
         ? "yes"
         : "no";
-    } catch (e) {
-      console.log(e);
+    } catch (e: any) {
+      logger.log(JSON.stringify(e));
       return "timeout";
     }
   }
