@@ -1,6 +1,7 @@
 import * as IPFS from 'ipfs-core';
 import { IpfsConfig } from './config/IpfsConfig';
 import { nudgeIpfsHash } from './nudgeIpfsHash';
+import { isValidWrapperManifestName } from './isValidWrapperManifestName';
 import { sleep } from './sleep';
 
 export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, cid: string): Promise<"yes" | "no" | "timeout"> => {
@@ -9,7 +10,7 @@ export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, cid: st
       timeout: ipfsConfig.objectGetTimeout,
     });
 
-    return info.Links.some(x => x.Name === 'web3api.yaml')
+    return info.Links.some(x => x.Name && isValidWrapperManifestName(x.Name))
       ? "yes"
       : "no";
   } catch (e) {
@@ -27,7 +28,7 @@ export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, cid: st
         timeout: ipfsConfig.objectGetTimeout,
       });
   
-      return info.Links.some(x => x.Name === 'web3api.yaml')
+      return info.Links.some(x => x.Name && isValidWrapperManifestName(x.Name))
         ? "yes"
         : "no";
     } catch (e) {
