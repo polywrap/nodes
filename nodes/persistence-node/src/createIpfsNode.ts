@@ -7,25 +7,33 @@ interface IDeps {
 }
 
 export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
-  const ipfsUrl = deps.ipfsConfig.ipfsUrl
+  const externalIpfsProvider = deps.ipfsConfig.externalIpfsProvider
 
   let ipfsNode: IPFS;
 
-  if (ipfsUrl) {
+  if (externalIpfsProvider) {
     ipfsNode = await createIpfsHttpClient({
-      url: ipfsUrl,
+      url: externalIpfsProvider,
     });
-    console.log(`Using IPFS node at ${ipfsUrl}`);
+    console.log(`Using IPFS node at ${externalIpfsProvider}`);
   } else {
     ipfsNode = await createInternalpfsNode();
     console.log("Using local IPFS node");
   }
 
   const version = await ipfsNode.version()
-  console.log('Version:', version.version)
+  console.log(`Version: ${version.version}`)
 
-  console.log("IPFS ID", await ipfsNode.id());
-  console.log("isOnline", await ipfsNode.isOnline());
+  const files = ipfsNode.pin.ls();
+
+  let counter = 0;
+  for await (let file of files) {
+    counter++;
+  }
+  console.log("FILES:", counter)
+
+  console.log(`IPFS ID`, await ipfsNode.id());
+  console.log(`isOnline: ${ipfsNode.isOnline()}`);
 
   return ipfsNode;
 };

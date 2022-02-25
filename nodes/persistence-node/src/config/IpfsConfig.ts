@@ -1,8 +1,7 @@
 import { isValidUrl } from "../isValidUrl";
 
 export class IpfsConfig {
-  ipfsProvider = process.env.IPFS_PROVIDER ?? "http://localhost:5001";
-  ipfsUrl = getValidUrlOrUndefined(process.env.IPFS_URL);
+  externalIpfsProvider = getValidUrlOrUndefined(process.env.EXTERNAL_IPFS_PROVIDER);
   gatewayURI = process.env.IPFS_GATEWAY ?? "https://ipfs.io/ipfs";
   objectGetTimeout = parseInt(process.env.IPFS_OBJECT_GET_TIMEOUT!) ?? 15000;
   pinTimeout = parseInt(process.env.IPFS_PIN_TIMEOUT!) ?? 30000;
