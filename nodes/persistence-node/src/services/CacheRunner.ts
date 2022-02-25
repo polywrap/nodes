@@ -118,7 +118,7 @@ export class CacheRunner {
     if(!ipfsEnsCache[ipfsHash]) {
       this.deps.logger.log(`Checking if ${ipfsHash} is a wrapper`);
 
-      const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);
+      const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
 
       if(resp === "no") {
         this.deps.logger.log("IPFS hash is not a valid wrapper");
