@@ -18,14 +18,20 @@ export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
     console.log(`Using IPFS node at ${externalIpfsProvider}`);
   } else {
     ipfsNode = await createInternalpfsNode();
-    console.log("Using local IPFS node");
+    console.log("Using integrated IPFS node");
   }
 
   const version = await ipfsNode.version()
-  console.log(`Version: ${version.version}`)
+  console.log(`IPFS Node Version: ${version.version}`)
 
-  console.log(`IPFS ID`, await ipfsNode.id());
-  console.log(`isOnline: ${ipfsNode.isOnline()}`);
+  const files = await ipfsNode.pin.ls()
+
+  for await (let file of files) {
+    console.log(file)
+  }
+
+  console.log(`IPFS ID: `, await ipfsNode.id());
+  console.log(`IPFS Online: ${ipfsNode.isOnline()}`);
 
   return ipfsNode;
 };
