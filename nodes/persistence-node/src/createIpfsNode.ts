@@ -24,14 +24,6 @@ export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
   const version = await ipfsNode.version()
   console.log(`Version: ${version.version}`)
 
-  const files = ipfsNode.pin.ls();
-
-  let counter = 0;
-  for await (let file of files) {
-    counter++;
-  }
-  console.log("FILES:", counter)
-
   console.log(`IPFS ID`, await ipfsNode.id());
   console.log(`isOnline: ${ipfsNode.isOnline()}`);
 
