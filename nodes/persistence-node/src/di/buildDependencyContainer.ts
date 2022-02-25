@@ -11,10 +11,9 @@ import { IpfsGatewayApi } from "../services/IpfsGatewayApi";
 import { LoggerConfig } from "../config/LoggerConfig";
 import { Logger } from "../services/Logger";
 
-export const buildDependencyContainer = async(
+export const buildDependencyContainer = async (
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<any>> => {
-  const ipfsNode = await createIpfsNode();
 
   const storage = new Storage();
   await storage.load();
@@ -36,15 +35,10 @@ export const buildDependencyContainer = async(
         );
       })
       .singleton(),
-    ipfsNode: awilix
-      .asFunction(({ }) => {
-        return ipfsNode;
-      })
-      .singleton(),
     ensPublicResolver: awilix
       .asFunction(({ ensConfig, ethersProvider }) => {
         const contract = new ethers.Contract(ensConfig.ResolverAddr, ensConfig.ResolverAbi, ethersProvider);
-        
+
         return contract;
       })
       .singleton(),
@@ -56,6 +50,14 @@ export const buildDependencyContainer = async(
     cacheRunner: awilix.asClass(CacheRunner).singleton(),
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     ...extensionsAndOverrides,
+  });
+
+  const ipfsNode = await createIpfsNode(container.cradle);
+
+  container.register({
+    ipfsNode: awilix
+      .asFunction(() => ipfsNode)
+      .singleton()
   });
 
   return container;
