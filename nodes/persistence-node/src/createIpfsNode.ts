@@ -12,7 +12,7 @@ export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
   let ipfsNode: IPFS;
 
   if (externalIpfsProvider) {
-    ipfsNode = await createIpfsHttpClient({
+    ipfsNode = createIpfsHttpClient({
       url: externalIpfsProvider,
     });
     console.log(`Using IPFS node at ${externalIpfsProvider}`);
@@ -23,12 +23,6 @@ export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
 
   const version = await ipfsNode.version()
   console.log(`IPFS Node Version: ${version.version}`)
-
-  const files = await ipfsNode.pin.ls()
-
-  for await (let file of files) {
-    console.log(file)
-  }
 
   console.log(`IPFS ID: `, await ipfsNode.id());
   console.log(`IPFS Online: ${ipfsNode.isOnline()}`);
