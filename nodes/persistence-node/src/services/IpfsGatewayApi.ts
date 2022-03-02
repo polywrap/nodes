@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import * as IPFS from 'ipfs-core';
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import multer, { memoryStorage } from "multer";
 import { IpfsConfig } from "../config/IpfsConfig";
 import { MulterFile } from "../MulterFile";
@@ -43,7 +43,7 @@ export class IpfsGatewayApi {
       }
     });
 
-    app.all('*', (req, res, next) => {
+    app.all('*', handleError(async (req, res, next) => {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
 
@@ -60,9 +60,9 @@ export class IpfsGatewayApi {
         this.deps.logger.log("Request: " + req.method + " " + req.url);
         next();
       }
-    });
+    }));
 
-    app.get('/api/v0/cat', async (req, res) => {
+    app.get('/api/v0/cat', handleError(async (req, res) => {
       const hash = req.query.arg as string;
 
       const stream = ipfs.cat(hash); 
@@ -79,9 +79,9 @@ export class IpfsGatewayApi {
       const buffer = Buffer.from(data);
 
       res.send(buffer);
-    });
+    }));
 
-    app.get('/api/v0/resolve', async (req, res) => {
+    app.get('/api/v0/resolve', handleError(async (req, res) => {
       const hash = req.query.arg as string;
 
       const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`); 
@@ -89,9 +89,9 @@ export class IpfsGatewayApi {
       res.json({
         path: resolvedPath
       });
-    });
+    }));
 
-    app.post('/add', upload.fields([ { name: "files"}, { name: "options", maxCount: 1 } ]), async (req, res) => {
+    app.post('/add', upload.fields([ { name: "files"}, { name: "options", maxCount: 1 } ]), handleError(async (req, res) => {
       if(!req.files) {
         res.json({
           error: "No files were uploaded"
@@ -120,18 +120,30 @@ export class IpfsGatewayApi {
       res.json({
         cid,
       });
-    });
+    }));
 
-    app.get("/", async (req, res) => {
+    app.get("/", handleError(async (req, res) => {
       res.send("Status: running");
-    });
+    }));
 
-    app.get("/status", async (req, res) => {
+    app.get("/status", handleError(async (req, res) => {
       res.json({
         status: "running"
       });
+    }));
+
+    app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+      res.status(500).send("Something went wrong. Check the logs for more info.");
+      this.deps.logger.log(err.message);
     });
 
     runServer(httpConfig, httpsConfig, app);
+  }
+}
+
+function handleError(callback: (req: Request<{}>, res: Response, next: NextFunction) => Promise<void>) {
+  return function (req: Request<{}>, res: Response, next: NextFunction) {
+    callback(req, res, next)
+      .catch(next)
   }
 }
