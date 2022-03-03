@@ -1,6 +1,6 @@
 # Persistence node roadmap
 
-Release 0.2.0
+Release 0.2.0 (April)
 
 - [Separate IPFS node option](https://github.com/polywrap/nodes/issues/6) (done)
 - [Handle ExpressJS Errors](https://github.com/polywrap/nodes/issues/15) (done)
