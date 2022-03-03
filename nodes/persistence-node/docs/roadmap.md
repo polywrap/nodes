@@ -12,3 +12,6 @@ Release 0.2.0 (April)
 - [New API endpoint to show a list of files in an IPFS directory](https://github.com/polywrap/nodes/issues/5)
 - [Separate CLI](https://github.com/polywrap/nodes/issues/7)
 - [Shallow dependency pinning](https://github.com/polywrap/nodes/issues/8)
+
+Release 0.2.1
+- [Log Unresponsive Wrappers](https://github.com/polywrap/nodes/issues/16)
