@@ -1,4 +1,4 @@
-import { isValidUrl } from "../isValidUrl";
+import { isValidUrl } from "../utils/isValidUrl";
 
 export class IpfsConfig {
   externalIpfsProvider = getValidUrlOrUndefined(process.env.EXTERNAL_IPFS_PROVIDER);

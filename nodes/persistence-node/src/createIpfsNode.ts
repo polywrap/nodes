@@ -25,7 +25,7 @@ export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
   console.log(`IPFS Node Version: ${version.version}`)
 
   console.log(`IPFS ID: `, await ipfsNode.id());
-  console.log(`IPFS Online: ${ipfsNode.isOnline()}`);
+  console.log(`IPFS Online: ${await ipfsNode.isOnline()}`);
 
   return ipfsNode;
 };
