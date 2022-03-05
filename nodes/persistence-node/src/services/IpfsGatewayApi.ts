@@ -113,7 +113,7 @@ export class IpfsGatewayApi {
         ipfs.ls(hash)
       );
 
-      res.render('index', {
+      res.render('ipfs-directory-contents', {
         files,
         hash,
         sizeInKb: function () {
