@@ -72,10 +72,9 @@ export class IpfsGatewayApi {
 
     app.get('/api/v0/cat', handleError(async (req, res) => {
       const hash = req.query.arg as string;
-      const filename = req.query.filename as string;
 
-      if (hash == null || filename == null) {
-        throw Error("Hash and filename arguments must be set.");
+      if (hash == null) {
+        throw Error("Hash parameter missing.");
       }
 
       const stream = ipfs.cat(hash);
@@ -90,8 +89,6 @@ export class IpfsGatewayApi {
       }
 
       const buffer = Buffer.from(data);
-
-      res.set('Content-disposition', 'attachment; filename=' + filename);
 
       res.send(buffer);
     }));
