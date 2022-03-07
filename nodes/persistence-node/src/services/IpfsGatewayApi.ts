@@ -12,7 +12,7 @@ import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
 import { Logger } from "./Logger";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { toArray } from "../utils/toArray";
+import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 
 interface IDependencies {
@@ -106,10 +106,10 @@ export class IpfsGatewayApi {
       });
     }));
 
-    app.get('/api/v0/ls/:hash', handleError(async (req, res) => {
+    app.get('/ipfs/:hash', handleError(async (req, res) => {
       const hash = (req.params as any).hash as string;
 
-      const files = await toArray(
+      const files = await asyncIterableToArray(
         ipfs.ls(hash)
       );
 
