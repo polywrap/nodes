@@ -12,6 +12,3 @@ Release 0.2.0 (April)
 - [More robust retries for unresponsive wrappers](https://github.com/polywrap/nodes/issues/4)
 - [Separate CLI](https://github.com/polywrap/nodes/issues/7)
 - [Shallow dependency pinning](https://github.com/polywrap/nodes/issues/8)
-
-Release 0.2.1 (TBD)
-- [Log Unresponsive Wrappers](https://github.com/polywrap/nodes/issues/16)
