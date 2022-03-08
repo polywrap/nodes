@@ -73,8 +73,9 @@ export class IpfsGatewayApi {
     app.get('/api/v0/cat', handleError(async (req, res) => {
       const hash = req.query.arg as string;
 
-      if (hash == null) {
-        throw Error("Hash parameter missing.");
+      if (!hash) {
+        res.status(422).send("Hash parameter missing.");
+        return;
       }
 
       const stream = ipfs.cat(hash);
