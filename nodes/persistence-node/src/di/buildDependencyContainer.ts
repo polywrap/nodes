@@ -10,6 +10,7 @@ import { createIpfsNode } from "../createIpfsNode";
 import { IpfsGatewayApi } from "../services/IpfsGatewayApi";
 import { LoggerConfig } from "../config/LoggerConfig";
 import { Logger } from "../services/Logger";
+import { UnrensponsiveEnsNodeProcessor } from "../services/UnrensponsiveEnsNodeProcessor";
 
 export const buildDependencyContainer = async (
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
@@ -48,6 +49,7 @@ export const buildDependencyContainer = async (
       })
       .singleton(),
     cacheRunner: awilix.asClass(CacheRunner).singleton(),
+    unrensponsiveEnsNodeProcessor: awilix.asClass(UnrensponsiveEnsNodeProcessor).singleton(),
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     ...extensionsAndOverrides,
   });
