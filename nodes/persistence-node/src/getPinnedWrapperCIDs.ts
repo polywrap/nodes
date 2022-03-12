@@ -3,7 +3,7 @@ import { Logger } from "./services/Logger";
 import { Storage } from "./types/Storage";
 import { asyncIterableToArray } from "./utils/asyncIterableToArray";
 
-export const getPinnedCids = async (storage: Storage, ipfsNode: IPFS, logger: Logger): Promise<string[]> => {
+export const getPinnedWrapperCIDs = async (storage: Storage, ipfsNode: IPFS, logger: Logger): Promise<string[]> => {
 
   const pinnedCidsFromIpfs = (await asyncIterableToArray(
     ipfsNode.pin.ls()
