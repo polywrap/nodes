@@ -24,6 +24,7 @@ export class UnrensponsiveEnsNodeProcessor {
             const unresponsiveEnsNodes = Object.keys(this.deps.storage.unresponsiveEnsNodes);
             
             if (this.isCanceled && !unresponsiveEnsNodes.length) {
+                this.deps.logger.log("Processing of unrensponsive packages cancelled");
                 return;
             }
             
@@ -31,9 +32,9 @@ export class UnrensponsiveEnsNodeProcessor {
                 await sleep(500);
                 continue;
             }
-            
-            this.deps.storage.unresponsiveEnsNodes = {};
 
+            this.deps.logger.log(`Found ${unresponsiveEnsNodes.length} unresponsive nodes for processing`);
+            this.deps.storage.unresponsiveEnsNodes = {};
             await this.deps.cacheRunner.processEnsNodes(unresponsiveEnsNodes);
         }
     }

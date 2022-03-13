@@ -10,6 +10,7 @@ require("custom-env").env();
   const dependencyContainer = await buildDependencyContainer();
   const {
     cacheRunner,
+    unrensponsiveEnsNodeProcessor,
     ipfsGatewayApi,
     storage,
     loggerConfig
@@ -20,12 +21,21 @@ require("custom-env").env();
     .description("Run for a past block count")
     .requiredOption("-b, --blocks <number>", "Past block count")
     .option("--log", "Enable logging")
+    .option("--processUnresponsive", "Retry fetching unresponsive wrappers")
     .action(async (options) => {
-      if(!!options.log) {
+      if (!!options.log) {
         loggerConfig.shouldLog = true;
       }
-      
+
+      if (!!options.processUnresponsive) {
+        await Promise.all([unrensponsiveEnsNodeProcessor.execute(), 
+                           cacheRunner.runForPastBlocks(Number(options.blocks))
+                                      .then(() => unrensponsiveEnsNodeProcessor.cancel())])
+        process.exit(0);
+      }
+
       await cacheRunner.runForPastBlocks(Number(options.blocks));
+      
       process.exit(0);
     });
   
@@ -33,11 +43,19 @@ require("custom-env").env();
     .command("missed")
     .description("Run for missed blocks while the app was offline")
     .option("--log", "Enable logging")
+    .option("--processUnresponsive", "Retry fetching unresponsive wrappers")
     .action(async (options) => {
-      if(!!options.log) {
+      if (!!options.log) {
         loggerConfig.shouldLog = true;
       }
       
+      if (!!options.processUnresponsive) {
+        await Promise.all([unrensponsiveEnsNodeProcessor.execute(),
+                           cacheRunner.runForMissedBlocks()
+                                      .then(() => unrensponsiveEnsNodeProcessor.cancel())]);
+        
+        process.exit(0);
+      }
       await cacheRunner.runForMissedBlocks();
       process.exit(0);
     });
@@ -46,12 +64,19 @@ require("custom-env").env();
     .command("listen")
     .description("Listen for events and pin wrappers")
     .option("--log", "Enable logging")
+    .option("--processUnresponsive", "Retry fetching unresponsive wrappers")
     .action(async (options) => {
       if(!!options.log) {
         loggerConfig.shouldLog = true;
       }
-      
-      await cacheRunner.listenForEvents();
+
+      if (!!options.processUnresponsive) {
+        await Promise.all([
+          unrensponsiveEnsNodeProcessor.execute(),
+          cacheRunner.listenForEvents()])
+      } else {
+        await cacheRunner.listenForEvents();
+      }
     });
 
   program
