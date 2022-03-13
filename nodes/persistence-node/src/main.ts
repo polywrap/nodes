@@ -2,6 +2,7 @@
 import { buildDependencyContainer } from "./di/buildDependencyContainer";
 import { program } from "commander";
 import fs from "fs";
+import e from "express";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require("custom-env").env();
@@ -28,15 +29,18 @@ require("custom-env").env();
       }
 
       if (!!options.processUnresponsive) {
-        await Promise.all([unrensponsiveEnsNodeProcessor.execute(), 
-                           cacheRunner.runForPastBlocks(Number(options.blocks))
-                                      .then(() => unrensponsiveEnsNodeProcessor.cancel())])
+        await Promise.all([
+          unrensponsiveEnsNodeProcessor.execute(), 
+
+          cacheRunner.runForPastBlocks(Number(options.blocks))
+            .then(() => unrensponsiveEnsNodeProcessor.cancel())]);
+
+        process.exit(0);
+      } else {
+        await cacheRunner.runForPastBlocks(Number(options.blocks));
+      
         process.exit(0);
       }
-
-      await cacheRunner.runForPastBlocks(Number(options.blocks));
-      
-      process.exit(0);
     });
   
   program
@@ -50,14 +54,17 @@ require("custom-env").env();
       }
       
       if (!!options.processUnresponsive) {
-        await Promise.all([unrensponsiveEnsNodeProcessor.execute(),
-                           cacheRunner.runForMissedBlocks()
-                                      .then(() => unrensponsiveEnsNodeProcessor.cancel())]);
+        await Promise.all([
+          unrensponsiveEnsNodeProcessor.execute(),
+          
+          cacheRunner.runForMissedBlocks()
+            .then(() => unrensponsiveEnsNodeProcessor.cancel())]);
         
         process.exit(0);
+      } else {
+        await cacheRunner.runForMissedBlocks();
+        process.exit(0);
       }
-      await cacheRunner.runForMissedBlocks();
-      process.exit(0);
     });
 
   program
@@ -87,6 +94,7 @@ require("custom-env").env();
     .option("--https <number>", "Https port")
     .option("--ssl <string>", "Directory with SSL certificates")
     .option("--log", "Enable logging")
+    .option("--processUnresponsive", "Retry fetching unresponsive wrappers")
     .action(async (options) => {
       if(!!options.log) {
         loggerConfig.shouldLog = true;
@@ -110,20 +118,17 @@ require("custom-env").env();
           }
         : undefined;
 
-      if(options.listen) {
-        await Promise.all([
-          ipfsGatewayApi.run(
-            httpConfig, 
-            httpsConfig
-          ),
+      const promises: Promise<void>[] = [ipfsGatewayApi.run(httpConfig, httpsConfig)];
+
+      if (options.listen) {
+        promises.push(cacheRunner.listenForEvents());
+      } else if (options.listen && options.processUnresponsive) {
+        promises.push(unrensponsiveEnsNodeProcessor.execute(), 
           cacheRunner.listenForEvents()
-        ]);
-      } else {
-        await ipfsGatewayApi.run(
-          httpConfig, 
-          httpsConfig
-        );
+            .then(() => unrensponsiveEnsNodeProcessor.cancel()));
       }
+      
+      await Promise.all(promises);
     });
 
   program
