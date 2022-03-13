@@ -69,15 +69,7 @@ export class CacheRunner {
     await this.deps.storage.save();
   }
 
-  async processUnresponsive() {
-    this.deps.logger.log("Processing unresponsive packages...");
-    
-    const ensNodes = Object.keys(this.deps.storage.unresponsiveEnsNodes);
-    this.deps.storage.unresponsiveEnsNodes = {};
-
-    await this.processEnsNodes(ensNodes);
-  }
-
+  //    procesNonUnresponsiveEnsIpfs
   async processEnsIpfs(ensNode: string, ipfsHash: string | undefined): Promise<boolean> {
     const ensIpfsCache = this.deps.storage.ensIpfs;
     const ipfsEnsCache = this.deps.storage.ipfsEns;
@@ -110,11 +102,12 @@ export class CacheRunner {
       return false;
     }
 
+    //TODO: move to call sites
     if(Object.keys(this.deps.storage.unresponsiveEnsNodes).includes(ensNode)) {
       this.deps.logger.log(`Ens domain already included in unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
       return false;
     }
-
+    
     if(!ipfsEnsCache[ipfsHash]) {
       this.deps.logger.log(`Checking if ${ipfsHash} is a wrapper`);
 
@@ -124,6 +117,7 @@ export class CacheRunner {
         this.deps.logger.log("IPFS hash is not a valid wrapper");
         return false;
       } else if(resp === "timeout") {
+        // TODO: queue unrensponsive node to be handled in background
         this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
         this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         return false;
@@ -133,6 +127,7 @@ export class CacheRunner {
 
       if(!success) {
         this.deps.logger.log("Pinning failed");
+        // 1. instead of adding to unresponsive node array, make response more robust
         this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
         this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         return false;
@@ -177,6 +172,7 @@ export class CacheRunner {
           pinnedCnt++;
         }
       } catch(ex) {
+        //TODO: check if this is a bug
         this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         this.deps.logger.log("Error retrieving contenthash");
         this.deps.logger.log(JSON.stringify(ex));

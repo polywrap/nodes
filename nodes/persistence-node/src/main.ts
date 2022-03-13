@@ -140,7 +140,10 @@ require("custom-env").env();
         loggerConfig.shouldLog = true;
       }
 
-      await cacheRunner.processUnresponsive();
+      const promise = unrensponsiveEnsNodeProcessor.execute();
+      unrensponsiveEnsNodeProcessor.cancel();
+      await promise;
+      
       process.exit(0);
     });
 
