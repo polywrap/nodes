@@ -2,7 +2,6 @@
 import { buildDependencyContainer } from "./di/buildDependencyContainer";
 import { program } from "commander";
 import fs from "fs";
-import e from "express";
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 require("custom-env").env();
@@ -143,7 +142,7 @@ require("custom-env").env();
       const promise = unrensponsiveEnsNodeProcessor.execute();
       unrensponsiveEnsNodeProcessor.cancel();
       await promise;
-      
+
       process.exit(0);
     });
 
