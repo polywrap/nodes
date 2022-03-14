@@ -1,4 +1,8 @@
+import { ethers } from "ethers";
+import { getIpfsHashFromContenthash } from "../getIpfsHashFromContenthash";
 import { sleep } from "../sleep";
+import { toShortString } from "../toShortString";
+import { ProcessEnsIpfsStatus } from "../types/ProcessEnsIpfsResponse";
 import { Storage } from "../types/Storage";
 import { CacheRunner } from "./CacheRunner";
 import { Logger } from "./Logger";
@@ -6,7 +10,8 @@ import { Logger } from "./Logger";
 interface IDependencies {
     storage: Storage,
     cacheRunner: CacheRunner,
-    logger: Logger
+    logger: Logger,
+    ensPublicResolver: ethers.Contract,
 }
 
 export class UnrensponsiveEnsNodeProcessor {
@@ -33,9 +38,33 @@ export class UnrensponsiveEnsNodeProcessor {
                 continue;
             }
 
-            this.deps.logger.log(`Found ${unresponsiveEnsNodes.length} unresponsive nodes for processing`);
-            this.deps.storage.unresponsiveEnsNodes = {};
-            await this.deps.cacheRunner.processEnsNodes(unresponsiveEnsNodes);
+            await this.processNodes(unresponsiveEnsNodes);
+        }
+    }
+
+    async processNodes(ensNodes: string[]) {
+        while (ensNodes.length) {
+            const ensNode = ensNodes.shift()!;
+            try {
+                this.deps.logger.log("----------------------------------------------");
+                this.deps.logger.log(`Retrieving contenthash for unresponsive ${toShortString(ensNode)}`);
+                const contenthash = await this.deps.ensPublicResolver.contenthash(ensNode);
+                const ipfsHash = getIpfsHashFromContenthash(contenthash);
+                this.deps.logger.log("Retrieved IPFS hash for ENS domain");
+                const status = await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash);
+                
+                if (status != ProcessEnsIpfsStatus.Error) {
+                    delete this.deps.storage.unresponsiveEnsNodes[ensNode];
+                    this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
+                } else {
+                    this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
+                    this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
+                }
+            } catch(ex) {
+                this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
+                this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
+            }
+            this.deps.storage.save();
         }
     }
 
