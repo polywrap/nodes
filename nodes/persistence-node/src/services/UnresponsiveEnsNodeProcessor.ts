@@ -45,6 +45,12 @@ export class UnresponsiveEnsNodeProcessor {
   async processNodes(ensNodes: string[]) {
     for (const ensNode of ensNodes) {
       try {
+        // FIX ME: once we introduce exponential backoff logic in retries, 
+        // we won't need to check if wrapper is in unresponsive list as we'll be able to iterate through storage directly
+        if (!this.deps.storage.unresponsiveEnsNodes[ensNode]) {
+          continue;
+        }
+        this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: true };
         this.deps.logger.log("----------------------------------------------");
         this.deps.logger.log(`Retrieving contenthash for unresponsive ${toShortString(ensNode)}`);
         const contenthash = await this.deps.ensPublicResolver.contenthash(ensNode);
@@ -56,12 +62,12 @@ export class UnresponsiveEnsNodeProcessor {
           delete this.deps.storage.unresponsiveEnsNodes[ensNode];
           this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
         } else {
-          this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
+          this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: false };
           this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
         }
       } catch(ex) {
         this.deps.logger.log(JSON.stringify(ex));
-        this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
+        this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: false };
         this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
       }
         this.deps.storage.save();

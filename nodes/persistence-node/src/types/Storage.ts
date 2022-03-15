@@ -1,10 +1,12 @@
 import fs from 'fs';
 
+const isRetryingKey = "isRetrying";
+
 export class Storage {
   lastBlockNumber: number;
   ensIpfs: Record<string, string | undefined>;
   ipfsEns: Record<string, string | undefined>;
-  unresponsiveEnsNodes: Record<string, boolean>;
+  unresponsiveEnsNodes: Record<string, { [isRetryingKey]: boolean | undefined }>;
   constructor() {
     this.lastBlockNumber = 0;
     this.ensIpfs = {};
@@ -21,6 +23,6 @@ export class Storage {
     Object.assign(this, obj);
   }
   async save(): Promise<void> {
-    fs.writeFileSync('./storage.json', JSON.stringify(this, null, 2));
+    fs.writeFileSync('./storage.json', JSON.stringify(this, (key, value) => key === isRetryingKey ? undefined : value, 2));
   }
 };
