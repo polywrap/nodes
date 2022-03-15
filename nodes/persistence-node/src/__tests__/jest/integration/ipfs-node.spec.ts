@@ -4,7 +4,7 @@ import {
   stopTestEnvironment,
 } from "@web3api/test-env-js";
 import * as IPFS from 'ipfs-core'
-import { buildDependencyContainer } from "../../../di/buildDependencyContainer";
+import { buildMainDependencyContainer } from "../../../di/buildMainDependencyContainer";
 import * as awilix from "awilix";
 
 jest.setTimeout(30000);
@@ -25,7 +25,7 @@ describe("ipfs-node", () => {
   });
 
   beforeEach(async () => {
-    const dependencyContainer = await buildDependencyContainer({
+    const dependencyContainer = await buildMainDependencyContainer({
       ipfsConfig: awilix
       .asFunction(({ }) => {
         return {

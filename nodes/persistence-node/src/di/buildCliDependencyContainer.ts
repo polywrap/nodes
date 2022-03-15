@@ -6,12 +6,11 @@ import { IpfsConfig } from "../config/IpfsConfig";
 import { EnsConfig } from "../config/EnsConfig";
 import { Storage } from "../types/Storage";
 import { CacheRunner } from "../services/CacheRunner";
-import { createIpfsNode } from "../createIpfsNode";
-import { IpfsGatewayApi } from "../services/IpfsGatewayApi";
 import { LoggerConfig } from "../config/LoggerConfig";
 import { Logger } from "../services/Logger";
+import { InternalApiConfig } from "../config/InternalApiConfig";
 
-export const buildDependencyContainer = async (
+export const buildCliDependencyContainer = async (
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<any>> => {
 
@@ -27,37 +26,10 @@ export const buildDependencyContainer = async (
     ethersConfig: awilix.asClass(EthersConfig).singleton(),
     ensConfig: awilix.asClass(EnsConfig).singleton(),
     loggerConfig: awilix.asClass(LoggerConfig).singleton(),
+    internalApiConfig: awilix.asClass(InternalApiConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
-    ethersProvider: awilix
-      .asFunction(({ ethersConfig }) => {
-        return ethers.providers.getDefaultProvider(
-          ethersConfig.providerNetwork
-        );
-      })
-      .singleton(),
-    ensPublicResolver: awilix
-      .asFunction(({ ensConfig, ethersProvider }) => {
-        const contract = new ethers.Contract(ensConfig.ResolverAddr, ensConfig.ResolverAbi, ethersProvider);
-
-        return contract;
-      })
-      .singleton(),
-    storage: awilix
-      .asFunction(({ }) => {
-        return storage;
-      })
-      .singleton(),
     cacheRunner: awilix.asClass(CacheRunner).singleton(),
-    ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     ...extensionsAndOverrides,
-  });
-
-  const ipfsNode = await createIpfsNode(container.cradle);
-
-  container.register({
-    ipfsNode: awilix
-      .asFunction(() => ipfsNode)
-      .singleton()
   });
 
   return container;

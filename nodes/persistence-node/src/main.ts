@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { buildDependencyContainer } from "./di/buildDependencyContainer";
+import { buildMainDependencyContainer } from "./di/buildMainDependencyContainer";
 import { program } from "commander";
 import fs from "fs";
 
@@ -7,13 +7,16 @@ import fs from "fs";
 require("custom-env").env();
 
 (async () => {
-  const dependencyContainer = await buildDependencyContainer();
+  const dependencyContainer = await buildMainDependencyContainer();
   const {
     cacheRunner,
     ipfsGatewayApi,
+    persistenceNodeApi,
     storage,
     loggerConfig
   } = dependencyContainer.cradle;
+
+  persistenceNodeApi.run()
 
   program
     .command("past")
