@@ -60,6 +60,7 @@ export class UnrensponsiveEnsNodeProcessor {
           this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
         }
       } catch(ex) {
+        this.deps.logger.log(JSON.stringify(ex));
         this.deps.storage.unresponsiveEnsNodes[ensNode] = true;
         this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
       }
