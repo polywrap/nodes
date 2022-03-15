@@ -1,4 +1,4 @@
-export enum ProcessEnsIpfsStatus {
+export enum ProcessEnsIpfsResult {
     Error,
     Pinned,
     Unpinned,

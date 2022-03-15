@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import { getIpfsHashFromContenthash } from "../getIpfsHashFromContenthash";
 import { sleep } from "../sleep";
 import { toShortString } from "../toShortString";
-import { ProcessEnsIpfsStatus } from "../types/ProcessEnsIpfsResponse";
+import { ProcessEnsIpfsResult } from "../types/ProcessEnsIpfsResult";
 import { Storage } from "../types/Storage";
 import { CacheRunner } from "./CacheRunner";
 import { Logger } from "./Logger";
@@ -53,7 +53,7 @@ export class UnrensponsiveEnsNodeProcessor {
                 this.deps.logger.log("Retrieved IPFS hash for ENS domain");
                 const status = await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash);
                 
-                if (status != ProcessEnsIpfsStatus.Error) {
+                if (status != ProcessEnsIpfsResult.Error) {
                     delete this.deps.storage.unresponsiveEnsNodes[ensNode];
                     this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
                 } else {
