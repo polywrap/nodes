@@ -45,7 +45,7 @@ export class UnresponsiveEnsNodeProcessor {
   async processNodes(ensNodes: string[]) {
     for (const ensNode of ensNodes) {
       try {
-        // FIX ME: once we introduce exponential backoff logic in retries, 
+        // TODO: once we introduce exponential backoff logic in retries, 
         // we won't need to check if wrapper is in unresponsive list as we'll be able to iterate through storage directly
         if (!this.deps.storage.unresponsiveEnsNodes[ensNode]) {
           continue;
