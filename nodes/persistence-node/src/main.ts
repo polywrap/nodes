@@ -105,6 +105,22 @@ require("custom-env").env();
       
       await Promise.all(promises);
     });
+  
+  program
+    .command("unresponsive")
+    .description("Process unresponsive IPFS URIs")
+    .option("--log", "Enable logging")
+    .action(async (options) => {
+      if(!!options.log) {
+        loggerConfig.shouldLog = true;
+      }
+      
+      const promise = unrensponsiveEnsNodeProcessor.run();
+      unrensponsiveEnsNodeProcessor.cancel();
+      await promise;
+      
+      process.exit(0);
+    });
 
   program
     .command("info")
