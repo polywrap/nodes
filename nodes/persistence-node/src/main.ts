@@ -21,49 +21,26 @@ require("custom-env").env();
     .description("Run for a past block count")
     .requiredOption("-b, --blocks <number>", "Past block count")
     .option("--log", "Enable logging")
-    .option("--processUnresponsive", "Retry fetching unresponsive wrappers")
     .action(async (options) => {
       if (!!options.log) {
         loggerConfig.shouldLog = true;
       }
 
-      if (!!options.processUnresponsive) {
-        await Promise.all([
-          unrensponsiveEnsNodeProcessor.execute(), 
-
-          cacheRunner.runForPastBlocks(Number(options.blocks))
-            .then(() => unrensponsiveEnsNodeProcessor.cancel())]);
-
-        process.exit(0);
-      } else {
-        await cacheRunner.runForPastBlocks(Number(options.blocks));
-      
-        process.exit(0);
-      }
+      await cacheRunner.runForPastBlocks(Number(options.blocks));
+      process.exit(0);
     });
   
   program
     .command("missed")
     .description("Run for missed blocks while the app was offline")
     .option("--log", "Enable logging")
-    .option("--processUnresponsive", "Retry fetching unresponsive wrappers")
     .action(async (options) => {
       if (!!options.log) {
         loggerConfig.shouldLog = true;
       }
       
-      if (!!options.processUnresponsive) {
-        await Promise.all([
-          unrensponsiveEnsNodeProcessor.execute(),
-          
-          cacheRunner.runForMissedBlocks()
-            .then(() => unrensponsiveEnsNodeProcessor.cancel())]);
-        
-        process.exit(0);
-      } else {
-        await cacheRunner.runForMissedBlocks();
-        process.exit(0);
-      }
+      await cacheRunner.runForMissedBlocks();
+      process.exit(0);
     });
 
   program
@@ -78,7 +55,7 @@ require("custom-env").env();
 
       if (!!options.processUnresponsive) {
         await Promise.all([
-          unrensponsiveEnsNodeProcessor.execute(),
+          unrensponsiveEnsNodeProcessor.run(),
           cacheRunner.listenForEvents()])
       } else {
         await cacheRunner.listenForEvents();
@@ -122,28 +99,11 @@ require("custom-env").env();
       if (options.listen) {
         promises.push(cacheRunner.listenForEvents());
       } else if (options.listen && options.processUnresponsive) {
-        promises.push(unrensponsiveEnsNodeProcessor.execute(), 
-          cacheRunner.listenForEvents()
-            .then(() => unrensponsiveEnsNodeProcessor.cancel()));
+        promises.push(unrensponsiveEnsNodeProcessor.run(), 
+          cacheRunner.listenForEvents());
       }
       
       await Promise.all(promises);
-    });
-
-  program
-    .command("unresponsive")
-    .description("Process unresponsive IPFS URIs")
-    .option("--log", "Enable logging")
-    .action(async (options) => {
-      if(!!options.log) {
-        loggerConfig.shouldLog = true;
-      }
-
-      const promise = unrensponsiveEnsNodeProcessor.execute();
-      unrensponsiveEnsNodeProcessor.cancel();
-      await promise;
-
-      process.exit(0);
     });
 
   program
