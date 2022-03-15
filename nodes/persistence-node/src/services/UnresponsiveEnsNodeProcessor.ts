@@ -70,7 +70,7 @@ export class UnresponsiveEnsNodeProcessor {
         this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: false };
         this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
       }
-        this.deps.storage.save();
+      this.deps.storage.save();
     }
   }
 
