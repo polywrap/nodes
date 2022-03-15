@@ -96,11 +96,12 @@ require("custom-env").env();
 
       const promises: Promise<void>[] = [ipfsGatewayApi.run(httpConfig, httpsConfig)];
 
-      if (options.listen) {
+      if (!!options.listen) {
         promises.push(cacheRunner.listenForEvents());
-      } else if (options.listen && options.processUnresponsive) {
-        promises.push(unresponsiveEnsNodeProcessor.run(), 
-          cacheRunner.listenForEvents());
+      }
+
+      if (!!options.processUnresponsive) {
+        promises.push(unresponsiveEnsNodeProcessor.run();
       }
       
       await Promise.all(promises);
