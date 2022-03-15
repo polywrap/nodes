@@ -14,7 +14,7 @@ interface IDependencies {
   ensPublicResolver: ethers.Contract,
 }
 
-export class UnrensponsiveEnsNodeProcessor {
+export class UnresponsiveEnsNodeProcessor {
   isCanceled = false;
   deps: IDependencies;
   
@@ -23,13 +23,13 @@ export class UnrensponsiveEnsNodeProcessor {
   }
 
   async run() {
-    this.deps.logger.log("Processing unrensponsive packages...");
+    this.deps.logger.log("Processing unresponsive packages...");
 
     while (true) {
       const unresponsiveEnsNodes = Object.keys(this.deps.storage.unresponsiveEnsNodes);
             
       if (this.isCanceled && !unresponsiveEnsNodes.length) {
-        this.deps.logger.log("Processing of unrensponsive packages cancelled");
+        this.deps.logger.log("Processing of unresponsive packages cancelled");
         return;
       }
             

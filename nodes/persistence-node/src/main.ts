@@ -10,7 +10,7 @@ require("custom-env").env();
   const dependencyContainer = await buildDependencyContainer();
   const {
     cacheRunner,
-    unrensponsiveEnsNodeProcessor,
+    unresponsiveEnsNodeProcessor,
     ipfsGatewayApi,
     storage,
     loggerConfig
@@ -55,7 +55,7 @@ require("custom-env").env();
 
       if (!!options.processUnresponsive) {
         await Promise.all([
-          unrensponsiveEnsNodeProcessor.run(),
+          unresponsiveEnsNodeProcessor.run(),
           cacheRunner.listenForEvents()])
       } else {
         await cacheRunner.listenForEvents();
@@ -99,7 +99,7 @@ require("custom-env").env();
       if (options.listen) {
         promises.push(cacheRunner.listenForEvents());
       } else if (options.listen && options.processUnresponsive) {
-        promises.push(unrensponsiveEnsNodeProcessor.run(), 
+        promises.push(unresponsiveEnsNodeProcessor.run(), 
           cacheRunner.listenForEvents());
       }
       
@@ -115,8 +115,8 @@ require("custom-env").env();
         loggerConfig.shouldLog = true;
       }
       
-      const promise = unrensponsiveEnsNodeProcessor.run();
-      unrensponsiveEnsNodeProcessor.cancel();
+      const promise = unresponsiveEnsNodeProcessor.run();
+      unresponsiveEnsNodeProcessor.cancel();
       await promise;
       
       process.exit(0);
