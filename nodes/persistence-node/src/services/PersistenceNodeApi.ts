@@ -1,35 +1,16 @@
-import { ethers } from "ethers";
 import express, { NextFunction, Request, Response } from "express";
 import http from "http";
-import * as IPFS from 'ipfs-core';
-import { InternalApiConfig } from "../config/InternalApiConfig";
-import { IpfsConfig } from "../config/IpfsConfig";
-import { Storage } from "../types/Storage";
-import { CacheRunner } from "./CacheRunner";
-import { Logger } from "./Logger";
-
-interface IDependencies {
-  ethersProvider: ethers.providers.Provider;
-  ensPublicResolver: ethers.Contract;
-  storage: Storage;
-  cacheRunner: CacheRunner;
-  ipfsNode: IPFS.IPFS;
-  ipfsConfig: IpfsConfig;
-  internalApiConfig: InternalApiConfig;
-  logger: Logger;
-}
+import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 
 export class PersistenceNodeApi {
-  deps: IDependencies;
-
-  constructor(deps: IDependencies) {
-    this.deps = deps;
-  }
+  constructor(
+    private deps: MainDependencyContainer
+  ) { }
 
   async run() {
     const app = express();
 
-    app.get('/api/v0/past', handleError(async (req, res) => {
+    app.get('/api/past', handleError(async (req, res) => {
       const blocks = req.query.blocks;
 
       if (!blocks) {
@@ -37,26 +18,20 @@ export class PersistenceNodeApi {
         return;
       }
 
-      var head = {
-        'Content-Type': 'text/html; charset=UTF-8',
-        'transfer-encoding': 'chunked'
-      }
-
-      res.writeHead(206, head)
-
-      this.deps.logger.registerListener(log => {
-        console.log('LISTENER TRIGERED')
-        res.write(log)
-      })
-
       await this.deps.cacheRunner.runForPastBlocks(Number(blocks));
 
-      this.deps.logger.unregisterListener();
-      res.end()
+      res.send(`Task 'past' successfully executed.`)
+    }));
+
+    app.get('/api/unresponsive', handleError(async (req, res) => {
+
+      await this.deps.cacheRunner.processUnresponsive();
+
+      res.send(`Task 'unresponsive' successfully executed.`)
     }));
 
     const server = http.createServer({}, app);
-    const port = this.deps.internalApiConfig.port;
+    const port = this.deps.persistenceNodeApiConfig.port;
     
     server.listen(port, function () {
       console.log(`Internal HTTP server started at http://localhost:${port}`);

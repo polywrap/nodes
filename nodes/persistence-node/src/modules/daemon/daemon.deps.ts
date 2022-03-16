@@ -1,26 +1,43 @@
 import * as awilix from "awilix";
-import { ethers } from "ethers";
+import { Contract, ethers, providers } from "ethers";
 import { NameAndRegistrationPair } from "awilix";
-import { EthersConfig } from "../config/EthersConfig";
-import { IpfsConfig } from "../config/IpfsConfig";
-import { EnsConfig } from "../config/EnsConfig";
-import { Storage } from "../types/Storage";
-import { CacheRunner } from "../services/CacheRunner";
-import { createIpfsNode } from "../createIpfsNode";
-import { IpfsGatewayApi } from "../services/IpfsGatewayApi";
-import { LoggerConfig } from "../config/LoggerConfig";
-import { Logger } from "../services/Logger";
-import { PersistenceNodeApi } from "../services/PersistenceNodeApi";
-import { InternalApiConfig } from "../config/InternalApiConfig";
+import { EthersConfig } from "../../config/EthersConfig";
+import { IpfsConfig } from "../../config/IpfsConfig";
+import { EnsConfig } from "../../config/EnsConfig";
+import { Storage } from "../../types/Storage";
+import { CacheRunner } from "../../services/CacheRunner";
+import { createIpfsNode } from "../../createIpfsNode";
+import { IpfsGatewayApi } from "../../services/IpfsGatewayApi";
+import { LoggerConfig } from "../../config/LoggerConfig";
+import { Logger } from "../../services/Logger";
+import { PersistenceNodeApi } from "../../services/PersistenceNodeApi";
+import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
+import { IPFS } from "ipfs-core";
+
+export interface MainDependencyContainer {
+  ipfsConfig: IpfsConfig
+  ethersConfig: EthersConfig
+  ensConfig: EnsConfig
+  loggerConfig: LoggerConfig
+  persistenceNodeApiConfig: PersistenceNodeApiConfig
+  logger: Logger
+  cacheRunner: CacheRunner
+  ipfsGatewayApi: IpfsGatewayApi
+  persistenceNodeApi: PersistenceNodeApi
+  storage: Storage
+  ethersProvider: providers.BaseProvider,
+  ensPublicResolver: Contract,
+  ipfsNode: IPFS
+}
 
 export const buildMainDependencyContainer = async (
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
-): Promise<awilix.AwilixContainer<any>> => {
+): Promise<awilix.AwilixContainer<MainDependencyContainer>> => {
 
   const storage = new Storage();
   await storage.load();
 
-  const container = awilix.createContainer({
+  const container = awilix.createContainer<MainDependencyContainer>({
     injectionMode: awilix.InjectionMode.PROXY,
   });
 
@@ -29,7 +46,7 @@ export const buildMainDependencyContainer = async (
     ethersConfig: awilix.asClass(EthersConfig).singleton(),
     ensConfig: awilix.asClass(EnsConfig).singleton(),
     loggerConfig: awilix.asClass(LoggerConfig).singleton(),
-    internalApiConfig: awilix.asClass(InternalApiConfig).singleton(),
+    persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
     ethersProvider: awilix
       .asFunction(({ ethersConfig }) => {

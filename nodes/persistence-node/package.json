@@ -10,8 +10,7 @@
     "/bin"
   ],
   "bin": {
-    "wrap-persistence-node-daemon": "./bin/main.js",
-    "wrap-persistence-node-cli": "./bin/cli/cli.js"
+    "wrap-persistence-node": "./bin/main.js"
   },
   "repository": {
     "type": "git",
@@ -28,10 +27,8 @@
   ],
   "scripts": {
     "build": "tsc --project tsconfig.build.json",
-    "dev-cli": "ts-node src/cli/cli.ts",
-    "dev-daemon": "ts-node src/main.ts",
-    "start-daemon": "node bin/main.js",
-    "start-cli": "node bin/cli/cli.js",
+    "dev": "ts-node src/main.ts",
+    "start": "node bin/main.js",
     "test": "yarn test:jest",
     "test:jest": "jest test --passWithNoTests"
   },

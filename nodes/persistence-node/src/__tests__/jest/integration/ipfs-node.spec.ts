@@ -4,7 +4,7 @@ import {
   stopTestEnvironment,
 } from "@web3api/test-env-js";
 import * as IPFS from 'ipfs-core'
-import { buildMainDependencyContainer } from "../../../di/buildMainDependencyContainer";
+import { buildMainDependencyContainer } from "../../../modules/daemon/daemon.deps";
 import * as awilix from "awilix";
 
 jest.setTimeout(30000);
