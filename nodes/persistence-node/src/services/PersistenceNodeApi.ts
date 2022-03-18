@@ -10,29 +10,23 @@ export class PersistenceNodeApi {
   async run() {
     const app = express();
 
-    app.get('/api/past', handleError(async (req, res) => {
-      const blocks = req.query.blocks;
+    app.get('/api/reset', handleError(async (req, res) => {
 
-      if (!blocks) {
-        res.status(422).send("Blocks parameter missing.");
-        return;
-      }
+      await this.deps.storage.reset();
 
-      await this.deps.cacheRunner.runForPastBlocks(Number(blocks));
-
-      res.send(`Task 'past' successfully executed.`)
+      res.send(`Task 'reset' successfully executed.`)
     }));
 
-    app.get('/api/unresponsive', handleError(async (req, res) => {
+    app.get('/api/info', handleError(async (req, res) => {
 
-      await this.deps.cacheRunner.processUnresponsive();
+      const info = this.deps.storage.getStats();
 
-      res.send(`Task 'unresponsive' successfully executed.`)
+      res.send(info);
     }));
 
     const server = http.createServer({}, app);
     const port = this.deps.persistenceNodeApiConfig.port;
-    
+
     server.listen(port, function () {
       console.log(`Internal HTTP server started at http://localhost:${port}`);
     });

@@ -28,4 +28,16 @@ export class Daemon {
     async listenForEvents() {
         await this.deps.cacheRunner.listenForEvents()
     }
+
+    async runForPastBlocks(blocks: number) {
+        await this.deps.cacheRunner.runForPastBlocks(blocks);
+    }
+
+    async runForMissedBlocks() {
+        await this.deps.cacheRunner.runForMissedBlocks();
+    }
+
+    async processUnresponsive() {
+        await this.deps.cacheRunner.processUnresponsive()
+    }
 }
