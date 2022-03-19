@@ -101,7 +101,7 @@ require("custom-env").env();
       }
 
       if (!!options.processUnresponsive) {
-        promises.push(unresponsiveEnsNodeProcessor.run();
+        promises.push(unresponsiveEnsNodeProcessor.run());
       }
       
       await Promise.all(promises);
