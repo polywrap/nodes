@@ -38,10 +38,12 @@ export class EnsNodeProcessor {
 
     while (true) {
       await this.processEnqueuedEvents();
-      if (processUnresponsive) {
+      if (processUnresponsive && this.deps.storage.unresponsiveEnsNodes.size) {
         await this.processUnresponsiveNode();
+      } else {
+        await sleep(500);
       }
-      await sleep(500);
+      
     }
   }
 
@@ -58,29 +60,27 @@ export class EnsNodeProcessor {
   }
 
   async processUnresponsiveNode() {
-    if (this.deps.storage.unresponsiveEnsNodes.size) {
-      const [ensNode] = this.deps.storage.unresponsiveEnsNodes.keys();
-      this.deps.storage.unresponsiveEnsNodes.delete(ensNode);
-      try {
-        this.deps.logger.log("----------------------------------------------");
-        this.deps.logger.log(`Retrieving contenthash for unresponsive ${toShortString(ensNode)}`);
-        const contenthash = await this.deps.ensPublicResolver.contenthash(ensNode);
-        const ipfsHash = getIpfsHashFromContenthash(contenthash);
-        this.deps.logger.log("Retrieved IPFS hash for ENS domain");
-        const status = await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash);
+    const [ensNode] = this.deps.storage.unresponsiveEnsNodes.keys();
+    this.deps.storage.unresponsiveEnsNodes.delete(ensNode);
+    try {
+      this.deps.logger.log("----------------------------------------------");
+      this.deps.logger.log(`Retrieving contenthash for unresponsive ${toShortString(ensNode)}`);
+      const contenthash = await this.deps.ensPublicResolver.contenthash(ensNode);
+      const ipfsHash = getIpfsHashFromContenthash(contenthash);
+      this.deps.logger.log("Retrieved IPFS hash for ENS domain");
+      const status = await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash);
                 
-        if (status !== ProcessEnsIpfsResult.Error) {
-          this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
-        } else {
-          this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
-        }
-      }
-      catch (ex) {
-        this.deps.logger.log(JSON.stringify(ex));
+      if (status !== ProcessEnsIpfsResult.Error) {
+        this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
+      } else {
         this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
-        this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
       }
-      this.deps.storage.save();
     }
+    catch (ex) {
+      this.deps.logger.log(JSON.stringify(ex));
+      this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
+      this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
+    }
+    this.deps.storage.save();
   }
 }
