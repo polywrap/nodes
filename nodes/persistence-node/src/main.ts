@@ -10,7 +10,7 @@ require("custom-env").env();
   const dependencyContainer = await buildDependencyContainer();
   const {
     cacheRunner,
-    unresponsiveEnsNodeProcessor,
+    ensNodeProcessor,
     ipfsGatewayApi,
     storage,
     loggerConfig
@@ -53,13 +53,10 @@ require("custom-env").env();
         loggerConfig.shouldLog = true;
       }
 
-      if (!!options.processUnresponsive) {
-        await Promise.all([
-          unresponsiveEnsNodeProcessor.run(),
-          cacheRunner.listenForEvents()])
-      } else {
-        await cacheRunner.listenForEvents();
-      }
+      await Promise.all([
+        ensNodeProcessor.run(!!options.processUnresponsive),
+        cacheRunner.listenForEvents()
+      ]);
     });
 
   program
@@ -97,11 +94,9 @@ require("custom-env").env();
       const promises: Promise<void>[] = [ipfsGatewayApi.run(httpConfig, httpsConfig)];
 
       if (!!options.listen) {
-        promises.push(cacheRunner.listenForEvents());
-      }
-
-      if (!!options.processUnresponsive) {
-        promises.push(unresponsiveEnsNodeProcessor.run());
+        promises.push(
+          cacheRunner.listenForEvents(), 
+          ensNodeProcessor.run(!!options.listenForEvents));
       }
       
       await Promise.all(promises);

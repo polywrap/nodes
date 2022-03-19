@@ -1,17 +1,15 @@
 import fs from 'fs';
 
-const isRetryingKey = "isRetrying";
-
 export class Storage {
   lastBlockNumber: number;
   ensIpfs: Record<string, string | undefined>;
   ipfsEns: Record<string, string | undefined>;
-  unresponsiveEnsNodes: Record<string, { [isRetryingKey]: boolean | undefined }>;
+  unresponsiveEnsNodes: Map<string, boolean>;
   constructor() {
     this.lastBlockNumber = 0;
     this.ensIpfs = {};
     this.ipfsEns = {};
-    this.unresponsiveEnsNodes = {};
+    this.unresponsiveEnsNodes = new Map();
   }
 
   async load(): Promise<void> {
@@ -19,10 +17,25 @@ export class Storage {
       await this.save();
     }
 
-    const obj = JSON.parse(fs.readFileSync('./storage.json', 'utf8'));
+    const obj = JSON.parse(fs.readFileSync('./storage.json', 'utf8'), this.reviver);
     Object.assign(this, obj);
   }
   async save(): Promise<void> {
-    fs.writeFileSync('./storage.json', JSON.stringify(this, (key, value) => key === isRetryingKey ? undefined : value, 2));
+    fs.writeFileSync('./storage.json', JSON.stringify(this, this.replacer, 2));
+  }
+
+  reviver(key: any, value: any) {
+    if (key === "unresponsiveEnsNodes") {
+      return new Map(value);
+    }
+    return value;
+  }
+
+  replacer(key: any, value: any) {
+    if (key === "unresponsiveEnsNodes") {
+      return Array.from(value.entries());
+    } else {
+      return value;
+    }
   }
 };

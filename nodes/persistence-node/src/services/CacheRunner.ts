@@ -10,6 +10,7 @@ import { toShortString } from "../toShortString";
 import { IpfsConfig } from "../config/IpfsConfig";
 import { Logger } from "./Logger";
 import { ProcessEnsIpfsResult } from "../types/ProcessEnsIpfsResult";
+import { EnsNodeProcessor } from "./EnsNodeProcessor";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -18,6 +19,7 @@ interface IDependencies {
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
   logger: Logger;
+  ensNodeProcessor: EnsNodeProcessor;
 }
 
 export class CacheRunner {
@@ -48,21 +50,7 @@ export class CacheRunner {
     this.deps.logger.log("Listening for events...");
   
     this.deps.ensPublicResolver.on("ContenthashChanged", async (ensNode: string, contenthash: string, event: any) => {
-      
-      const unresponsiveNode = this.deps.storage.unresponsiveEnsNodes[ensNode];
-      if (!!unresponsiveNode && unresponsiveNode.isRetrying) {
-        this.deps.logger.log(`Ens domain already included in unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length}) and is being processed.`);
-        return;
-      }
-
-      delete this.deps.storage.unresponsiveEnsNodes[ensNode];
-
-      this.deps.logger.log("----------------------------------------------");
-      await this.processEnsIpfs(ensNode, getIpfsHashFromContenthash(contenthash));
-
-      this.deps.storage.lastBlockNumber = event.blockNumber - 1;
-      await this.deps.storage.save();
-      this.deps.logger.log("----------------------------------------------");
+      this.deps.ensNodeProcessor.enqueue({ensNode, ipfsHash: getIpfsHashFromContenthash(contenthash), blockNumber: event.blockNumber})
     });
   }
 
@@ -103,7 +91,7 @@ export class CacheRunner {
           return ProcessEnsIpfsResult.Unpinned;
         } else {
           this.deps.logger.log("Unpinning failed");
-          this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: false };
+          this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
           this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
           return ProcessEnsIpfsResult.Error;
         }
@@ -122,7 +110,7 @@ export class CacheRunner {
         this.deps.logger.log("IPFS hash is not a valid wrapper");
         return ProcessEnsIpfsResult.NothingChanged;
       } else if (resp === "timeout") {
-        this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: false };
+        this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
         this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         return ProcessEnsIpfsResult.Error;
       }
@@ -131,7 +119,7 @@ export class CacheRunner {
 
       if (!success) {
         this.deps.logger.log("Pinning failed");
-        this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: false };
+        this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
         this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         return ProcessEnsIpfsResult.Error;
       }
@@ -162,7 +150,7 @@ export class CacheRunner {
     for (let i = 0; i < ensNodes.length; i++) {
       const ensNode = ensNodes[i];
 
-      if (!!this.deps.storage.unresponsiveEnsNodes[ensNode]) {
+      if (this.deps.storage.unresponsiveEnsNodes.has(ensNode)) {
         this.deps.logger.log(`Ens domain already included in unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         continue;
       }
@@ -184,7 +172,7 @@ export class CacheRunner {
           unresponsiveCnt++;
         }
       } catch(ex) {
-        this.deps.storage.unresponsiveEnsNodes[ensNode] = { isRetrying: false };
+        this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
         unresponsiveCnt++;
         this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         this.deps.logger.log("Error retrieving contenthash");
