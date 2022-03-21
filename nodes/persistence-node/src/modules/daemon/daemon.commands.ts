@@ -6,7 +6,6 @@ export function initializeDaemonCommands() {
   program
     .command("daemon")
     .description("Run persistence node daemon")
-    .option("-l, --listen", "Listen to events")
     .option("--http <number>", "Http port")
     .option("--https <number>", "Https port")
     .option("--ssl <string>", "Directory with SSL certificates")
@@ -32,15 +31,8 @@ export function initializeDaemonCommands() {
         : undefined;
 
       const daemon = await Daemon.build(!!options.log);
+      daemon.run(httpConfig, httpsConfig);
 
-      if (options.listen) {
-        await Promise.all([
-          daemon.runApi(httpConfig, httpsConfig),
-          daemon.listenForEvents()
-        ]);
-      } else {
-        await daemon.runApi(httpConfig, httpsConfig)
-      }
     });
 
   program

@@ -8,7 +8,6 @@ export class Daemon {
         private deps: MainDependencyContainer,
         shouldLog: boolean
     ) {
-        this.deps.persistenceNodeApi.run()
         this.deps.loggerConfig.shouldLog = shouldLog;
      }
 
@@ -18,15 +17,15 @@ export class Daemon {
         return new Daemon(container.cradle, shouldLog);
     }
 
-    async runApi(httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
-        await this.deps.ipfsGatewayApi.run(
-            httpConfig,
-            httpsConfig
-        );
-    }
-
-    async listenForEvents() {
-        await this.deps.cacheRunner.listenForEvents()
+    async run(httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
+        Promise.all([
+            this.deps.persistenceNodeApi.run(),
+            this.deps.ipfsGatewayApi.run(
+                httpConfig,
+                httpsConfig
+            ),
+            this.deps.cacheRunner.listenForEvents()
+        ]);
     }
 
     async runForPastBlocks(blocks: number) {
@@ -38,6 +37,6 @@ export class Daemon {
     }
 
     async processUnresponsive() {
-        await this.deps.cacheRunner.processUnresponsive()
+        await this.deps.cacheRunner.processUnresponsive();
     }
 }

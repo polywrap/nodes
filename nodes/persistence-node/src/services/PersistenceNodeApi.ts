@@ -14,14 +14,14 @@ export class PersistenceNodeApi {
 
       await this.deps.storage.reset();
 
-      res.send(`Task 'reset' successfully executed.`)
+      res.status(200).send();
     }));
 
     app.get('/api/info', handleError(async (req, res) => {
 
       const info = this.deps.storage.getStats();
 
-      res.send(info);
+      res.status(200).send(info);
     }));
 
     const server = http.createServer({}, app);

@@ -23,7 +23,7 @@ export class Storage {
       fs.rmSync("./storage.json");
     }
 
-    this.resetToDefaultValues()
+    this.resetToDefaultValues();
   }
 
   async save(): Promise<void> {
