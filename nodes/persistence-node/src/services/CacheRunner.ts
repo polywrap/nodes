@@ -48,7 +48,7 @@ export class CacheRunner {
 
   async listenForEvents() {
     this.deps.logger.log("Listening for events...");
-  
+    
     this.deps.ensPublicResolver.on("ContenthashChanged", async (ensNode: string, contenthash: string, event: any) => {
       this.deps.ensNodeProcessor.enqueue({ensNode, ipfsHash: getIpfsHashFromContenthash(contenthash), blockNumber: event.blockNumber})
     });

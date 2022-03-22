@@ -13,6 +13,7 @@ import { Logger } from "../../services/Logger";
 import { PersistenceNodeApi } from "../../services/PersistenceNodeApi";
 import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
 import { IPFS } from "ipfs-core";
+import { EnsNodeProcessor } from "../../services/EnsNodeProcessor";
 
 export interface MainDependencyContainer {
   ipfsConfig: IpfsConfig
@@ -27,7 +28,8 @@ export interface MainDependencyContainer {
   storage: Storage
   ethersProvider: providers.BaseProvider,
   ensPublicResolver: Contract,
-  ipfsNode: IPFS
+  ipfsNode: IPFS,
+  ensNodeProcessor: EnsNodeProcessor,
 }
 
 export const buildMainDependencyContainer = async (
@@ -68,6 +70,7 @@ export const buildMainDependencyContainer = async (
       })
       .singleton(),
     cacheRunner: awilix.asClass(CacheRunner).singleton(),
+    ensNodeProcessor: awilix.asClass(EnsNodeProcessor).singleton(),
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
     ...extensionsAndOverrides,
