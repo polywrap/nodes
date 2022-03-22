@@ -50,12 +50,19 @@ export class EnsNodeProcessor {
   async processEnqueuedEvents() {
     while (this.eventsQueue.length) {
       const event = this.eventsQueue.shift()!;
-      this.deps.storage.unresponsiveEnsNodes.delete(event.ensNode);
-      this.deps.logger.log("----------------------------------------------");
-      await this.deps.cacheRunner.processEnsIpfs(event.ensNode, event.ipfsHash);
-      this.deps.storage.lastBlockNumber = event.blockNumber - 1;
-      await this.deps.storage.save();
-      this.deps.logger.log("----------------------------------------------");
+      try {
+        this.deps.storage.unresponsiveEnsNodes.delete(event.ensNode);
+        this.deps.logger.log("----------------------------------------------");
+        await this.deps.cacheRunner.processEnsIpfs(event.ensNode, event.ipfsHash);
+        this.deps.storage.lastBlockNumber = event.blockNumber - 1;
+        this.deps.logger.log("----------------------------------------------");
+      } catch (ex) {
+        this.deps.logger.log(JSON.stringify(ex));
+        this.deps.logger.log(`Processing of ${toShortString(event.ensNode)} failed`);
+        this.deps.storage.unresponsiveEnsNodes.set(event.ensNode, true);
+      } finally {
+        await this.deps.storage.save();
+      }
     }
   }
 
@@ -68,19 +75,15 @@ export class EnsNodeProcessor {
       const contenthash = await this.deps.ensPublicResolver.contenthash(ensNode);
       const ipfsHash = getIpfsHashFromContenthash(contenthash);
       this.deps.logger.log("Retrieved IPFS hash for ENS domain");
-      const status = await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash);
-                
-      if (status !== ProcessEnsIpfsResult.Error) {
-        this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
-      } else {
-        this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
-      }
+      await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash);
+      this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
     }
     catch (ex) {
       this.deps.logger.log(JSON.stringify(ex));
       this.deps.logger.log(`Retry for unresponsive ${toShortString(ensNode)} failed`);
       this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
+    } finally {
+      this.deps.storage.save();
     }
-    this.deps.storage.save();
   }
 }

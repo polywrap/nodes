@@ -26,14 +26,14 @@ export class Storage {
 
   reviver(key: any, value: any) {
     if (key === "unresponsiveEnsNodes") {
-      return new Map(value);
+      return new Map(Object.entries(value));
     }
     return value;
   }
 
   replacer(key: any, value: any) {
     if (key === "unresponsiveEnsNodes") {
-      return Array.from(value.entries());
+      return Object.fromEntries(value.entries());
     } else {
       return value;
     }
