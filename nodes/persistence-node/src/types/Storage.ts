@@ -3,10 +3,43 @@ import fs from 'fs';
 export class Storage {
   constructor(
     public lastBlockNumber: number = 0,
-    public ensIpfs: Record<string, string | undefined> = {},
-    public ipfsEns: Record<string, string | undefined> = {},
+    private ensIpfs: Record<string, string | undefined> = {},
+    private ipfsEns: Record<string, string[] | undefined> = {},
     public unresponsiveEnsNodes: Map<string, boolean> = new Map(),
   ) { }
+
+  getIpfsHash(ensNode: string) {
+    return this.ensIpfs[ensNode];
+  }
+
+  getAllIpfsHashes() {
+    return Object.keys(this.ipfsEns);
+  }
+
+  hashExists(ipfsHash: string) {
+    return !!this.ipfsEns[ipfsHash];
+  }
+
+  set(ensNode: string, ipfsHash: string) {
+    this.ensIpfs[ensNode] = ipfsHash;
+    if (!this.ipfsEns[ipfsHash]) {
+      this.ipfsEns[ipfsHash] = [ensNode];
+    } else if (!this.ipfsEns[ipfsHash]!.some(ens => ens === ensNode)) {
+      this.ipfsEns[ipfsHash]!.push(ensNode);
+    }
+  }
+
+  remove(ipfsHash: string) {
+    const ensNodes = this.ipfsEns[ipfsHash] || [];
+    for (const node of ensNodes) {
+      delete this.ensIpfs[node];
+    }
+    delete this.ipfsEns[ipfsHash];
+  }
+
+  async save(): Promise<void> {
+    fs.writeFileSync('./storage.json', JSON.stringify(this, this.replacer, 2));
+  }
 
   async load(): Promise<void> {
     if (!fs.existsSync('./storage.json')) {
@@ -23,10 +56,6 @@ export class Storage {
     }
 
     this.resetToDefaultValues();
-  }
-
-  async save(): Promise<void> {
-    fs.writeFileSync('./storage.json', JSON.stringify(this, this.replacer, 2));
   }
 
   reviver(key: any, value: any) {

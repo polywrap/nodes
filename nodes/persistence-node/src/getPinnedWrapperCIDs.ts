@@ -9,7 +9,7 @@ export const getPinnedWrapperCIDs = async (storage: Storage, ipfsNode: IPFS, log
     ipfsNode.pin.ls()
   )).map(pinned => pinned.cid.toString());
 
-  const pinnedCidsFromStorageFile = Object.keys(storage.ipfsEns)
+  const pinnedCidsFromStorageFile = Object.keys(storage.getAllIpfsHashes())
 
   const intersection = pinnedCidsFromStorageFile.filter(file => {
     if (pinnedCidsFromIpfs.includes(file)) {

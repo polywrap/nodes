@@ -48,7 +48,7 @@ export class CacheRunner {
 
   async listenForEvents() {
     this.deps.logger.log("Listening for events...");
-    
+
     this.deps.ensPublicResolver.on("ContenthashChanged", async (ensNode: string, contenthash: string, event: any) => {
       this.deps.ensNodeProcessor.enqueue({ensNode, ipfsHash: getIpfsHashFromContenthash(contenthash), blockNumber: event.blockNumber})
     });
@@ -68,11 +68,8 @@ export class CacheRunner {
   }
   
   async processEnsIpfs(ensNode: string, ipfsHash: string | undefined): Promise<ProcessEnsIpfsResult> {
-    const ensIpfsCache = this.deps.storage.ensIpfs;
-    const ipfsEnsCache = this.deps.storage.ipfsEns;
-
     if (!ipfsHash) {
-      const savedIpfsHash = ensIpfsCache[ensNode];
+      const savedIpfsHash = this.deps.storage.getIpfsHash(ensNode);
 
       if (savedIpfsHash) {
         this.deps.logger.log("ENS no longer points to an IPFS hash");
@@ -81,12 +78,7 @@ export class CacheRunner {
         const success = await unpinCid(this.deps.ipfsNode, this.deps.ipfsConfig, savedIpfsHash);
         
         if (success) {
-          if (ipfsEnsCache[savedIpfsHash]) {
-            delete ipfsEnsCache[savedIpfsHash];
-          }
-
-          delete ensIpfsCache[ensNode];
-
+          this.deps.storage.remove(savedIpfsHash);
           this.deps.logger.log("Unpinned successfully");
           return ProcessEnsIpfsResult.Unpinned;
         } else {
@@ -101,7 +93,7 @@ export class CacheRunner {
       }
     }
     
-    if (!ipfsEnsCache[ipfsHash]) {
+    if (!this.deps.storage.hashExists(ipfsHash)) {
       this.deps.logger.log(`Checking if ${ipfsHash} is a wrapper`);
 
       const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
@@ -123,10 +115,7 @@ export class CacheRunner {
         this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
         return ProcessEnsIpfsResult.Error;
       }
-
-      ipfsEnsCache[ipfsHash] = ensNode;
-      ensIpfsCache[ensNode] = ipfsHash;
-
+      this.deps.storage.set(ensNode, ipfsHash);
       return ProcessEnsIpfsResult.Pinned;
     } else {
       this.deps.logger.log(`${ipfsHash} is already pinned`);
@@ -185,7 +174,7 @@ export class CacheRunner {
     }
 
     this.deps.logger.log(`Finished processing ${ensNodes.length} ENS domains`);
-    this.deps.logger.log(`${Object.keys(this.deps.storage.ipfsEns).length} pinned IPFS hashes`);
+    this.deps.logger.log(`${this.deps.storage.getAllIpfsHashes().length} pinned IPFS hashes`);
 
     this.deps.logger.log(`${Object.keys(this.deps.storage.unresponsiveEnsNodes).length} unresponsive domains/ipfs hashes`);
   }
