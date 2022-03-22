@@ -30,14 +30,14 @@ export class Storage {
       return;
     }
 
-    if (!!previousIpfsHash) {
-      this.ipfsEns[previousIpfsHash] = this.ipfsEns[previousIpfsHash]?.filter(ensNode => ensNode !== ensNode);
-    }
-
     this.ensIpfs[ensNode] = ipfsHash;
+
+    if (!!previousIpfsHash) {
+      this.ipfsEns[previousIpfsHash] = this.ipfsEns[previousIpfsHash]?.filter(n => n !== ensNode);
+    }
     if (!this.ipfsEns[ipfsHash]) {
       this.ipfsEns[ipfsHash] = [ensNode];
-    } else if (!this.ipfsEns[ipfsHash]!.some(ens => ens === ensNode)) {
+    } else {
       this.ipfsEns[ipfsHash]!.push(ensNode);
     }
   }

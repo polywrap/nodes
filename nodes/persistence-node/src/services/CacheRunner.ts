@@ -67,6 +67,50 @@ export class CacheRunner {
     await this.deps.storage.save();
   }
 
+  async unpinIpfsHash(ipfsHash: string) {
+    this.deps.logger.log("ENS no longer points to an IPFS hash");
+    this.deps.logger.log("Unpinning...");
+    const success = await unpinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);
+        
+    if (success) {
+      this.deps.storage.remove(ipfsHash);
+      this.deps.logger.log("Unpinned successfully");
+      return;
+    } else {
+      this.deps.logger.log("Unpinning failed");
+      throw "Unpinning failed";
+    }
+  }
+
+  async pinIpfsHash(ensNode: string, ipfsHash: string) {
+    if (this.deps.storage.hashExists(ipfsHash)) {
+      this.deps.logger.log("IPFS hash is already pinned");
+      this.deps.storage.set(ensNode, ipfsHash);
+      return;
+    }
+    this.deps.logger.log(`Checking if ${ipfsHash} is a wrapper`);
+
+    const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
+
+    if (resp === "no") {
+      this.deps.logger.log("IPFS hash is not a valid wrapper");
+      return;
+    } else if (resp === "timeout") {
+      this.deps.logger.log("IPFS timeout");
+      throw "IPFS timeout";
+    }
+
+    const success = await pinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);  
+
+    if (!success) {
+      this.deps.logger.log("Pinning failed");
+      throw "Pinning failed";
+    }
+    this.deps.storage.set(ensNode, ipfsHash);
+    return;
+  }
+
+  //TODO: remove method and move logic to call sites!
   async processEnsIpfs(ensNode: string, ipfsHash: string | undefined): Promise<void> {
     const savedIpfsHash = this.deps.storage.getIpfsHash(ensNode);
     
@@ -76,101 +120,11 @@ export class CacheRunner {
 
     const shouldUnpin = !!savedIpfsHash && this.deps.storage.getEnsNodes(savedIpfsHash)?.length === 1;
     if (shouldUnpin) {
-      this.deps.logger.log("ENS no longer points to an IPFS hash");
-      this.deps.logger.log("Unpinning...");
-      const success = await unpinCid(this.deps.ipfsNode, this.deps.ipfsConfig, savedIpfsHash);
-        
-      if (success) {
-        this.deps.storage.remove(savedIpfsHash);
-        this.deps.logger.log("Unpinned successfully");
-        return;
-      } else {
-        this.deps.logger.log("Unpinning failed");
-        throw "Unpinning failed";
-      }
+      this.unpinIpfsHash(savedIpfsHash);
     }
 
-    const shouldPin = !!ipfsHash && !this.deps.storage.hashExists(ipfsHash);
-    if (shouldPin) {
-      this.deps.logger.log(`Checking if ${ipfsHash} is a wrapper`);
-
-      const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
-
-      if (resp === "no") {
-        this.deps.logger.log("IPFS hash is not a valid wrapper");
-        return;
-      } else if (resp === "timeout") {
-        this.deps.logger.log("IPFS timeout");
-        throw "IPFS timeout";
-      }
-
-      const success = await pinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);  
-
-      if (!success) {
-        this.deps.logger.log("Pinning failed");
-        throw "Pinning failed";
-      }
-      this.deps.storage.set(ensNode, ipfsHash);
-      return;
-    } else {
-      this.deps.logger.log(`${ipfsHash} is already pinned`);
-      return;
-    }
-  }
-  
-  async processEnsIpfsObsolete(ensNode: string, ipfsHash: string | undefined): Promise<ProcessEnsIpfsResult> {
-    if (!ipfsHash) {
-      const savedIpfsHash = this.deps.storage.getIpfsHash(ensNode);
-
-      if (savedIpfsHash) {
-        this.deps.logger.log("ENS no longer points to an IPFS hash");
-        this.deps.logger.log("Unpinning...");
-
-        const success = await unpinCid(this.deps.ipfsNode, this.deps.ipfsConfig, savedIpfsHash);
-        
-        if (success) {
-          this.deps.storage.remove(savedIpfsHash);
-          this.deps.logger.log("Unpinned successfully");
-          return ProcessEnsIpfsResult.Unpinned;
-        } else {
-          this.deps.logger.log("Unpinning failed");
-          this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
-          this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
-          return ProcessEnsIpfsResult.Error;
-        }
-      } else {
-        this.deps.logger.log("Nothing changed");
-        return ProcessEnsIpfsResult.NothingChanged;
-      }
-    }
-    
-    if (!this.deps.storage.hashExists(ipfsHash)) {
-      this.deps.logger.log(`Checking if ${ipfsHash} is a wrapper`);
-
-      const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
-
-      if (resp === "no") {
-        this.deps.logger.log("IPFS hash is not a valid wrapper");
-        return ProcessEnsIpfsResult.NothingChanged;
-      } else if (resp === "timeout") {
-        this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
-        this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
-        return ProcessEnsIpfsResult.Error;
-      }
-
-      const success = await pinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);  
-
-      if (!success) {
-        this.deps.logger.log("Pinning failed");
-        this.deps.storage.unresponsiveEnsNodes.set(ensNode, true);
-        this.deps.logger.log(`Added ${toShortString(ensNode)} to unresponsive list (${Object.keys(this.deps.storage.unresponsiveEnsNodes).length})`);
-        return ProcessEnsIpfsResult.Error;
-      }
-      this.deps.storage.set(ensNode, ipfsHash);
-      return ProcessEnsIpfsResult.Pinned;
-    } else {
-      this.deps.logger.log(`${ipfsHash} is already pinned`);
-      return ProcessEnsIpfsResult.NothingChanged;
+    if (!!ipfsHash) {
+      this.pinIpfsHash(ensNode, ipfsHash);
     }
   }
 
