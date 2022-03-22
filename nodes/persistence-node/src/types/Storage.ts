@@ -21,6 +21,15 @@ export class Storage {
   }
 
   set(ensNode: string, ipfsHash: string) {
+    const previousIpfsHash = this.ensIpfs[ensNode];
+    if (previousIpfsHash === ipfsHash) {
+      return;
+    }
+
+    if (!!previousIpfsHash) {
+      this.ipfsEns[previousIpfsHash] = this.ipfsEns[previousIpfsHash]?.filter(ensNode => ensNode !== ensNode);
+    }
+
     this.ensIpfs[ensNode] = ipfsHash;
     if (!this.ipfsEns[ipfsHash]) {
       this.ipfsEns[ipfsHash] = [ensNode];
