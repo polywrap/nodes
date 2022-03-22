@@ -2,7 +2,6 @@ import { ethers } from "ethers";
 import { getIpfsHashFromContenthash } from "../getIpfsHashFromContenthash";
 import { sleep } from "../sleep";
 import { toShortString } from "../toShortString";
-import { ProcessEnsIpfsResult } from "../types/ProcessEnsIpfsResult";
 import { Storage } from "../types/Storage";
 import { CacheRunner } from "./CacheRunner";
 import { Logger } from "./Logger";
@@ -14,7 +13,7 @@ interface IDependencies {
   cacheRunner: CacheRunner;
 }
 
-interface IEventQueueItem {
+interface IEventData {
   ensNode: string,
   ipfsHash: string | undefined,
   blockNumber: number
@@ -22,15 +21,15 @@ interface IEventQueueItem {
 
 export class EnsNodeProcessor {
   deps: IDependencies;
-  eventsQueue: IEventQueueItem[];
+  scheduledEvents: Map<string, IEventData>;
 
   constructor(deps: IDependencies) {
     this.deps = deps;
-    this.eventsQueue = [];
+    this.scheduledEvents = new Map();
   }
 
-  enqueue(event: IEventQueueItem) {
-    this.eventsQueue.push(event);
+  enqueue(event: IEventData) {
+    this.scheduledEvents.set(event.ensNode, event);
   }
 
   async run(processUnresponsive: boolean) {
@@ -48,27 +47,32 @@ export class EnsNodeProcessor {
   }
 
   async processEnqueuedEvents() {
-    while (this.eventsQueue.length) {
-      const event = this.eventsQueue.shift()!;
-      try {
-        this.deps.storage.unresponsiveEnsNodes.delete(event.ensNode);
-        this.deps.logger.log("----------------------------------------------");
+    while (this.scheduledEvents.size) {
+      const events = Array.from(this.scheduledEvents.values());
+      this.scheduledEvents.clear();
+      const scheduledHashes = events.map(e => e.ipfsHash);
 
-        await this.deps.cacheRunner.processEnsIpfs(
-          event.ensNode, 
-          event.ipfsHash,
-          //TODO: introduce parallelism to execution of a queue
-          (savedIpfsHash) => this.deps.storage.getEnsNodes(savedIpfsHash)?.length === 1);
-        
-        this.deps.storage.lastBlockNumber = event.blockNumber - 1;
-        this.deps.logger.log("----------------------------------------------");
-      } catch (ex) {
-        this.deps.logger.log(JSON.stringify(ex));
-        this.deps.logger.log(`Processing of ${toShortString(event.ensNode)} failed`);
-        this.deps.storage.unresponsiveEnsNodes.set(event.ensNode, true);
-      } finally {
-        await this.deps.storage.save();
-      }
+      await Promise.all(events.map(async event => {
+        try {
+          this.deps.storage.unresponsiveEnsNodes.delete(event.ensNode);
+          this.deps.logger.log("----------------------------------------------");
+
+          await this.deps.cacheRunner.processEnsIpfs(
+            event.ensNode,
+            event.ipfsHash,
+            (savedIpfsHash) => this.deps.storage.getEnsNodes(savedIpfsHash)?.length === 1 && 
+                               !scheduledHashes.some(scheduled => scheduled === savedIpfsHash));
+
+          this.deps.storage.lastBlockNumber = Math.max(this.deps.storage.lastBlockNumber, event.blockNumber - 1);
+          this.deps.logger.log("----------------------------------------------");
+        } catch (ex) {
+          this.deps.logger.log(JSON.stringify(ex));
+          this.deps.logger.log(`Processing of ${toShortString(event.ensNode)} failed`);
+          this.deps.storage.unresponsiveEnsNodes.set(event.ensNode, true);
+        } finally {
+          await this.deps.storage.save();
+        }
+      }));
     }
   }
 

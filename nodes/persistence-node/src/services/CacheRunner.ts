@@ -9,7 +9,6 @@ import { unpinCid } from "../unpinCid";
 import { toShortString } from "../toShortString";
 import { IpfsConfig } from "../config/IpfsConfig";
 import { Logger } from "./Logger";
-import { ProcessEnsIpfsResult } from "../types/ProcessEnsIpfsResult";
 import { EnsNodeProcessor } from "./EnsNodeProcessor";
 
 interface IDependencies {
