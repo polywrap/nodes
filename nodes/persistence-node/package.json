@@ -26,10 +26,11 @@
     "wrapper"
   ],
   "scripts": {
-    "build": "tsc --project tsconfig.build.json",
+    "build": "tsc --project tsconfig.build.json && yarn copy-ui-files",
     "dev": "ts-node src/main.ts",
     "start": "node bin/main.js",
     "test": "yarn test:jest",
+    "copy-ui-files": "rm -rf ./bin/ui/ && mkdir -p ./bin/ui/ && cp -r ./src/ui/ ./bin/ui/",
     "test:jest": "jest test --passWithNoTests"
   },
   "dependencies": {

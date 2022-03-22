@@ -13,10 +13,13 @@ It achieves that by watching for the "Contenthash changed" events of the public 
 5. Run "yarn dev {command}" to run the commands with ts-node
 
 ### The following commands are supported:
-- past:  Run for a past block count
-- missed:          Run for missed blocks while the app was offline
-- listen:          Listen for events and pin wrappers
-- unresponsive:    Process unresponsive IPFS URIs
-- info:            Display useful information about the current state (pinned hash count, unresponsive count, etc)
-- reset:           Delete the storage file
-- help:  display help for command
+- `daemon`: starts a deamon which does the following:
+    - listens for new wrapper registrations and pins them
+    - runs API to interact with IPFS data (either through API calls or web UI)
+    - runs API to allow other program instances to connect to daemon and run some of its commands
+- `past`: Run for a past block count
+- `missed`: Run for missed blocks while the app was offline
+- `unresponsive`: Process unresponsive IPFS URIs
+- `cli info`: Display useful information about the current state (pinned hash count, unresponsive count, etc)
+- `cli reset`: Delete the storage file
+- `help`: Display help for command
