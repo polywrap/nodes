@@ -1,5 +1,5 @@
 import { program } from "commander";
-import { Daemon } from "./daemon.model";
+import { DaemonModule } from "./daemon.module";
 
 export function initializeDaemonCommands() {
 
@@ -30,7 +30,7 @@ export function initializeDaemonCommands() {
         }
         : undefined;
 
-      const daemon = await Daemon.build(!!options.log);
+      const daemon = await DaemonModule.build(!!options.log);
       daemon.run(httpConfig, httpsConfig);
 
     });
@@ -41,7 +41,7 @@ export function initializeDaemonCommands() {
     .requiredOption("-b, --blocks <number>", "Past block count")
     .option("--log", "Enable logging")
     .action(async (options) => {
-      const daemon = await Daemon.build(!!options.log)
+      const daemon = await DaemonModule.build(!!options.log)
       await daemon.runForPastBlocks(
         Number(options.blocks)
       );
@@ -54,7 +54,7 @@ export function initializeDaemonCommands() {
     .description("Run for missed blocks while the app was offline")
     .option("--log", "Enable logging")
     .action(async (options) => {
-      const daemon = await Daemon.build(!!options.log)
+      const daemon = await DaemonModule.build(!!options.log)
       await daemon.runForMissedBlocks();
 
       process.exit(0);
@@ -66,7 +66,7 @@ export function initializeDaemonCommands() {
     .option("--log", "Enable logging")
     .action(async (options) => {
 
-      const daemon = await Daemon.build(!!options.log);
+      const daemon = await DaemonModule.build(!!options.log);
       await daemon.processUnresponsive();
 
       process.exit(0);

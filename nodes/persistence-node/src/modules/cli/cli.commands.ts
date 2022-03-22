@@ -1,5 +1,5 @@
 import { program } from "commander";
-import { CLI } from "./cli.model";
+import { CliModule } from "./cli.module";
 
 export function initializeCliCommands() {
   const cli = program
@@ -10,7 +10,7 @@ export function initializeCliCommands() {
     .description("Display useful information about the current state (pinned hash count, unresponsive count, etc)")
     .action(async (options) => {
 
-      const cli = await CLI.build(!!options.log);
+      const cli = await CliModule.build(!!options.log);
       await cli.getInfo();
 
       process.exit(0);
@@ -21,7 +21,7 @@ export function initializeCliCommands() {
     .description("Delete the storage file")
     .action(async (options) => {
 
-      const cli = await CLI.build(!!options.log);
+      const cli = await CliModule.build(!!options.log);
       await cli.resetStorage();
 
       process.exit(0);

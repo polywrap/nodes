@@ -1,7 +1,7 @@
 import axios from "axios";
 import { buildCliDependencyContainer, CliDependencyContainer } from "./cli.deps";
 
-export class CLI {
+export class CliModule {
 
     private constructor(
         private deps: CliDependencyContainer,
@@ -10,10 +10,10 @@ export class CLI {
         this.deps.loggerConfig.shouldLog = shouldLog;
     }
 
-    static async build(shouldLog: boolean): Promise<CLI> {
+    static async build(shouldLog: boolean): Promise<CliModule> {
         const container = await buildCliDependencyContainer();
 
-        return new CLI(container.cradle, shouldLog);
+        return new CliModule(container.cradle, shouldLog);
     }
 
     async getInfo() {

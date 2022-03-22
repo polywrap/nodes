@@ -10,6 +10,3 @@ initializeDaemonCommands();
 initializeCliCommands();
 
 program.parse(process.argv);
-
-
-

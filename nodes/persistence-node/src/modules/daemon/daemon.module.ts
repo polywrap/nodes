@@ -2,7 +2,7 @@ import { HttpConfig } from "../../api-server/HttpConfig";
 import { HttpsConfig } from "../../api-server/HttpsConfig";
 import { buildMainDependencyContainer, MainDependencyContainer } from "./daemon.deps";
 
-export class Daemon {
+export class DaemonModule {
 
     private constructor(
         private deps: MainDependencyContainer,
@@ -11,10 +11,10 @@ export class Daemon {
         this.deps.loggerConfig.shouldLog = shouldLog;
      }
 
-    static async build(shouldLog: boolean): Promise<Daemon> {
+    static async build(shouldLog: boolean): Promise<DaemonModule> {
         const container = await buildMainDependencyContainer();
 
-        return new Daemon(container.cradle, shouldLog);
+        return new DaemonModule(container.cradle, shouldLog);
     }
 
     async run(httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
