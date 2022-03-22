@@ -53,7 +53,13 @@ export class EnsNodeProcessor {
       try {
         this.deps.storage.unresponsiveEnsNodes.delete(event.ensNode);
         this.deps.logger.log("----------------------------------------------");
-        await this.deps.cacheRunner.processEnsIpfs(event.ensNode, event.ipfsHash);
+
+        await this.deps.cacheRunner.processEnsIpfs(
+          event.ensNode, 
+          event.ipfsHash,
+          //TODO: introduce parallelism to execution of a queue
+          (savedIpfsHash) => this.deps.storage.getEnsNodes(savedIpfsHash)?.length === 1);
+        
         this.deps.storage.lastBlockNumber = event.blockNumber - 1;
         this.deps.logger.log("----------------------------------------------");
       } catch (ex) {
@@ -75,7 +81,7 @@ export class EnsNodeProcessor {
       const contenthash = await this.deps.ensPublicResolver.contenthash(ensNode);
       const ipfsHash = getIpfsHashFromContenthash(contenthash);
       this.deps.logger.log("Retrieved IPFS hash for ENS domain");
-      await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash);
+      await this.deps.cacheRunner.processEnsIpfs(ensNode, ipfsHash, (savedIpfsHash) => this.deps.storage.getEnsNodes(savedIpfsHash)?.length === 1);
       this.deps.logger.log(`Sucessfully processed unresponsive ${toShortString(ensNode)}`);
     }
     catch (ex) {
