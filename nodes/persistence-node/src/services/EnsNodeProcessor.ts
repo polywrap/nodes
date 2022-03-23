@@ -28,7 +28,7 @@ export class EnsNodeProcessor {
     this.scheduledEvents = new Map();
   }
 
-  enqueue(event: IEventData) {
+  schedule(event: IEventData) {
     this.scheduledEvents.set(event.ensNode, event);
   }
 
@@ -36,7 +36,7 @@ export class EnsNodeProcessor {
     this.deps.logger.log("Processing ens nodes...");
 
     while (true) {
-      await this.processEnqueuedEvents();
+      await this.processScheduledEvents();
       if (processUnresponsive && this.deps.storage.unresponsiveEnsNodes.size) {
         await this.processUnresponsiveNode();
       } else {
@@ -46,7 +46,7 @@ export class EnsNodeProcessor {
     }
   }
 
-  async processEnqueuedEvents() {
+  async processScheduledEvents() {
     while (this.scheduledEvents.size) {
       const events = Array.from(this.scheduledEvents.values());
       this.scheduledEvents.clear();
@@ -63,7 +63,6 @@ export class EnsNodeProcessor {
             (savedIpfsHash) => this.deps.storage.getEnsNodes(savedIpfsHash)?.length === 1 && 
                                !scheduledHashes.some(scheduled => scheduled === savedIpfsHash));
 
-          this.deps.storage.lastBlockNumber = Math.max(this.deps.storage.lastBlockNumber, event.blockNumber - 1);
           this.deps.logger.log("----------------------------------------------");
         } catch (ex) {
           this.deps.logger.log(JSON.stringify(ex));
@@ -73,6 +72,9 @@ export class EnsNodeProcessor {
           await this.deps.storage.save();
         }
       }));
+
+      this.deps.storage.lastBlockNumber = Math.max(...events.map(e => e.blockNumber)) - 1;
+      await this.deps.storage.save();
     }
   }
 

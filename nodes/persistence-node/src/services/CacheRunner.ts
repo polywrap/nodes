@@ -49,7 +49,7 @@ export class CacheRunner {
     this.deps.logger.log("Listening for events...");
 
     this.deps.ensPublicResolver.on("ContenthashChanged", async (ensNode: string, contenthash: string, event: any) => {
-      this.deps.ensNodeProcessor.enqueue({ensNode, ipfsHash: getIpfsHashFromContenthash(contenthash), blockNumber: event.blockNumber})
+      this.deps.ensNodeProcessor.schedule({ensNode, ipfsHash: getIpfsHashFromContenthash(contenthash), blockNumber: event.blockNumber})
     });
   }
 
@@ -101,14 +101,14 @@ export class CacheRunner {
       return;
     } else if (resp === "timeout") {
       this.deps.logger.log("IPFS timeout");
-      throw "IPFS timeout";
+      throw new Error("IPFS timeout");
     }
 
     const success = await pinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);  
 
     if (!success) {
       this.deps.logger.log("Pinning failed");
-      throw "Pinning failed";
+      throw new Error("Pinning failed");
     }
     this.deps.storage.set(ensNode, ipfsHash);
     onSuccessfullyPinned && onSuccessfullyPinned();
@@ -116,6 +116,10 @@ export class CacheRunner {
   }
 
   async unpinIpfsHash(ipfsHash: string) {
+    if (!this.deps.storage.hashExists(ipfsHash)) {
+      this.deps.logger.log("IPFS hash is not pinned, nothing to unpin");
+      return;
+    }
     this.deps.logger.log("ENS no longer points to an IPFS hash");
     this.deps.logger.log("Unpinning...");
     const success = await unpinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);
@@ -126,7 +130,7 @@ export class CacheRunner {
       return;
     } else {
       this.deps.logger.log("Unpinning failed");
-      throw "Unpinning failed";
+      throw new Error("Unpinning failed");
     }
   }
 
