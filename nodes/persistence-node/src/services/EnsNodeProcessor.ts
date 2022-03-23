@@ -7,16 +7,16 @@ import { CacheRunner } from "./CacheRunner";
 import { Logger } from "./Logger";
 
 interface IDependencies {
-  storage: Storage,
-  logger: Logger,
+  storage: Storage;
+  logger: Logger;
   ensPublicResolver: ethers.Contract;
   cacheRunner: CacheRunner;
 }
 
 interface IEventData {
-  ensNode: string,
-  ipfsHash: string | undefined,
-  blockNumber: number
+  ensNode: string;
+  ipfsHash: string | undefined;
+  blockNumber: number;
 }
 
 export class EnsNodeProcessor {
