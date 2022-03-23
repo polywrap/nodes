@@ -2,10 +2,7 @@ import { program } from "commander";
 import { CliModule } from "./cli.module";
 
 export function initializeCliCommands() {
-  const cli = program
-    .command('cli');
-
-  cli
+  program
     .command("info")
     .description("Display useful information about the current state (pinned hash count, unresponsive count, etc)")
     .action(async (options) => {
@@ -16,7 +13,7 @@ export function initializeCliCommands() {
       process.exit(0);
     });
 
-  cli
+  program
     .command("reset")
     .description("Delete the storage file")
     .action(async (options) => {

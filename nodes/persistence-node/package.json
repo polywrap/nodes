@@ -30,7 +30,7 @@
     "dev": "ts-node src/main.ts",
     "start": "node bin/main.js",
     "test": "yarn test:jest",
-    "copy-ui-files": "rm -rf ./bin/ui/ && mkdir -p ./bin/ui/ && cp -r ./src/ui/ ./bin/ui/",
+    "copy-ui-files": "rm -rf ./bin/ui/ && mkdir -p ./bin/ui/ && cp -r ./src/ui/ ./bin/",
     "test:jest": "jest test --passWithNoTests"
   },
   "dependencies": {
