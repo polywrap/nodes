@@ -13,7 +13,7 @@ interface IDependencies {
   cacheRunner: CacheRunner;
 }
 
-interface IEventData {
+interface IEnsIpfsEvent {
   ensNode: string;
   ipfsHash: string | undefined;
   blockNumber: number;
@@ -21,14 +21,14 @@ interface IEventData {
 
 export class EnsNodeProcessor {
   deps: IDependencies;
-  scheduledEvents: Map<string, IEventData>;
+  scheduledEvents: Map<string, IEnsIpfsEvent>;
 
   constructor(deps: IDependencies) {
     this.deps = deps;
     this.scheduledEvents = new Map();
   }
 
-  schedule(event: IEventData) {
+  schedule(event: IEnsIpfsEvent) {
     this.scheduledEvents.set(event.ensNode, event);
   }
 
