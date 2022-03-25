@@ -79,6 +79,9 @@ export class EnsNodeProcessor {
   }
 
   async processUnresponsiveNode() {
+    if (!this.deps.storage.unresponsiveEnsNodes.size) {
+      return;
+    }
     const [ensNode] = this.deps.storage.unresponsiveEnsNodes.keys();
     this.deps.storage.unresponsiveEnsNodes.delete(ensNode);
     try {
