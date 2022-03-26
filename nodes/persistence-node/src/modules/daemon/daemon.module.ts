@@ -17,23 +17,15 @@ export class DaemonModule {
         return new DaemonModule(container.cradle, shouldLog);
     }
 
-    async run(httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
+    async run(fromBlockNumber: number, httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
         Promise.all([
             this.deps.persistenceNodeApi.run(),
             this.deps.ipfsGatewayApi.run(
                 httpConfig,
                 httpsConfig
             ),
-            this.deps.cacheRunner.listenForEvents()
+            this.deps.cacheRunner.startIndexing(fromBlockNumber)
         ]);
-    }
-
-    async runForPastBlocks(blocks: number) {
-        await this.deps.cacheRunner.runForPastBlocks(blocks);
-    }
-
-    async runForMissedBlocks() {
-        await this.deps.cacheRunner.runForMissedBlocks();
     }
 
     async processUnresponsive() {

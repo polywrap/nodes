@@ -13,21 +13,23 @@ import { Logger } from "../../services/Logger";
 import { PersistenceNodeApi } from "../../services/PersistenceNodeApi";
 import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
 import { IPFS } from "ipfs-core";
+import { EnsIndexerConfig } from "../../config/EnsIndexerConfig";
 
 export interface MainDependencyContainer {
-  ipfsConfig: IpfsConfig
-  ethersConfig: EthersConfig
-  ensConfig: EnsConfig
-  loggerConfig: LoggerConfig
-  persistenceNodeApiConfig: PersistenceNodeApiConfig
-  logger: Logger
-  cacheRunner: CacheRunner
-  ipfsGatewayApi: IpfsGatewayApi
-  persistenceNodeApi: PersistenceNodeApi
-  storage: Storage
-  ethersProvider: providers.BaseProvider,
-  ensPublicResolver: Contract,
-  ipfsNode: IPFS
+  ipfsConfig: IpfsConfig;
+  ethersConfig: EthersConfig;
+  ensConfig: EnsConfig;
+  loggerConfig: LoggerConfig;
+  persistenceNodeApiConfig: PersistenceNodeApiConfig;
+  ensIndexerConfig: EnsIndexerConfig;
+  logger: Logger;
+  cacheRunner: CacheRunner;
+  ipfsGatewayApi: IpfsGatewayApi;
+  persistenceNodeApi: PersistenceNodeApi;
+  storage: Storage;
+  ethersProvider: providers.BaseProvider;
+  ensPublicResolver: Contract;
+  ipfsNode: IPFS;
 }
 
 export const buildMainDependencyContainer = async (
@@ -47,6 +49,7 @@ export const buildMainDependencyContainer = async (
     ensConfig: awilix.asClass(EnsConfig).singleton(),
     loggerConfig: awilix.asClass(LoggerConfig).singleton(),
     persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
+    ensIndexerConfig: awilix.asClass(EnsIndexerConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
     ethersProvider: awilix
       .asFunction(({ ethersConfig }) => {
