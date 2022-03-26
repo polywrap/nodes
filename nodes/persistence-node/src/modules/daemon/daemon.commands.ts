@@ -35,16 +35,4 @@ export function initializeDaemonCommands() {
       daemon.run(parseInt(options.fromBlock) ?? 0, httpConfig, httpsConfig);
 
     });
-
-  program
-    .command("unresponsive")
-    .description("Process unresponsive IPFS URIs")
-    .option("--log", "Enable logging")
-    .action(async (options) => {
-
-      const daemon = await DaemonModule.build(!!options.log);
-      await daemon.processUnresponsive();
-
-      process.exit(0);
-    });
 }

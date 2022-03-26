@@ -5,7 +5,7 @@ import { EthersConfig } from "../../config/EthersConfig";
 import { IpfsConfig } from "../../config/IpfsConfig";
 import { EnsConfig } from "../../config/EnsConfig";
 import { Storage } from "../../types/Storage";
-import { CacheRunner } from "../../services/CacheRunner";
+import { EnsIndexer } from "../../services/EnsIndexer";
 import { createIpfsNode } from "../../createIpfsNode";
 import { IpfsGatewayApi } from "../../services/IpfsGatewayApi";
 import { LoggerConfig } from "../../config/LoggerConfig";
@@ -23,7 +23,7 @@ export interface MainDependencyContainer {
   persistenceNodeApiConfig: PersistenceNodeApiConfig;
   ensIndexerConfig: EnsIndexerConfig;
   logger: Logger;
-  cacheRunner: CacheRunner;
+  ensIndexer: EnsIndexer;
   ipfsGatewayApi: IpfsGatewayApi;
   persistenceNodeApi: PersistenceNodeApi;
   storage: Storage;
@@ -70,7 +70,7 @@ export const buildMainDependencyContainer = async (
         return storage;
       })
       .singleton(),
-    cacheRunner: awilix.asClass(CacheRunner).singleton(),
+    ensIndexer: awilix.asClass(EnsIndexer).singleton(),
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
     ...extensionsAndOverrides,
