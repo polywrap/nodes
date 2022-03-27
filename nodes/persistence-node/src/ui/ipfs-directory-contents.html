@@ -23,9 +23,16 @@
             {{#files}}
             <tr>
                 <td>
-                    <a href="/api/v0/cat?arg={{path}}&filename={{name}}">
-                        {{name}}
-                    </a>
+                    {{^isTextFile}}
+                        <a href="/api/v0/cat?arg={{path}}&filename={{name}}">
+                            {{name}}
+                        </a>
+                    {{/isTextFile}}
+                    {{#isTextFile}}
+                        <a href="/ipfs/{{path}}">
+                            {{name}}
+                        </a>
+                    {{/isTextFile}}
                 </td>
                 <td>
                     {{cid}}

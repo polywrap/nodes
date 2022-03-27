@@ -15,6 +15,8 @@ import path from "path";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
+import { getIpfsFileContents, getIpfsFileContentsAsString } from "../getIpfsFileContents";
+import { isTextFile } from "../utils/isTextFile";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -79,20 +81,9 @@ export class IpfsGatewayApi {
         return;
       }
 
-      const stream = ipfs.cat(hash);
+      const fileContents = await getIpfsFileContents(ipfs, hash);
 
-      let data: Uint8Array = new Uint8Array();
-
-      for await (const chunk of stream) {
-        const temp = new Uint8Array(data.length + chunk.length);
-        temp.set(data);
-        temp.set(chunk, data.length);
-        data = temp;
-      }
-
-      const buffer = Buffer.from(data);
-
-      res.send(buffer);
+      res.send(fileContents);
     }));
 
     app.get('/api/v0/resolve', handleError(async (req, res) => {
@@ -114,6 +105,18 @@ export class IpfsGatewayApi {
       })
     }));
 
+    app.get('/ipfs/:hash/:file', handleError(async (req, res) => {
+      const hash = (req.params as any).hash as string;
+      const file = (req.params as any).file as string;
+
+      const fileContent = await getIpfsFileContentsAsString(ipfs, `${hash}/${file}`);
+
+      res.render('ipfs-file-contents', {
+        name: file,
+        content: fileContent
+      });
+    }));
+
     app.get('/ipfs/:hash', handleError(async (req, res) => {
       const hash = (req.params as any).hash as string;
 
@@ -126,7 +129,12 @@ export class IpfsGatewayApi {
         hash,
         sizeInKb: function () {
           return formatFileSize((this as any).size)
-        }
+        },
+        isTextFile: function () {
+          return isTextFile(
+            (this as any).name
+          )
+        },
       })
     }));
 
