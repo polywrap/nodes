@@ -83,7 +83,7 @@ export class IpfsGatewayApi {
 
       await asyncIterableToArray(stream)
         .then(
-          (chunks) => {
+          chunks => {
             let data: Uint8Array = new Uint8Array();
 
             for (const chunk of chunks) {
@@ -97,9 +97,13 @@ export class IpfsGatewayApi {
 
             res.send(buffer);
           }, 
-          (err) => {
-            this.deps.logger.log(err.message);
-            res.status(404).send("File not found");
+          err => {
+            if (err instanceof RangeError) {
+              this.deps.logger.log(err.message);
+              res.status(404).send("File not found");
+            } else {
+              throw err;
+            }
           });
     }));
 
@@ -125,17 +129,27 @@ export class IpfsGatewayApi {
     app.get('/ipfs/:hash', handleError(async (req, res) => {
       const hash = (req.params as any).hash as string;
 
-      const files = await asyncIterableToArray(
-        ipfs.ls(hash)
-      );
+      const stream = ipfs.ls(hash);
 
-      res.render('ipfs-directory-contents', {
-        files,
-        hash,
-        sizeInKb: function () {
-          return formatFileSize((this as any).size)
-        }
-      })
+      await asyncIterableToArray(stream)
+        .then(
+          files => {
+            res.render('ipfs-directory-contents', {
+              files,
+              hash,
+              sizeInKb: function () {
+                return formatFileSize((this as any).size)
+              }
+            });
+          },
+          err => {
+            if (err instanceof RangeError) {
+              this.deps.logger.log(err.message);
+              res.status(404).send("Ipfs directory not found");
+            } else {
+              throw err;
+            }
+          });
     }));
 
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {
@@ -180,6 +194,7 @@ export class IpfsGatewayApi {
     }));
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+      this.deps.logger.log(JSON.stringify(err, Object.getOwnPropertyNames(err)));
       res.status(500).send("Something went wrong. Check the logs for more info.");
       this.deps.logger.log(err.message);
     });
