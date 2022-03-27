@@ -81,18 +81,26 @@ export class IpfsGatewayApi {
 
       const stream = ipfs.cat(hash);
 
-      let data: Uint8Array = new Uint8Array();
+      await asyncIterableToArray(stream)
+        .then(
+          (chunks) => {
+            let data: Uint8Array = new Uint8Array();
 
-      for await (const chunk of stream) {
-        const temp = new Uint8Array(data.length + chunk.length);
-        temp.set(data);
-        temp.set(chunk, data.length);
-        data = temp;
-      }
+            for (const chunk of chunks) {
+              const temp = new Uint8Array(data.length + chunk.length);
+              temp.set(data);
+              temp.set(chunk, data.length);
+              data = temp;
+            }
 
-      const buffer = Buffer.from(data);
+            const buffer = Buffer.from(data);
 
-      res.send(buffer);
+            res.send(buffer);
+          }, 
+          (err) => {
+            this.deps.logger.log(err.message);
+            res.status(404).send("File not found");
+          });
     }));
 
     app.get('/api/v0/resolve', handleError(async (req, res) => {
