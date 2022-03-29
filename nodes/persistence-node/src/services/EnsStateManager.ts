@@ -1,43 +1,71 @@
+import fs from 'fs';
 import { EnsState } from "../types/EnsState";
 
-interface IDependencies {
-  ensState: EnsState;
-}
-
 export class EnsStateManager {
-  deps: IDependencies;
+  state: EnsState = {
+    ensIpfs: {},
+    ipfsEns: {},
+    lastBlockNumber: 0,
+  };
 
-  constructor(deps: IDependencies) {
-    this.deps = deps;
+  get lastBlockNumber(): number {
+    return this.state.lastBlockNumber;
+  }
+  set lastBlockNumber(newBlockNumber: number) {
+    this.state.lastBlockNumber = newBlockNumber;
+  } 
+
+  containsIpfsHash(ipfsHash: string): boolean {
+    return !!this.state.ipfsEns[ipfsHash];
+  }
+
+  getIpfsHashes(): string[] {
+    return Object.keys(this.state.ipfsEns);
   }
 
   update(ensNode: string, newIpfsHash: string | undefined) {
-    const prevIpfsHash = this.deps.ensState.ensIpfs.get(ensNode);
+    const prevIpfsHash = this.state.ensIpfs[ensNode];
 
     if(prevIpfsHash) {
-      const ensMap = this.deps.ensState.ipfsEns.get(prevIpfsHash);
+      const ensMap = this.state.ipfsEns[prevIpfsHash];
       if(ensMap) {
-        ensMap.delete(ensNode);
+        delete ensMap[ensNode];
   
-        if(ensMap.size == 0) {
-          this.deps.ensState.ipfsEns.delete(prevIpfsHash);
+        //TODO: fix this
+        if(Object.keys(ensMap).length == 0) {
+          delete this.state.ipfsEns[prevIpfsHash];
         }
       } 
     }
 
     if(newIpfsHash) {
-      this.deps.ensState.ensIpfs.set(ensNode, newIpfsHash);
+      this.state.ensIpfs[ensNode] = newIpfsHash;
 
-      let newEnsMap = this.deps.ensState.ipfsEns.get(newIpfsHash);
+      let newEnsMap = this.state.ipfsEns[newIpfsHash];
 
       if(newEnsMap) {
-        newEnsMap.set(ensNode, true);
+        newEnsMap[ensNode] = true;
       } else {
-        newEnsMap = new Map();
-        newEnsMap.set(ensNode, true);
+        newEnsMap = {
+          [ensNode]: true,
+       };
   
-        this.deps.ensState.ipfsEns.set(newIpfsHash, newEnsMap);
+        this.state.ipfsEns[newIpfsHash] = newEnsMap;
       }
     }
+  
+    this.save();
+  }
+
+  async save(): Promise<void> {
+    fs.writeFileSync('./ens-state.json', JSON.stringify(this.state, null, 2));
+  }
+
+  async load(): Promise<void> {
+    if (!fs.existsSync('./ens-state.json')) {
+      await this.save();
+    }
+
+    this.state = JSON.parse(fs.readFileSync('./ens-state.json', 'utf8'));
   }
 }

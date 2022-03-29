@@ -1,4 +1,5 @@
 export type EnsState = {
-  ensIpfs: Map<string, string>;
-  ipfsEns: Map<string, Map<string, boolean>>;
+  lastBlockNumber: number;
+  ensIpfs: Record<string, string>;
+  ipfsEns: Record<string, Record<string, boolean>>;
 };

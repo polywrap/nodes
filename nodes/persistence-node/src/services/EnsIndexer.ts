@@ -1,6 +1,5 @@
 import { ethers } from "ethers";
 import { getIpfsHashFromContenthash } from "../getIpfsHashFromContenthash";
-import { Storage } from "../types/Storage";
 import * as IPFS from 'ipfs-core';
 import { IpfsConfig } from "../config/IpfsConfig";
 import { Logger } from "./Logger";
@@ -16,7 +15,6 @@ type EnsNodeChangeEvent = {
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
   ensPublicResolver: ethers.Contract;
-  storage: Storage;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
   ensIndexerConfig: EnsIndexerConfig;
@@ -33,15 +31,15 @@ export class EnsIndexer {
 
   async startIndexing(fromBlock: number) {
 
-    if(fromBlock > this.deps.storage.lastBlockNumber) {
-      this.deps.storage.lastBlockNumber = fromBlock;
-      await this.deps.storage.save();
+    if(fromBlock > this.deps.ensStateManager.lastBlockNumber) {
+      this.deps.ensStateManager.lastBlockNumber = fromBlock;
+      await this.deps.ensStateManager.save();
     } 
-    this.deps.logger.log(`Indexing events from block ${this.deps.storage.lastBlockNumber}...`);
+    this.deps.logger.log(`Indexing events from block ${this.deps.ensStateManager.lastBlockNumber}...`);
 
     return new Promise(async () => {
       while(true) {
-        const nextBlockToIndex = this.deps.storage.lastBlockNumber;
+        const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
         
         let latestBlock = await this.deps.ethersProvider.getBlockNumber();
 
@@ -52,8 +50,8 @@ export class EnsIndexer {
 
         await this.indexBlockRange(nextBlockToIndex, latestBlock);
 
-        this.deps.storage.lastBlockNumber = latestBlock + 1;
-        await this.deps.storage.save(); 
+        this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
+        await this.deps.ensStateManager.save(); 
         
         await sleep(this.deps.ensIndexerConfig.requestInterval);
       }
@@ -68,6 +66,8 @@ export class EnsIndexer {
     let queryEnd;
 
     while(queryStart <= toBlock) {
+      const prevUniqueEventListLength = uniqueEventList.length;
+
       if(toBlock - queryStart > this.deps.ensIndexerConfig.maxBlockRangePerRequest) {
         queryEnd = queryStart + this.deps.ensIndexerConfig.maxBlockRangePerRequest;
       } else {
@@ -113,12 +113,14 @@ export class EnsIndexer {
       }
 
       queryStart = queryEnd + 1;
+
+      if(uniqueEventList.length > prevUniqueEventListLength) {
+        this.deps.logger.log(`Found ${uniqueEventList.length} events`);
+      }
     }
 
     for(const event of uniqueEventList) {
-      this.deps.logger.log("----------------------------------------------");
       await this.processEnsIpfs(event.ensNode, event.cid);
-      this.deps.logger.log("----------------------------------------------"); 
     }
   }
 

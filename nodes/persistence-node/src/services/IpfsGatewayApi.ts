@@ -14,7 +14,7 @@ import mustacheExpress from "mustache-express";
 import path from "path";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
-import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
+import { PersistenceStateManager } from "./PersistenceStateManager";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -23,6 +23,7 @@ interface IDependencies {
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
   logger: Logger;
+  persistenceStateManager: PersistenceStateManager;
 }
 
 export class IpfsGatewayApi {
@@ -106,11 +107,19 @@ export class IpfsGatewayApi {
     }));
 
     app.get('/pin/ls', handleError(async (req, res) => {
-      const pinned = await getPinnedWrapperCIDs(this.deps.storage, this.deps.ipfsNode, this.deps.logger)
+      let pinnedIpfsHashes: string[] = [];
+
+      for(const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
+        if(!info.isPinned) {
+          continue;
+        }
+
+        pinnedIpfsHashes.push(info.ipfsHash);
+      }
 
       res.render('ipfs-pinned-files', {
-        pinned,
-        count: pinned.length,
+        pinnedIpfsHashes,
+        count: pinnedIpfsHashes.length,
       })
     }));
 

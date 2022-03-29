@@ -24,7 +24,8 @@ export class DaemonModule {
                 httpConfig,
                 httpsConfig
             ),
-            this.deps.ensIndexer.startIndexing(fromBlockNumber)
+            this.deps.ensIndexer.startIndexing(fromBlockNumber),
+            this.deps.persistenceService.run()
         ]);
     }
 }
