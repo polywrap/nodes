@@ -33,7 +33,7 @@ export class CacheRunner {
     this.deps = deps;
   }
 
-  async startIndexing(fromBlock: number) {
+  async startIndexing(fromBlock: number): Promise<void> {
 
     if(fromBlock > this.deps.storage.lastBlockNumber) {
       this.deps.storage.lastBlockNumber = fromBlock;
@@ -122,7 +122,7 @@ export class CacheRunner {
     }
   } 
 
-  async processUnresponsive() {
+  async processUnresponsive(): Promise<void> {
     this.deps.logger.log("Processing unresponsive packages...");
     
     const ensNodes = Object.keys(this.deps.storage.unresponsiveEnsNodes);
@@ -201,7 +201,7 @@ export class CacheRunner {
     }
   }
 
-  async processEnsNodes(nodes: string[]) {
+  async processEnsNodes(nodes: string[]): Promise<void> {
     const ensNodes = [...new Set(nodes)];
 
     this.deps.logger.log(`Found ${ensNodes.length} eligible ENS domains`);
