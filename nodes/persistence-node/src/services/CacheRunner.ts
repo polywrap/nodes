@@ -41,25 +41,23 @@ export class CacheRunner {
     } 
     this.deps.logger.log(`Indexing events from block ${this.deps.storage.lastBlockNumber}...`);
 
-    return new Promise(async () => {
-      while(true) {
-        const nextBlockToIndex = this.deps.storage.lastBlockNumber;
-        
-        let latestBlock = await this.deps.ethersProvider.getBlockNumber();
+    while(true) {
+      const nextBlockToIndex = this.deps.storage.lastBlockNumber;
+      
+      let latestBlock = await this.deps.ethersProvider.getBlockNumber();
 
-        if(latestBlock < nextBlockToIndex) {
-          await sleep(this.deps.ensIndexerConfig.requestInterval);
-          continue;
-        }
-
-        await this.indexBlockRange(nextBlockToIndex, latestBlock);
-
-        this.deps.storage.lastBlockNumber = latestBlock + 1;
-        await this.deps.storage.save(); 
-        
+      if(latestBlock < nextBlockToIndex) {
         await sleep(this.deps.ensIndexerConfig.requestInterval);
+        continue;
       }
-    });
+
+      await this.indexBlockRange(nextBlockToIndex, latestBlock);
+
+      this.deps.storage.lastBlockNumber = latestBlock + 1;
+      await this.deps.storage.save(); 
+      
+      await sleep(this.deps.ensIndexerConfig.requestInterval);
+    }
   }
 
   private async indexBlockRange(fromBlock: number, toBlock: number): Promise<void> { 
