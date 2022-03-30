@@ -104,22 +104,22 @@ export class IpfsGatewayApi {
       })
     }));
 
-    app.get("/ipfs/:hash(*)", handleError(async (req, res) => {
-      const hash = (req.params as any).hash as string;
+    app.get("/ipfs/:path(*)", handleError(async (req, res) => {
+      const path = (req.params as any).path as string;
 
-      const contentDescription = await ipfs.files.stat(`/ipfs/${hash}`);
+      const contentDescription = await ipfs.files.stat(`/ipfs/${path}`);
 
       if (contentDescription.type === "file") {
-        const fileContent = await getIpfsFileContents(ipfs, hash);
+        const fileContent = await getIpfsFileContents(ipfs, path);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
         const files = await asyncIterableToArray(
-          ipfs.ls(hash)
+          ipfs.ls(path)
         );
 
         return res.render("ipfs-directory-contents", {
           files,
-          hash,
+          path,
           totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
           sizeInKb: function () {
             return formatFileSize((this as any).size)
