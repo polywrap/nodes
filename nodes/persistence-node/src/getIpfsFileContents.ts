@@ -16,9 +16,3 @@ export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string): Promis
 
   return buffer;
 };
-
-export const getIpfsFileContentsAsString = async (ipfs: IPFS.IPFS, hash: string): Promise<String> => {
-  const contents = await getIpfsFileContents(ipfs, hash);
-  
-  return contents.toString("utf-8");
-};

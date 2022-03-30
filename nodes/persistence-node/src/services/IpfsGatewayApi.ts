@@ -15,8 +15,7 @@ import path from "path";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
-import { getIpfsFileContents, getIpfsFileContentsAsString } from "../getIpfsFileContents";
-import { isTextFile } from "../utils/isTextFile";
+import { getIpfsFileContents } from "../getIpfsFileContents";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -111,13 +110,8 @@ export class IpfsGatewayApi {
       const contentDescription = await ipfs.files.stat(`/ipfs/${hash}`);
 
       if (contentDescription.type === "file") {
-        const fileContent = await getIpfsFileContentsAsString(ipfs, hash);
-        const fileName = hash.split("/").pop();
-
-        return res.render("ipfs-file-contents", {
-          name: fileName,
-          content: fileContent
-        });
+        const fileContent = await getIpfsFileContents(ipfs, hash);
+        res.end(fileContent);
       } else if (contentDescription.type === "directory") {
         const files = await asyncIterableToArray(
           ipfs.ls(hash)
@@ -129,17 +123,6 @@ export class IpfsGatewayApi {
           totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
           sizeInKb: function () {
             return formatFileSize((this as any).size)
-          },
-          linkUrl: function () {
-            const name = (this as any).name;
-            const path = (this as any).path;
-            const isDir = (this as any).type === "dir";
-
-            if (isDir || isTextFile(name)) {
-              return `/ipfs/${path}`;
-            } else {
-              return `/api/v0/cat?arg=${path}&filename=${name}}`;
-            }
           },
         });
       } else {
