@@ -105,37 +105,46 @@ export class IpfsGatewayApi {
       })
     }));
 
-    app.get('/ipfs/:hash/:file', handleError(async (req, res) => {
-      const hash = (req.params as any).hash as string;
-      const file = (req.params as any).file as string;
-
-      const fileContent = await getIpfsFileContentsAsString(ipfs, `${hash}/${file}`);
-
-      res.render('ipfs-file-contents', {
-        name: file,
-        content: fileContent
-      });
-    }));
-
-    app.get('/ipfs/:hash', handleError(async (req, res) => {
+    app.get("/ipfs/:hash(*)", handleError(async (req, res) => {
       const hash = (req.params as any).hash as string;
 
-      const files = await asyncIterableToArray(
-        ipfs.ls(hash)
-      );
+      const contentDescription = await ipfs.files.stat(`/ipfs/${hash}`);
 
-      res.render('ipfs-directory-contents', {
-        files,
-        hash,
-        sizeInKb: function () {
-          return formatFileSize((this as any).size)
-        },
-        isTextFile: function () {
-          return isTextFile(
-            (this as any).name
-          )
-        },
-      })
+      if (contentDescription.type === "file") {
+        const fileContent = await getIpfsFileContentsAsString(ipfs, hash);
+        const fileName = hash.split("/").pop();
+
+        return res.render("ipfs-file-contents", {
+          name: fileName,
+          content: fileContent
+        });
+      } else if (contentDescription.type === "directory") {
+        const files = await asyncIterableToArray(
+          ipfs.ls(hash)
+        );
+
+        return res.render("ipfs-directory-contents", {
+          files,
+          hash,
+          totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
+          sizeInKb: function () {
+            return formatFileSize((this as any).size)
+          },
+          linkUrl: function () {
+            const name = (this as any).name;
+            const path = (this as any).path;
+            const isDir = (this as any).type === "dir";
+
+            if (isDir || isTextFile(name)) {
+              return `/ipfs/${path}`;
+            } else {
+              return `/api/v0/cat?arg=${path}&filename=${name}}`;
+            }
+          },
+        });
+      } else {
+        throw Error("Unsupported file type");
+      }
     }));
 
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {

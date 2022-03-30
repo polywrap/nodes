@@ -10,6 +10,7 @@
 
 <body>
     <h2>Index of /ipfs/{{hash}}</h2>
+    <h3>Size: {{totalSizeInKb}}</h3>
 
     <table>
         <th>
@@ -23,16 +24,9 @@
             {{#files}}
             <tr>
                 <td>
-                    {{^isTextFile}}
-                        <a href="/api/v0/cat?arg={{path}}&filename={{name}}">
-                            {{name}}
-                        </a>
-                    {{/isTextFile}}
-                    {{#isTextFile}}
-                        <a href="/ipfs/{{path}}">
-                            {{name}}
-                        </a>
-                    {{/isTextFile}}
+                    <a href="{{linkUrl}}">
+                        {{name}}
+                    </a>
                 </td>
                 <td>
                     {{cid}}
