@@ -113,12 +113,22 @@ export class IpfsGatewayApi {
         const fileContent = await getIpfsFileContents(ipfs, path);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
-        const files = await asyncIterableToArray(
+        const items = await asyncIterableToArray(
           ipfs.ls(path)
         );
 
+        //The stat API doesn't show size for subdirectories
+        //So we need to go through the contents of the directory to find subdirectories
+        //and get their size
+        for(const item of items) {
+          if(item.type === "dir") {
+            const stat = await ipfs.files.stat(`/ipfs/${item.path}`, { size: true });
+            item.size = stat.cumulativeSize;
+          }
+        }
+
         return res.render("ipfs-directory-contents", {
-          files,
+          files: items,
           path,
           totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
           sizeInKb: function () {
