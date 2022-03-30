@@ -128,7 +128,7 @@ export class IpfsGatewayApi {
         }
 
         return res.render("ipfs-directory-contents", {
-          files: items,
+          items: items,
           path,
           totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
           sizeInKb: function () {
