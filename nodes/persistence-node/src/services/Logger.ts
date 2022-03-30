@@ -1,7 +1,7 @@
-import { LoggerConfig } from "../config/LoggerConfig";
+import { PersistenceNodeConfig } from "../config/PersistenceNodeConfig";
 
 interface IDependencies {
-  loggerConfig: LoggerConfig;
+  persistenceNodeConfig: PersistenceNodeConfig;
 }
 
 export class Logger {
@@ -14,7 +14,7 @@ export class Logger {
   async log(
     message: string
   ) {
-    if(this.deps.loggerConfig.shouldLog) {
+    if(this.deps.persistenceNodeConfig.loggerEnabled) {
       const timestamp = new Date().toLocaleString();
       console.log(`${timestamp}: ${message}`);
     }

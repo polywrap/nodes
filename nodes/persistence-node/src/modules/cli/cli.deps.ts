@@ -1,19 +1,12 @@
 import * as awilix from "awilix";
-import { ethers } from "ethers";
 import { NameAndRegistrationPair } from "awilix";
-import { EthersConfig } from "../../config/EthersConfig";
-import { IpfsConfig } from "../../config/IpfsConfig";
-import { EnsConfig } from "../../config/EnsConfig";
+import { PersistenceNodeConfig } from "../../config/PersistenceNodeConfig";
 import { Storage } from "../../types/Storage";
-import { CacheRunner } from "../../services/CacheRunner";
-import { LoggerConfig } from "../../config/LoggerConfig";
 import { Logger } from "../../services/Logger";
-import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
 
 export interface CliDependencyContainer {
-  loggerConfig: LoggerConfig
   logger: Logger
-  internalApiConfig: PersistenceNodeApiConfig
+  persistenceNodeConfig: PersistenceNodeConfig
 }
 
 export const buildCliDependencyContainer = async (
@@ -28,8 +21,7 @@ export const buildCliDependencyContainer = async (
   });
 
   container.register({
-    loggerConfig: awilix.asClass(LoggerConfig).singleton(),
-    internalApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
+    persistenceNodeConfig: awilix.asClass(PersistenceNodeConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
     ...extensionsAndOverrides,
   });

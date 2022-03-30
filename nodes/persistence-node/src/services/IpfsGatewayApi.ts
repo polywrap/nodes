@@ -1,34 +1,21 @@
-import { ethers } from "ethers";
-import * as IPFS from 'ipfs-core';
 import express, { NextFunction, Request, Response } from "express";
 import multer, { memoryStorage } from "multer";
-import { IpfsConfig } from "../config/IpfsConfig";
-import { MulterFile } from "../MulterFile";
-import { Storage } from "../types/Storage";
+import mustacheExpress from "mustache-express";
+import path from "path";
 import { HttpConfig } from "../api-server/HttpConfig";
 import { HttpsConfig } from "../api-server/HttpsConfig";
 import { runServer } from "../api-server/runServer";
+import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
-import { Logger } from "./Logger";
-import mustacheExpress from "mustache-express";
-import path from "path";
+import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
+import { MulterFile } from "../MulterFile";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
-import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
-
-interface IDependencies {
-  ethersProvider: ethers.providers.Provider;
-  ensPublicResolver: ethers.Contract;
-  storage: Storage;
-  ipfsNode: IPFS.IPFS;
-  ipfsConfig: IpfsConfig;
-  logger: Logger;
-}
 
 export class IpfsGatewayApi {
-  deps: IDependencies;
+  deps: MainDependencyContainer;
 
-  constructor(deps: IDependencies) {
+  constructor(deps: MainDependencyContainer) {
     this.deps = deps;
   }
 

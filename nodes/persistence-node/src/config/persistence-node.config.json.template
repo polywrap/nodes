@@ -1,0 +1,14 @@
+{
+    "adminRpcApiPort": 6051,
+    "timeouts": {
+        "objectGetTimeout": 15000,
+        "pinTimeout": 30000,
+        "unpinTimeout": 30000,
+        "gatewayTimeout": 15000
+    },
+    "ipfs": {
+        "provider": "",
+        "gateway": "https://ipfs.io/ipfs"
+    },
+    "loggerEnabled": false
+}

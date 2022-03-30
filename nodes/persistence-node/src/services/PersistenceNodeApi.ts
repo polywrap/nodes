@@ -25,7 +25,7 @@ export class PersistenceNodeApi {
     }));
 
     const server = http.createServer({}, app);
-    const port = this.deps.persistenceNodeApiConfig.port;
+    const port = this.deps.persistenceNodeConfig.adminRpcApiPort;
 
     server.listen(port, function () {
       console.log(`Internal HTTP server started at http://localhost:${port}`);

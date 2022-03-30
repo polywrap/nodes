@@ -23,4 +23,14 @@ export function initializeCliCommands() {
 
       process.exit(0);
     });
+
+  program
+    .command("setup")
+    .description("Delete the storage file")
+    .action(async (options) => {
+
+      // TODO: implement actual logic here
+
+      process.exit(0);
+    });
 }
