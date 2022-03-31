@@ -8,20 +8,28 @@ import { IpfsGatewayApi } from "../../services/IpfsGatewayApi";
 import { Logger } from "../../services/Logger";
 import { PersistenceNodeApi } from "../../services/PersistenceNodeApi";
 import { IPFS } from "ipfs-core";
-import { PersistenceNodeConfig } from "../../config/PersistenceNodeConfig";
-import { EnsIndexerConfig } from "../../config/EnsIndexerConfig";
+import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
+import { EnsConfig } from "../../config/EnsConfig";
+import { LoggerConfig } from "../../config/LoggerConfig";
+import { IpfsConfig } from "../../config/IpfsConfig";
+import { EthersConfig } from "../../config/EthersConfig";
 
 export interface MainDependencyContainer {
-  persistenceNodeConfig: PersistenceNodeConfig
-  ensIndexerConfig: EnsIndexerConfig
+  ipfsConfig: IpfsConfig
+  ethersConfig: EthersConfig
+  ensConfig: EnsConfig
+  loggerConfig: LoggerConfig
+  persistenceNodeApiConfig: PersistenceNodeApiConfig
+
   logger: Logger
   cacheRunner: CacheRunner
-  ipfsGatewayApi: IpfsGatewayApi
-  persistenceNodeApi: PersistenceNodeApi
   storage: Storage
   ethersProvider: providers.BaseProvider,
   ensPublicResolver: Contract,
   ipfsNode: IPFS
+
+  ipfsGatewayApi: IpfsGatewayApi
+  persistenceNodeApi: PersistenceNodeApi
 }
 
 export const buildMainDependencyContainer = async (
@@ -36,19 +44,22 @@ export const buildMainDependencyContainer = async (
   });
 
   container.register({
-    persistenceNodeConfig: awilix.asClass(PersistenceNodeConfig).singleton(),
-    ensIndexerConfig: awilix.asClass(EnsIndexerConfig).singleton(),
+    ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
+    ethersConfig: awilix.asClass(EthersConfig).singleton(),
+    ensConfig: awilix.asClass(EnsConfig).singleton(),
+    loggerConfig: awilix.asClass(LoggerConfig).singleton(),
+    persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
     ethersProvider: awilix
-      .asFunction(({ ensIndexerConfig }) => {
+      .asFunction(({ ethersConfig }) => {
         return ethers.providers.getDefaultProvider(
-          ensIndexerConfig.providerNetwork
+          ethersConfig.providerNetwork
         );
       })
       .singleton(),
     ensPublicResolver: awilix
-      .asFunction(({ ensIndexerConfig, ethersProvider }) => {
-        const contract = new ethers.Contract(ensIndexerConfig.ResolverAddr, ensIndexerConfig.ResolverAbi, ethersProvider);
+      .asFunction(({ ensConfig, ethersProvider }) => {
+        const contract = new ethers.Contract(ensConfig.ResolverAddr, ensConfig.ResolverAbi, ethersProvider);
 
         return contract;
       })

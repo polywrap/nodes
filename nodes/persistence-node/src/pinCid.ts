@@ -1,12 +1,12 @@
 import * as IPFS from 'ipfs-core';
-import { PersistenceNodeConfig } from './config/PersistenceNodeConfig';
+import { IpfsConfig } from './config/IpfsConfig';
 
-export const pinCid = async (ipfs: IPFS.IPFS, config: PersistenceNodeConfig, cid: string): Promise<boolean> => {
+export const pinCid = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, cid: string): Promise<boolean> => {
   console.log(`Pinning ${cid}...`);
  
   try {
     await ipfs.pin.add(cid, {
-      timeout: config.pinTimeout,
+      timeout: ipfsConfig.pinTimeout,
     });
 
     console.log(`Pinned ${cid}`);

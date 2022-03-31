@@ -8,14 +8,15 @@ import { pinCid } from "../pinCid";
 import { unpinCid } from "../unpinCid";
 import { toShortString } from "../toShortString";
 import { Logger } from "./Logger";
-import { PersistenceNodeConfig } from "../config/PersistenceNodeConfig";
+import { IpfsConfig } from "../config/IpfsConfig";
 
 interface IDependencies {
+  ipfsConfig: IpfsConfig;
+
   ethersProvider: ethers.providers.Provider;
   ensPublicResolver: ethers.Contract;
   storage: Storage;
   ipfsNode: IPFS.IPFS;
-  persistenceNodeConfig: PersistenceNodeConfig;
   logger: Logger;
 }
 
@@ -89,7 +90,7 @@ export class CacheRunner {
         this.deps.logger.log("ENS no longer points to an IPFS hash");
         this.deps.logger.log("Unpinning...");
 
-        const success = await unpinCid(this.deps.ipfsNode, this.deps.persistenceNodeConfig, savedIpfsHash);
+        const success = await unpinCid(this.deps.ipfsNode, this.deps.ipfsConfig, savedIpfsHash);
         
         if(success) {
 
@@ -118,7 +119,7 @@ export class CacheRunner {
     if(!ipfsEnsCache[ipfsHash]) {
       this.deps.logger.log(`Checking if ${ipfsHash} is a wrapper`);
 
-      const resp = await isWrapper(this.deps.ipfsNode, this.deps.persistenceNodeConfig, this.deps.logger, ipfsHash);
+      const resp = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
 
       if(resp === "no") {
         this.deps.logger.log("IPFS hash is not a valid wrapper");
@@ -129,7 +130,7 @@ export class CacheRunner {
         return false;
       }
 
-      const success = await pinCid(this.deps.ipfsNode, this.deps.persistenceNodeConfig, ipfsHash);  
+      const success = await pinCid(this.deps.ipfsNode, this.deps.ipfsConfig, ipfsHash);  
 
       if(!success) {
         this.deps.logger.log("Pinning failed");

@@ -8,7 +8,7 @@ export class DaemonModule {
         private deps: MainDependencyContainer,
         loggerEnabled: boolean
     ) {
-        this.deps.persistenceNodeConfig.loggerEnabled = loggerEnabled;
+        this.deps.loggerConfig.loggerEnabled = loggerEnabled;
      }
 
     static async build(shouldLog: boolean): Promise<DaemonModule> {

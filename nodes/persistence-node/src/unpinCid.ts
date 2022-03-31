@@ -1,10 +1,10 @@
 import * as IPFS from 'ipfs-core';
-import { PersistenceNodeConfig } from './config/PersistenceNodeConfig';
+import { IpfsConfig } from './config/IpfsConfig';
 
-export const unpinCid = async (ipfs: IPFS.IPFS, config: PersistenceNodeConfig, cid: string): Promise<boolean> => {
+export const unpinCid = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, cid: string): Promise<boolean> => {
   try {
     await ipfs.pin.rm(cid, {
-      timeout: config.unpinTimeout,
+      timeout: ipfsConfig.unpinTimeout,
     });
 
     console.log(`Unpinned ${cid}`);

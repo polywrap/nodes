@@ -1,20 +1,20 @@
 import axios from "axios";
-import { PersistenceNodeConfig } from "./config/PersistenceNodeConfig";
+import { IpfsConfig } from "./config/IpfsConfig";
 
-export const nudgeIpfsHash = async (config: PersistenceNodeConfig, cid: string): Promise<boolean> => {
+export const nudgeIpfsHash = async (ipfsConfig: IpfsConfig, cid: string): Promise<boolean> => {
   console.log(`Nudging IPFS hash ${cid} with gateway...`);
   
   return await axios({
     method: 'get',
-    url: `${config.gatewayURI}/${cid}`,
-    timeout: config.gatewayTimeout,
+    url: `${ipfsConfig.gatewayURI}/${cid}`,
+    timeout: ipfsConfig.gatewayTimeout,
   })
   .then(() => {
-    console.log(`Fetched from ${config.gatewayURI}`);
+    console.log(`Fetched from ${ipfsConfig.gatewayURI}`);
 
     return true;
   }, () => {
-    console.log(`Could not fetch from ${config.gatewayURI}`);
+    console.log(`Could not fetch from ${ipfsConfig.gatewayURI}`);
 
     return false;
   });

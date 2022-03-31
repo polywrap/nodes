@@ -7,7 +7,7 @@ export class CliModule {
         private deps: CliDependencyContainer,
         loggerEnabled: boolean
     ) {
-        this.deps.persistenceNodeConfig.loggerEnabled = loggerEnabled;
+        this.deps.loggerConfig.loggerEnabled = loggerEnabled;
     }
 
     static async build(shouldLog: boolean): Promise<CliModule> {
@@ -32,7 +32,7 @@ export class CliModule {
         try {
             const res = await axios({
                 method: 'GET',
-                url: `http://localhost:${this.deps.persistenceNodeConfig.adminRpcApiPort}/${url}`,
+                url: `http://localhost:${this.deps.persistenceNodeApiConfig.adminRpcApiPort}/${url}`,
             });
 
             return res.data;

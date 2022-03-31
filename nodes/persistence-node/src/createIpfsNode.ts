@@ -1,13 +1,13 @@
 import { create as createInternalpfsNode, IPFS } from 'ipfs-core';
 import { create as createIpfsHttpClient } from 'ipfs-http-client'
-import { PersistenceNodeConfig } from './config/PersistenceNodeConfig';
+import { IpfsConfig } from './config/IpfsConfig';
 
 interface IDeps {
-  persistenceNodeConfig: PersistenceNodeConfig
+  ipfsConfig: IpfsConfig
 }
 
 export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
-  const externalIpfsProvider = deps.persistenceNodeConfig.externalIpfsProvider
+  const externalIpfsProvider = deps.ipfsConfig.externalIpfsProvider
 
   let ipfsNode: IPFS;
 

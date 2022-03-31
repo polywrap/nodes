@@ -7,7 +7,7 @@ storage.json
 
 # Environment
 .env
-src/config/*.config.json
+src/config/config.json
 
 # Logging
 *.log
