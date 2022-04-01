@@ -9,7 +9,8 @@
 </head>
 
 <body>
-    <h2>Index of /ipfs/{{hash}}</h2>
+    <h2>Index of /ipfs/{{path}}</h2>
+    <h3>Size: {{totalSizeInKb}}</h3>
 
     <table>
         <th>
@@ -20,10 +21,10 @@
             </tr>
         </th>
         <tbody>
-            {{#files}}
+            {{#items}}
             <tr>
                 <td>
-                    <a href="/api/v0/cat?arg={{path}}&filename={{name}}">
+                    <a href="/ipfs/{{path}}">
                         {{name}}
                     </a>
                 </td>
@@ -34,7 +35,7 @@
                     {{sizeInKb}}
                 </td>
             </tr>
-            {{/files}}
+            {{/items}}
         </tbody>
     </table>
 

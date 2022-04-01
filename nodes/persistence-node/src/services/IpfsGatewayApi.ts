@@ -15,6 +15,7 @@ import path from "path";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { PersistenceStateManager } from "./PersistenceStateManager";
+import { getIpfsFileContents } from "../getIpfsFileContents";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -80,20 +81,9 @@ export class IpfsGatewayApi {
         return;
       }
 
-      const stream = ipfs.cat(hash);
+      const fileContents = await getIpfsFileContents(ipfs, hash);
 
-      let data: Uint8Array = new Uint8Array();
-
-      for await (const chunk of stream) {
-        const temp = new Uint8Array(data.length + chunk.length);
-        temp.set(data);
-        temp.set(chunk, data.length);
-        data = temp;
-      }
-
-      const buffer = Buffer.from(data);
-
-      res.send(buffer);
+      res.send(fileContents);
     }));
 
     app.get('/api/v0/resolve', handleError(async (req, res) => {
@@ -123,20 +113,40 @@ export class IpfsGatewayApi {
       })
     }));
 
-    app.get('/ipfs/:hash', handleError(async (req, res) => {
-      const hash = (req.params as any).hash as string;
+    app.get("/ipfs/:path(*)", handleError(async (req, res) => {
+      const ipfsPath = (req.params as any).path as string;
 
-      const files = await asyncIterableToArray(
-        ipfs.ls(hash)
-      );
+      const contentDescription = await ipfs.files.stat(`/ipfs/${ipfsPath}`);
 
-      res.render('ipfs-directory-contents', {
-        files,
-        hash,
-        sizeInKb: function () {
-          return formatFileSize((this as any).size)
+      if (contentDescription.type === "file") {
+        const fileContent = await getIpfsFileContents(ipfs, ipfsPath);
+        res.end(fileContent);
+      } else if (contentDescription.type === "directory") {
+        const items = await asyncIterableToArray(
+          ipfs.ls(ipfsPath)
+        );
+
+        //The stat API doesn't show size for subdirectories
+        //So we need to go through the contents of the directory to find subdirectories
+        //and get their size
+        for(const item of items) {
+          if(item.type === "dir") {
+            const stat = await ipfs.files.stat(`/ipfs/${item.path}`, { size: true });
+            item.size = stat.cumulativeSize;
+          }
         }
-      })
+
+        return res.render("ipfs-directory-contents", {
+          items: items,
+          path: ipfsPath,
+          totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
+          sizeInKb: function () {
+            return formatFileSize((this as any).size)
+          },
+        });
+      } else {
+        throw Error("Unsupported file type");
+      }
     }));
 
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {
