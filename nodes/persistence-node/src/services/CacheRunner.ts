@@ -1,5 +1,4 @@
 import { ethers } from "ethers";
-import { getPastContenthashChanges } from "../getPastContenthashChanges";
 import { getIpfsHashFromContenthash } from "../getIpfsHashFromContenthash";
 import { Storage } from "../types/Storage";
 import { isWrapper } from "../isWrapper";
@@ -9,6 +8,13 @@ import { unpinCid } from "../unpinCid";
 import { toShortString } from "../toShortString";
 import { IpfsConfig } from "../config/IpfsConfig";
 import { Logger } from "./Logger";
+import { sleep } from "../sleep";
+import { EnsIndexerConfig } from "../config/EnsIndexerConfig";
+
+type EnsNodeChangeEvent = {
+  ensNode: string;
+  cid?: string;
+};
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -16,6 +22,7 @@ interface IDependencies {
   storage: Storage;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
+  ensIndexerConfig: EnsIndexerConfig;
   logger: Logger;
 }
 
@@ -26,50 +33,96 @@ export class CacheRunner {
     this.deps = deps;
   }
 
-  //TODO: runned missed events while updating
-  async runForPastBlocks(blockCnt: number) {
-    const latestBlock = await this.deps.ethersProvider.getBlockNumber();
+  async startIndexing(fromBlock: number): Promise<void> {
 
-    if(blockCnt !== 0) {
-      this.deps.logger.log("Processing past blocks...");
+    if(fromBlock > this.deps.storage.lastBlockNumber) {
+      this.deps.storage.lastBlockNumber = fromBlock;
+      await this.deps.storage.save();
+    } 
+    this.deps.logger.log(`Indexing events from block ${this.deps.storage.lastBlockNumber}...`);
 
-      await this.processPastBlocks(latestBlock - blockCnt);
+    while(true) {
+      const nextBlockToIndex = this.deps.storage.lastBlockNumber;
+      
+      let latestBlock = await this.deps.ethersProvider.getBlockNumber();
+
+      if(latestBlock < nextBlockToIndex) {
+        await sleep(this.deps.ensIndexerConfig.requestInterval);
+        continue;
+      }
+
+      await this.indexBlockRange(nextBlockToIndex, latestBlock);
+
+      this.deps.storage.lastBlockNumber = latestBlock + 1;
+      await this.deps.storage.save(); 
+      
+      await sleep(this.deps.ensIndexerConfig.requestInterval);
     }
   }
 
-  async runForMissedBlocks() {
-    this.deps.logger.log("Processing missed blocks...");
-  
-    await this.processPastBlocks(this.deps.storage.lastBlockNumber);
-  }
+  private async indexBlockRange(fromBlock: number, toBlock: number): Promise<void> { 
+    const uniqueEventList: EnsNodeChangeEvent[] = []
+    const ensNodeEventMap: Map<string, EnsNodeChangeEvent> = new Map();
 
-  async listenForEvents() {
-    this.deps.logger.log("Listening for events...");
-  
-    this.deps.ensPublicResolver.on("ContenthashChanged", async (ensNode: string, contenthash: string, event: any) => {
+    let queryStart = fromBlock;
+    let queryEnd;
+
+    while(queryStart <= toBlock) {
+      if(toBlock - queryStart > this.deps.ensIndexerConfig.maxBlockRangePerRequest) {
+        queryEnd = queryStart + this.deps.ensIndexerConfig.maxBlockRangePerRequest;
+      } else {
+        queryEnd = toBlock;
+      }
+
+      let logs: ethers.Event[];
+
+      try {
+        logs = await this.deps.ensPublicResolver.queryFilter(
+          this.deps.ensPublicResolver.filters.ContenthashChanged(), 
+          queryStart, 
+          queryEnd
+        );
+      } catch {
+        this.deps.logger.log(`Error querying logs for block range ${queryStart}-${queryEnd}`);
+        await sleep(1000);
+        continue;
+      }
+
+      for(const log of logs) {
+        const ensNode = log.args?.node;
+        const contenthash = log.args?.hash;
+
+        if(!ensNode || !contenthash) {
+          continue;
+        }
+
+        const cid =  getIpfsHashFromContenthash(contenthash);
+
+        const existingEvent = ensNodeEventMap.get(ensNode);
+        if(existingEvent) {
+          existingEvent.cid = cid;
+        } else {
+          const event = {
+            cid,
+            ensNode
+          };
+
+          uniqueEventList.push(event);
+          ensNodeEventMap.set(ensNode, event);
+        }
+      }
+
+      queryStart = queryEnd + 1;
+    }
+
+    for(const event of uniqueEventList) {
       this.deps.logger.log("----------------------------------------------");
-      await this.processEnsIpfs(ensNode, getIpfsHashFromContenthash(contenthash));
+      await this.processEnsIpfs(event.ensNode, event.cid);
+      this.deps.logger.log("----------------------------------------------"); 
+    }
+  } 
 
-      this.deps.storage.lastBlockNumber = event.blockNumber - 1;
-      await this.deps.storage.save();
-      this.deps.logger.log("----------------------------------------------");
-    });
-  }
-
-  async processPastBlocks(blockNumber: number) {    
-    const resp = await getPastContenthashChanges(
-      this.deps.ethersProvider, 
-      this.deps.ensPublicResolver, 
-      blockNumber
-    );
-
-    await this.processEnsNodes(resp.results.map(x => x.ensNode));
-
-    this.deps.storage.lastBlockNumber = resp.toBlock;
-    await this.deps.storage.save();
-  }
-
-  async processUnresponsive() {
+  async processUnresponsive(): Promise<void> {
     this.deps.logger.log("Processing unresponsive packages...");
     
     const ensNodes = Object.keys(this.deps.storage.unresponsiveEnsNodes);
@@ -148,7 +201,7 @@ export class CacheRunner {
     }
   }
 
-  async processEnsNodes(nodes: string[]) {
+  async processEnsNodes(nodes: string[]): Promise<void> {
     const ensNodes = [...new Set(nodes)];
 
     this.deps.logger.log(`Found ${ensNodes.length} eligible ENS domains`);
