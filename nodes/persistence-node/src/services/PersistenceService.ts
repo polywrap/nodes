@@ -2,11 +2,12 @@ import { IpfsConfig } from "../config/IpfsConfig";
 import * as IPFS from 'ipfs-core';
 import { Logger } from "./Logger";
 import { isWrapper } from "../isWrapper";
-import { TrackedIpfsHashInfo, UnresponsiveInfo } from "../types/TrackedIpfsHashInfo";
+import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
 import { addSeconds } from "../utils/addSeconds";
 import { EnsStateManager } from "./EnsStateManager";
 import { PersistenceStateManager } from "./PersistenceStateManager";
 import { sleep } from "../sleep";
+import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
@@ -56,7 +57,6 @@ export class PersistenceService {
 
     for(const ipfsHash of state) {
       if(!this.deps.persistenceStateManager.containsIpfsHash(ipfsHash)) {
-        console.log("track", ipfsHash);
         toTrack.push(ipfsHash);
       }
     }
@@ -115,7 +115,7 @@ export class PersistenceService {
     const result = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
 
     if(result === "yes") {
-      console.log("yes");
+      console.log("is a wrapper");
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         isWrapper: true,
@@ -124,14 +124,14 @@ export class PersistenceService {
 
       await this.pinCID(ipfsHash, retryCount);  
     } else if (result === "no") {
-      console.log("no");
+      console.log("not a wrapper");
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         isWrapper: false,
         isPinned: false,
       });
     } else if (result === "timeout") {
-      console.log("timeout");
+      console.log("timed out check if wrapper");
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         isPinned: false,
@@ -197,7 +197,7 @@ export class PersistenceService {
   }
 }
 
-const scheduleRetry = (retryCount: number): UnresponsiveInfo => {
+const scheduleRetry = (retryCount: number): UnresponsiveIpfsHashInfo => {
   return {
     scheduledRetryDate: addSeconds(new Date(), 60*Math.pow(2, retryCount)),
     retryCount: retryCount + 1,
