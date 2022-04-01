@@ -37,25 +37,23 @@ export class EnsIndexer {
     } 
     this.deps.logger.log(`Indexing events from block ${this.deps.ensStateManager.lastBlockNumber}...`);
 
-    return new Promise(async () => {
-      while(true) {
-        const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
-        
-        let latestBlock = await this.deps.ethersProvider.getBlockNumber();
+    while(true) {
+      const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
+      
+      let latestBlock = await this.deps.ethersProvider.getBlockNumber();
 
-        if(latestBlock < nextBlockToIndex) {
-          await sleep(this.deps.ensIndexerConfig.requestInterval);
-          continue;
-        }
-
-        await this.indexBlockRange(nextBlockToIndex, latestBlock);
-
-        this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
-        await this.deps.ensStateManager.save(); 
-        
+      if(latestBlock < nextBlockToIndex) {
         await sleep(this.deps.ensIndexerConfig.requestInterval);
+        continue;
       }
-    });
+
+      await this.indexBlockRange(nextBlockToIndex, latestBlock);
+
+      this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
+      await this.deps.ensStateManager.save(); 
+      
+      await sleep(this.deps.ensIndexerConfig.requestInterval);
+    }
   }
 
   private async indexBlockRange(fromBlock: number, toBlock: number): Promise<void> { 
