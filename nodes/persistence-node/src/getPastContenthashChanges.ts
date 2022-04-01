@@ -1,7 +1,7 @@
-import { ethers } from "ethers";
 import { Base58 } from "@ethersproject/basex";
+import { EnsResolver } from "./services/EnsResolver";
 
-export const getPastContenthashChanges = async (ethersProvider: ethers.providers.Provider, resolverContract: ethers.Contract, blockNumber: number): Promise<{
+export const getPastContenthashChanges = async (ensResolver: EnsResolver, blockNumber: number): Promise<{
   fromBlock: number,
   toBlock: number,
   results: {
@@ -9,12 +9,12 @@ export const getPastContenthashChanges = async (ethersProvider: ethers.providers
   ipfsHash: string | undefined,
 }[]
 }> => {
-  const latestBlock = await ethersProvider.getBlockNumber();
+  const latestBlock = await ensResolver.ethersProvider.getBlockNumber();
 
   const fromBlock = blockNumber;
   const toBlock = latestBlock;
 
-  const events = await resolverContract.queryFilter(resolverContract.filters.ContenthashChanged(), fromBlock, toBlock);
+  const events = await ensResolver.contract.queryFilter(ensResolver.contract.filters.ContenthashChanged(), fromBlock, toBlock);
 
   const results = [];
 

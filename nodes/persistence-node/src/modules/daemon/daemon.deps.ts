@@ -1,5 +1,4 @@
 import * as awilix from "awilix";
-import { Contract, ethers, providers } from "ethers";
 import { NameAndRegistrationPair } from "awilix";
 import { Storage } from "../../types/Storage";
 import { CacheRunner } from "../../services/CacheRunner";
@@ -12,11 +11,10 @@ import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig"
 import { EnsConfig } from "../../config/EnsConfig";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { IpfsConfig } from "../../config/IpfsConfig";
-import { EthersConfig } from "../../config/EthersConfig";
+import { EnsResolver } from "../../services/EnsResolver";
 
 export interface MainDependencyContainer {
   ipfsConfig: IpfsConfig
-  ethersConfig: EthersConfig
   ensConfig: EnsConfig
   loggerConfig: LoggerConfig
   persistenceNodeApiConfig: PersistenceNodeApiConfig
@@ -24,8 +22,7 @@ export interface MainDependencyContainer {
   logger: Logger
   cacheRunner: CacheRunner
   storage: Storage
-  ethersProvider: providers.BaseProvider,
-  ensPublicResolver: Contract,
+  ensPublicResolvers: EnsResolver[],
   ipfsNode: IPFS
 
   ipfsGatewayApi: IpfsGatewayApi
@@ -45,23 +42,15 @@ export const buildMainDependencyContainer = async (
 
   container.register({
     ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
-    ethersConfig: awilix.asClass(EthersConfig).singleton(),
     ensConfig: awilix.asClass(EnsConfig).singleton(),
     loggerConfig: awilix.asClass(LoggerConfig).singleton(),
     persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
-    ethersProvider: awilix
-      .asFunction(({ ethersConfig }) => {
-        return ethers.providers.getDefaultProvider(
-          ethersConfig.providerNetwork
+    ensPublicResolvers: awilix
+      .asFunction(({ ensConfig }: {ensConfig: EnsConfig}) => {
+        return ensConfig.networks.map(networkConfig => 
+          new EnsResolver(networkConfig)
         );
-      })
-      .singleton(),
-    ensPublicResolver: awilix
-      .asFunction(({ ensConfig, ethersProvider }) => {
-        const contract = new ethers.Contract(ensConfig.ResolverAddr, ensConfig.ResolverAbi, ethersProvider);
-
-        return contract;
       })
       .singleton(),
     storage: awilix
