@@ -12,6 +12,7 @@ import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
   ensStateManager: EnsStateManager;
+  
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
   logger: Logger;

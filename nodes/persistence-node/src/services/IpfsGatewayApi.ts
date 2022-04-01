@@ -5,16 +5,13 @@ import path from "path";
 import { HttpConfig } from "../api-server/HttpConfig";
 import { HttpsConfig } from "../api-server/HttpsConfig";
 import { runServer } from "../api-server/runServer";
-import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
 import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 import { MulterFile } from "../MulterFile";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
-import { PersistenceStateManager } from "./PersistenceStateManager";
 import { getIpfsFileContents } from "../getIpfsFileContents";
 
-  persistenceStateManager: PersistenceStateManager;
 export class IpfsGatewayApi {
   deps: MainDependencyContainer;
 

@@ -1,7 +1,7 @@
 import * as awilix from "awilix";
 import { NameAndRegistrationPair } from "awilix";
 import { Storage } from "../../types/Storage";
-import { EnsIndexer } from "../../services/EnsIndexer";
+import { EnsIndexingService } from "../../services/EnsIndexingService";
 import { createIpfsNode } from "../../createIpfsNode";
 import { IpfsGatewayApi } from "../../services/IpfsGatewayApi";
 import { Logger } from "../../services/Logger";
@@ -15,23 +15,18 @@ import { EnsIndexerConfig } from "../../config/EnsIndexerConfig";
 import { EnsStateManager } from "../../services/EnsStateManager";
 import { PersistenceService } from "../../services/PersistenceService";
 import { PersistenceStateManager } from "../../services/PersistenceStateManager";
-import { EnsResolver } from "../../services/EnsResolver";
+import { Contract } from "ethers";
 
 export interface MainDependencyContainer {
   ipfsConfig: IpfsConfig;
-  ethersConfig: EthersConfig;
   ensConfig: EnsConfig;
   loggerConfig: LoggerConfig;
   persistenceNodeApiConfig: PersistenceNodeApiConfig;
 
   ensIndexerConfig: EnsIndexerConfig;
   logger: Logger;
-  ensIndexer: EnsIndexer;
-  ipfsGatewayApi: IpfsGatewayApi;
-  persistenceNodeApi: PersistenceNodeApi;
+  ensIndexingService: EnsIndexingService;
   storage: Storage;
-  ensPublicResolvers: EnsResolver[],
-  ethersProvider: providers.BaseProvider;
   ensPublicResolver: Contract;
   ipfsNode: IPFS;
 
@@ -66,29 +61,22 @@ export const buildMainDependencyContainer = async (
     persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
     ensIndexerConfig: awilix.asClass(EnsIndexerConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
-    ensPublicResolvers: awilix
-      .asFunction(({ ensConfig }: {ensConfig: EnsConfig}) => {
-        return ensConfig.networks.map(networkConfig => 
-          new EnsResolver(networkConfig)
     ensStateManager: awilix
-    .asFunction(({ }) => {
-      return ensStateManager;
-    })
-    .singleton(),
+      .asFunction(({ }) => {
+        return ensStateManager;
+      })
+      .singleton(),
     persistenceStateManager: awilix
     .asFunction(({ }) => {
       return persistenceStateManager;
     })
     .singleton(),
-        );
-      })
-      .singleton(),
     storage: awilix
       .asFunction(({ }) => {
         return storage;
       })
       .singleton(),
-    ensIndexer: awilix.asClass(EnsIndexer).singleton(),
+    ensIndexingService: awilix.asClass(EnsIndexingService).singleton(),
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),

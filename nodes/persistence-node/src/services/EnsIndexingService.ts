@@ -6,6 +6,7 @@ import { Logger } from "./Logger";
 import { sleep } from "../sleep";
 import { EnsIndexerConfig } from "../config/EnsIndexerConfig";
 import { EnsStateManager } from "./EnsStateManager";
+import { EthereumNetwork } from "./EthereumNetwork";
 
 type EnsNodeChangeEvent = {
   ensNode: string;
@@ -13,7 +14,6 @@ type EnsNodeChangeEvent = {
 };
 
 interface IDependencies {
-  ethersProvider: ethers.providers.Provider;
   ensPublicResolver: ethers.Contract;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
@@ -22,14 +22,14 @@ interface IDependencies {
   logger: Logger;
 }
 
-export class EnsIndexer {
+export class EnsIndexingService {
   deps: IDependencies;
 
   constructor(deps: IDependencies) {
     this.deps = deps;
   }
 
-  async startIndexing(fromBlock: number) {
+  async startIndexing(fromBlock: number, network: EthereumNetwork) {
 
     if(fromBlock > this.deps.ensStateManager.lastBlockNumber) {
       this.deps.ensStateManager.lastBlockNumber = fromBlock;
@@ -40,14 +40,14 @@ export class EnsIndexer {
     while(true) {
       const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
       
-      let latestBlock = await this.deps.ethersProvider.getBlockNumber();
+      let latestBlock = await network.ethersProvider.getBlockNumber();
 
       if(latestBlock < nextBlockToIndex) {
         await sleep(this.deps.ensIndexerConfig.requestInterval);
         continue;
       }
 
-      await this.indexBlockRange(nextBlockToIndex, latestBlock);
+      await this.indexBlockRange(nextBlockToIndex, latestBlock, network);
 
       this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
       await this.deps.ensStateManager.save(); 
@@ -56,7 +56,7 @@ export class EnsIndexer {
     }
   }
 
-  private async indexBlockRange(fromBlock: number, toBlock: number): Promise<void> { 
+  private async indexBlockRange(fromBlock: number, toBlock: number, network: EthereumNetwork): Promise<void> { 
     const uniqueEventList: EnsNodeChangeEvent[] = []
     const ensNodeEventMap: Map<string, EnsNodeChangeEvent> = new Map();
 
@@ -75,8 +75,9 @@ export class EnsIndexer {
       let logs: ethers.Event[];
 
       try {
-        logs = await this.deps.ensPublicResolver.queryFilter(
-          this.deps.ensPublicResolver.filters.ContenthashChanged(), 
+        console.log("get");
+        logs = await network.ensPublicResolver.queryFilter(
+          network.ensPublicResolver.filters.ContenthashChanged(), 
           queryStart, 
           queryEnd
         );

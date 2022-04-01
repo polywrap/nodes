@@ -1,5 +1,6 @@
 import { HttpConfig } from "../../api-server/HttpConfig";
 import { HttpsConfig } from "../../api-server/HttpsConfig";
+import { EthereumNetwork } from "../../services/EthereumNetwork";
 import { buildMainDependencyContainer, MainDependencyContainer } from "./daemon.deps";
 
 export class DaemonModule {
@@ -18,13 +19,17 @@ export class DaemonModule {
     }
 
     async run(fromBlockNumber: number, httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
+        const indexingNetworks = this.deps.ensConfig.networks.map(networkConfig => new EthereumNetwork(networkConfig));
+
+        const indexingTask = this.deps.ensIndexingService.startIndexing(fromBlockNumber, indexingNetworks[2]);
+        
         Promise.all([
             this.deps.persistenceNodeApi.run(),
             this.deps.ipfsGatewayApi.run(
                 httpConfig,
                 httpsConfig
             ),
-            this.deps.ensIndexer.startIndexing(fromBlockNumber),
+            indexingTask,
             this.deps.persistenceService.run()
         ]);
     }

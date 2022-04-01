@@ -1,25 +1,22 @@
 import { Contract, ethers, providers } from "ethers";
 import { EnsNetworkConfig } from "../config/EnsConfig";
 
-export class EnsResolver {
+export class EthereumNetwork {
 
-  public readonly contract: Contract;
+  public readonly ensPublicResolver: Contract;
   public readonly ethersProvider: providers.BaseProvider;
   
   constructor (
-    private networkConfig: EnsNetworkConfig,
+    networkConfig: EnsNetworkConfig,
   ) {
     this.ethersProvider = ethers.providers.getDefaultProvider(
-      networkConfig.provider
+      networkConfig.network
     );
 
-    this.contract = new ethers.Contract(
+    this.ensPublicResolver = new ethers.Contract(
       networkConfig.ResolverAddr, 
       networkConfig.ResolverAbi, 
       this.ethersProvider
     );
   }
-
-  public getProviderAddress = () => this.networkConfig.provider;
-
 }
