@@ -11,8 +11,10 @@ import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 import { MulterFile } from "../MulterFile";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
+import { PersistenceStateManager } from "./PersistenceStateManager";
 import { getIpfsFileContents } from "../getIpfsFileContents";
 
+  persistenceStateManager: PersistenceStateManager;
 export class IpfsGatewayApi {
   deps: MainDependencyContainer;
 
@@ -83,30 +85,48 @@ export class IpfsGatewayApi {
     }));
 
     app.get('/pin/ls', handleError(async (req, res) => {
-      const pinned = await getPinnedWrapperCIDs(this.deps.storage, this.deps.ipfsNode, this.deps.logger)
+      let pinnedIpfsHashes: string[] = [];
+
+      for(const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
+        if(!info.isPinned) {
+          continue;
+        }
+
+        pinnedIpfsHashes.push(info.ipfsHash);
+      }
 
       res.render('ipfs-pinned-files', {
-        pinned,
-        count: pinned.length,
+        pinnedIpfsHashes,
+        count: pinnedIpfsHashes.length,
       })
     }));
 
     app.get("/ipfs/:path(*)", handleError(async (req, res) => {
-      const path = (req.params as any).path as string;
+      const ipfsPath = (req.params as any).path as string;
 
-      const contentDescription = await ipfs.files.stat(`/ipfs/${path}`);
+      const contentDescription = await ipfs.files.stat(`/ipfs/${ipfsPath}`);
 
       if (contentDescription.type === "file") {
-        const fileContent = await getIpfsFileContents(ipfs, path);
+        const fileContent = await getIpfsFileContents(ipfs, ipfsPath);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
-        const files = await asyncIterableToArray(
-          ipfs.ls(path)
+        const items = await asyncIterableToArray(
+          ipfs.ls(ipfsPath)
         );
 
+        //The stat API doesn't show size for subdirectories
+        //So we need to go through the contents of the directory to find subdirectories
+        //and get their size
+        for(const item of items) {
+          if(item.type === "dir") {
+            const stat = await ipfs.files.stat(`/ipfs/${item.path}`, { size: true });
+            item.size = stat.cumulativeSize;
+          }
+        }
+
         return res.render("ipfs-directory-contents", {
-          files,
-          path,
+          items: items,
+          path: ipfsPath,
           totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
           sizeInKb: function () {
             return formatFileSize((this as any).size)
