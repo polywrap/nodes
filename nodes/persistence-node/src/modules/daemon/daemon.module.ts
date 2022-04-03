@@ -19,17 +19,13 @@ export class DaemonModule {
     }
 
     async run(fromBlockNumber: number, httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
-        const indexingNetworks = this.deps.ensConfig.networks.map(networkConfig => new EthereumNetwork(networkConfig));
-
-        const indexingTask = this.deps.ensIndexingService.startIndexing(fromBlockNumber, indexingNetworks[2]);
-        
         Promise.all([
             this.deps.persistenceNodeApi.run(),
             this.deps.ipfsGatewayApi.run(
                 httpConfig,
                 httpsConfig
             ),
-            indexingTask,
+            this.deps.ensIndexerApp.run(fromBlockNumber),
             this.deps.persistenceService.run()
         ]);
     }

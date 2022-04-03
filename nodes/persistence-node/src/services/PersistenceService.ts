@@ -8,11 +8,11 @@ import { EnsStateManager } from "./EnsStateManager";
 import { PersistenceStateManager } from "./PersistenceStateManager";
 import { sleep } from "../sleep";
 import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
+import { EnsIndexerApp } from "./EnsIndexerApp";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
-  ensStateManager: EnsStateManager;
-  
+  ensIndexerApp: EnsIndexerApp;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
   logger: Logger;
@@ -27,7 +27,7 @@ export class PersistenceService {
 
   async run(): Promise<void> {
     while(true) {
-      const state = this.deps.ensStateManager.getIpfsHashes(); 
+      const state = this.deps.ensIndexerApp.getIpfsHashes(); 
       const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashes();
   
       const { toTrack, toUntrack } = await this.getDifference(state, tracked);
@@ -63,7 +63,7 @@ export class PersistenceService {
     }
 
     for(const ipfsHash of tracked) {
-      if(!this.deps.ensStateManager.containsIpfsHash(ipfsHash)) {
+      if(!this.deps.ensIndexerApp.containsIpfsHash(ipfsHash)) {
         toUntrack.push(this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash));
       } else {
         const info = this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash);

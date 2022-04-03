@@ -1,5 +1,6 @@
 import fs from 'fs';
 import { EnsState } from "../types/EnsState";
+import { EthereumNetwork } from './EthereumNetwork';
 
 export class EnsStateManager {
   state: EnsState = {
@@ -7,6 +8,17 @@ export class EnsStateManager {
     ipfsEns: {},
     lastBlockNumber: 0,
   };
+
+  constructor(private network: EthereumNetwork) {
+  }
+
+  get chainId(): number {
+    return this.network.chainId;
+  }
+
+  get stateFilePath(): string {
+    return `./ens-state.${this.chainId}.json`;
+  }
 
   get lastBlockNumber(): number {
     return this.state.lastBlockNumber;
@@ -58,14 +70,14 @@ export class EnsStateManager {
   }
 
   async save(): Promise<void> {
-    fs.writeFileSync('./ens-state.json', JSON.stringify(this.state, null, 2));
+    fs.writeFileSync(this.stateFilePath, JSON.stringify(this.state, null, 2));
   }
 
   async load(): Promise<void> {
-    if (!fs.existsSync('./ens-state.json')) {
+    if (!fs.existsSync(this.stateFilePath)) {
       await this.save();
     }
 
-    this.state = JSON.parse(fs.readFileSync('./ens-state.json', 'utf8'));
+    this.state = JSON.parse(fs.readFileSync(this.stateFilePath, 'utf8'));
   }
 }

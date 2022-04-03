@@ -14,45 +14,42 @@ type EnsNodeChangeEvent = {
 };
 
 interface IDependencies {
-  ensPublicResolver: ethers.Contract;
-  ipfsNode: IPFS.IPFS;
-  ipfsConfig: IpfsConfig;
-  ensIndexerConfig: EnsIndexerConfig;
-  ensStateManager: EnsStateManager;
-  logger: Logger;
+
 }
 
 export class EnsIndexingService {
-  deps: IDependencies;
 
-  constructor(deps: IDependencies) {
-    this.deps = deps;
+  constructor(
+    private readonly ensIndexerConfig: EnsIndexerConfig,
+    private readonly ensStateManager: EnsStateManager,
+    private readonly logger: Logger
+  ) {
   }
 
   async startIndexing(fromBlock: number, network: EthereumNetwork) {
 
-    if(fromBlock > this.deps.ensStateManager.lastBlockNumber) {
-      this.deps.ensStateManager.lastBlockNumber = fromBlock;
-      await this.deps.ensStateManager.save();
+    if(fromBlock > this.ensStateManager.lastBlockNumber) {
+      this.ensStateManager.lastBlockNumber = fromBlock;
+      await this.ensStateManager.save();
     } 
-    this.deps.logger.log(`Indexing events from block ${this.deps.ensStateManager.lastBlockNumber}...`);
+    this.logger.log(`Indexing events from block ${this.ensStateManager.lastBlockNumber}...`);
 
     while(true) {
-      const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
+      const nextBlockToIndex = this.ensStateManager.lastBlockNumber;
       
       let latestBlock = await network.ethersProvider.getBlockNumber();
 
       if(latestBlock < nextBlockToIndex) {
-        await sleep(this.deps.ensIndexerConfig.requestInterval);
+        await sleep(this.ensIndexerConfig.requestInterval);
         continue;
       }
 
       await this.indexBlockRange(nextBlockToIndex, latestBlock, network);
 
-      this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
-      await this.deps.ensStateManager.save(); 
+      this.ensStateManager.lastBlockNumber = latestBlock + 1;
+      await this.ensStateManager.save(); 
       
-      await sleep(this.deps.ensIndexerConfig.requestInterval);
+      await sleep(this.ensIndexerConfig.requestInterval);
     }
   }
 
@@ -66,8 +63,8 @@ export class EnsIndexingService {
     while(queryStart <= toBlock) {
       const prevUniqueEventListLength = uniqueEventList.length;
 
-      if(toBlock - queryStart > this.deps.ensIndexerConfig.maxBlockRangePerRequest) {
-        queryEnd = queryStart + this.deps.ensIndexerConfig.maxBlockRangePerRequest;
+      if(toBlock - queryStart > this.ensIndexerConfig.maxBlockRangePerRequest) {
+        queryEnd = queryStart + this.ensIndexerConfig.maxBlockRangePerRequest;
       } else {
         queryEnd = toBlock;
       }
@@ -75,14 +72,14 @@ export class EnsIndexingService {
       let logs: ethers.Event[];
 
       try {
-        console.log("get");
+        console.log("get", network.chainId);
         logs = await network.ensPublicResolver.queryFilter(
           network.ensPublicResolver.filters.ContenthashChanged(), 
           queryStart, 
           queryEnd
         );
       } catch {
-        this.deps.logger.log(`Error querying logs for block range ${queryStart}-${queryEnd}`);
+        this.logger.log(`Error querying logs for block range ${queryStart}-${queryEnd}`);
         await sleep(1000);
         continue;
       }
@@ -111,10 +108,11 @@ export class EnsIndexingService {
         }
       }
 
+      const blocksLeft = toBlock - queryEnd;
       queryStart = queryEnd + 1;
 
       if(uniqueEventList.length > prevUniqueEventListLength) {
-        this.deps.logger.log(`Found ${uniqueEventList.length} events`);
+        this.logger.log(`Found ${uniqueEventList.length} events, ${blocksLeft} blocks left to index`);
       }
     }
 
@@ -124,6 +122,6 @@ export class EnsIndexingService {
   }
 
   async processEnsIpfs(ensNode: string, ipfsHash: string | undefined): Promise<void> {
-    this.deps.ensStateManager.update(ensNode, ipfsHash);
+    this.ensStateManager.update(ensNode, ipfsHash);
   }
 }

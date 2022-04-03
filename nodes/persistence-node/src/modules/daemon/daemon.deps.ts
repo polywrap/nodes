@@ -12,10 +12,10 @@ import { EnsConfig } from "../../config/EnsConfig";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { IpfsConfig } from "../../config/IpfsConfig";
 import { EnsIndexerConfig } from "../../config/EnsIndexerConfig";
-import { EnsStateManager } from "../../services/EnsStateManager";
 import { PersistenceService } from "../../services/PersistenceService";
 import { PersistenceStateManager } from "../../services/PersistenceStateManager";
 import { Contract } from "ethers";
+import { EnsIndexerApp } from "../../services/EnsIndexerApp";
 
 export interface MainDependencyContainer {
   ipfsConfig: IpfsConfig;
@@ -25,14 +25,13 @@ export interface MainDependencyContainer {
 
   ensIndexerConfig: EnsIndexerConfig;
   logger: Logger;
-  ensIndexingService: EnsIndexingService;
+  ensIndexerApp: EnsIndexerApp;
   storage: Storage;
   ensPublicResolver: Contract;
   ipfsNode: IPFS;
 
   ipfsGatewayApi: IpfsGatewayApi
   persistenceNodeApi: PersistenceNodeApi
-  ensStateManager: EnsStateManager;
   persistenceService: PersistenceService;
   persistenceStateManager: PersistenceStateManager;
 }
@@ -48,9 +47,6 @@ export const buildMainDependencyContainer = async (
     injectionMode: awilix.InjectionMode.PROXY,
   });
 
-  const ensStateManager = new EnsStateManager();
-  await ensStateManager.load();
-
   const persistenceStateManager = new PersistenceStateManager();
   await persistenceStateManager.load();
 
@@ -61,11 +57,7 @@ export const buildMainDependencyContainer = async (
     persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
     ensIndexerConfig: awilix.asClass(EnsIndexerConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
-    ensStateManager: awilix
-      .asFunction(({ }) => {
-        return ensStateManager;
-      })
-      .singleton(),
+    ensIndexerApp: awilix.asClass(EnsIndexerApp).singleton(),
     persistenceStateManager: awilix
     .asFunction(({ }) => {
       return persistenceStateManager;
@@ -76,7 +68,6 @@ export const buildMainDependencyContainer = async (
         return storage;
       })
       .singleton(),
-    ensIndexingService: awilix.asClass(EnsIndexingService).singleton(),
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),

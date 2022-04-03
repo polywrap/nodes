@@ -7,16 +7,20 @@ export class EthereumNetwork {
   public readonly ethersProvider: providers.BaseProvider;
   
   constructor (
-    networkConfig: EnsNetworkConfig,
+    private networkConfig: EnsNetworkConfig,
   ) {
     this.ethersProvider = ethers.providers.getDefaultProvider(
       networkConfig.network
     );
 
     this.ensPublicResolver = new ethers.Contract(
-      networkConfig.ResolverAddr, 
-      networkConfig.ResolverAbi, 
+      networkConfig.resolverAddr, 
+      networkConfig.resolverAbi, 
       this.ethersProvider
     );
+  }
+
+  public get chainId(): number {
+    return this.networkConfig.chainId;
   }
 }
