@@ -19,9 +19,8 @@ export class PersistenceNodeApi {
 
     app.get('/api/info', handleError(async (req, res) => {
 
-      const info = this.deps.storage.getStats();
-
-      res.status(200).send(info);
+      //TODO:
+      res.status(200).send({});
     }));
 
     const server = http.createServer({}, app);

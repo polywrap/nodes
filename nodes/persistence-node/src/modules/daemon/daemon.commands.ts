@@ -10,6 +10,7 @@ export function initializeDaemonCommands() {
     .option("--https <number>", "Https port")
     .option("--ssl <string>", "Directory with SSL certificates")
     .option("--log", "Enable logging")
+    .option("--from-block <number>", "Block number to start listening from")
     .action(async (options) => {
 
       if (!options.http && !options.https) {
@@ -31,44 +32,7 @@ export function initializeDaemonCommands() {
         : undefined;
 
       const daemon = await DaemonModule.build(!!options.log);
-      daemon.run(httpConfig, httpsConfig);
+      daemon.run(parseInt(options.fromBlock) ?? 0, httpConfig, httpsConfig);
 
-    });
-
-  program
-    .command("past")
-    .description("Run for a past block count")
-    .requiredOption("-b, --blocks <number>", "Past block count")
-    .option("--log", "Enable logging")
-    .action(async (options) => {
-      const daemon = await DaemonModule.build(!!options.log)
-      await daemon.runForPastBlocks(
-        Number(options.blocks)
-      );
-
-      process.exit(0);
-    });
-
-  program
-    .command("missed")
-    .description("Run for missed blocks while the app was offline")
-    .option("--log", "Enable logging")
-    .action(async (options) => {
-      const daemon = await DaemonModule.build(!!options.log)
-      await daemon.runForMissedBlocks();
-
-      process.exit(0);
-    });
-
-  program
-    .command("unresponsive")
-    .description("Process unresponsive IPFS URIs")
-    .option("--log", "Enable logging")
-    .action(async (options) => {
-
-      const daemon = await DaemonModule.build(!!options.log);
-      await daemon.processUnresponsive();
-
-      process.exit(0);
     });
 }

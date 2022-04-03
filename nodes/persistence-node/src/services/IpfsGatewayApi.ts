@@ -5,7 +5,6 @@ import path from "path";
 import { HttpConfig } from "../api-server/HttpConfig";
 import { HttpsConfig } from "../api-server/HttpsConfig";
 import { runServer } from "../api-server/runServer";
-import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
 import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 import { MulterFile } from "../MulterFile";
@@ -83,11 +82,19 @@ export class IpfsGatewayApi {
     }));
 
     app.get('/pin/ls', handleError(async (req, res) => {
-      const pinned = await getPinnedWrapperCIDs(this.deps.storage, this.deps.ipfsNode, this.deps.logger)
+      let pinnedIpfsHashes: string[] = [];
+
+      for(const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
+        if(!info.isPinned) {
+          continue;
+        }
+
+        pinnedIpfsHashes.push(info.ipfsHash);
+      }
 
       res.render('ipfs-pinned-files', {
-        pinned,
-        count: pinned.length,
+        pinnedIpfsHashes,
+        count: pinnedIpfsHashes.length,
       })
     }));
 

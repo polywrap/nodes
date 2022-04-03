@@ -2,11 +2,26 @@
     "ensIndexer": {
         "networks": [
             {
-                "provider": "https://rinkeby.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161",
+                "network": "mainnet",
+                "chainId": 1,
+                "ensResolverAddress": "0x4976fb03C32e5B8cfe2b6cCB31c09Ba78EBaBa41",
+                "requestInterval": 15000,
+                "maxBlockRangePerRequest": 5000
+            },
+            {
+                "network": "ropsten",
+                "chainId": 3,
+                "provider": "https://ropsten.infura.io/v3/",
+                "ensResolverAddress": "0x42D63ae25990889E35F215bC95884039Ba354115",
+                "requestInterval": 15000,
+                "maxBlockRangePerRequest": 5000
+            },
+            {
+                "network": "rinkeby",
+                "chainId": 4,
                 "ensResolverAddress": "0xf6305c19e814d2a75429Fd637d01F7ee0E77d615",
-                "requestInterval": 1000,
-                "maxBlockRangePerRequest": 1000,
-                "chainId": 1000
+                "requestInterval": 15000,
+                "maxBlockRangePerRequest": 5000
             }
         ]
     },
@@ -19,9 +34,9 @@
             "gatewayTimeout": 15000
         },
         "ipfs": {
-            "provider": "http://ipfs.supercollider.hr/",
+            "provider": "http://localhost:5001",
             "gateway": "https://ipfs.io/ipfs"
         },
-        "loggerEnabled": false
+        "loggerEnabled": true
     }
 }

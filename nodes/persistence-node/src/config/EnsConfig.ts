@@ -3,7 +3,7 @@ import config from "./config.json";
 // TODO: Implement multiple logic here:
 
 export interface EnsNetworkConfig {
-  provider: string,
+  network: string,
   ResolverAddr: string
   ResolverAbi: string[]
 }
@@ -15,7 +15,7 @@ export class EnsConfig {
 function mapNetworksFromConfig() {
   return config.ensIndexer.networks.map(network => {
     return {
-      provider: network.provider,
+      network: network.network,
       ResolverAddr: network.ensResolverAddress,
       ResolverAbi: [
         "function contenthash(bytes32 node) external view returns (bytes memory)",
