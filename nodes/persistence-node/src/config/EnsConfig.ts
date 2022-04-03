@@ -1,7 +1,5 @@
 import config from "./config.json";
 
-// TODO: Implement multiple logic here:
-
 export interface EnsNetworkConfig {
   network: string,
   ResolverAddr: string

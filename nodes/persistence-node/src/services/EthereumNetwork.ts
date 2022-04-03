@@ -7,7 +7,7 @@ export class EthereumNetwork {
   public readonly ethersProvider: providers.BaseProvider;
   
   constructor (
-    networkConfig: EnsNetworkConfig,
+    private readonly networkConfig: EnsNetworkConfig,
   ) {
     this.ethersProvider = ethers.providers.getDefaultProvider(
       networkConfig.network
@@ -19,4 +19,7 @@ export class EthereumNetwork {
       this.ethersProvider
     );
   }
+
+  public getNetworkAddress = () => this.networkConfig.network;
+
 }

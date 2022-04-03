@@ -75,7 +75,6 @@ export class EnsIndexingService {
       let logs: ethers.Event[];
 
       try {
-        console.log("get");
         logs = await network.ensPublicResolver.queryFilter(
           network.ensPublicResolver.filters.ContenthashChanged(), 
           queryStart, 
