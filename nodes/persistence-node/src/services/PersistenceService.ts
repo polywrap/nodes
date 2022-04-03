@@ -32,9 +32,6 @@ export class PersistenceService {
   
       const { toTrack, toUntrack } = await this.getDifference(state, tracked);
   
-      console.log("toTrack", toTrack);
-      console.log("toUntrack", toUntrack);
-
       const trackTasks = toTrack.map(this.tryTrackIpfsHash.bind(this));
       const untrackTasks = toUntrack.map(this.tryUntrackIpfsHash.bind(this));
   

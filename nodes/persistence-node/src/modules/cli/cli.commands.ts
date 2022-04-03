@@ -14,17 +14,6 @@ export function initializeCliCommands() {
     });
 
   program
-    .command("reset")
-    .description("Delete the storage file")
-    .action(async (options) => {
-
-      const cli = await CliModule.build(!!options.log);
-      await cli.resetStorage();
-
-      process.exit(0);
-    });
-
-  program
     .command("setup")
     .description("Delete the storage file")
     .action(async (options) => {

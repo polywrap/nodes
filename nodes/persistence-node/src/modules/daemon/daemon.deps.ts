@@ -1,7 +1,5 @@
 import * as awilix from "awilix";
 import { NameAndRegistrationPair } from "awilix";
-import { Storage } from "../../types/Storage";
-import { EnsIndexingService } from "../../services/EnsIndexingService";
 import { createIpfsNode } from "../../createIpfsNode";
 import { IpfsGatewayApi } from "../../services/IpfsGatewayApi";
 import { Logger } from "../../services/Logger";
@@ -26,7 +24,6 @@ export interface MainDependencyContainer {
   ensIndexerConfig: EnsIndexerConfig;
   logger: Logger;
   ensIndexerApp: EnsIndexerApp;
-  storage: Storage;
   ensPublicResolver: Contract;
   ipfsNode: IPFS;
 
@@ -39,9 +36,6 @@ export interface MainDependencyContainer {
 export const buildMainDependencyContainer = async (
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<MainDependencyContainer>> => {
-
-  const storage = new Storage();
-  await storage.load();
 
   const container = awilix.createContainer<MainDependencyContainer>({
     injectionMode: awilix.InjectionMode.PROXY,
@@ -63,11 +57,6 @@ export const buildMainDependencyContainer = async (
       return persistenceStateManager;
     })
     .singleton(),
-    storage: awilix
-      .asFunction(({ }) => {
-        return storage;
-      })
-      .singleton(),
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),

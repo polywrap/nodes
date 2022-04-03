@@ -10,13 +10,6 @@ export class PersistenceNodeApi {
   async run() {
     const app = express();
 
-    app.get('/api/reset', handleError(async (req, res) => {
-
-      await this.deps.storage.reset();
-
-      res.status(200).send();
-    }));
-
     app.get('/api/info', handleError(async (req, res) => {
 
       //TODO:

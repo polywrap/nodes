@@ -1,7 +1,6 @@
 import * as awilix from "awilix";
 import { NameAndRegistrationPair } from "awilix";
 import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
-import { Storage } from "../../types/Storage";
 import { Logger } from "../../services/Logger";
 import { LoggerConfig } from "../../config/LoggerConfig";
 
@@ -15,9 +14,6 @@ export interface CliDependencyContainer {
 export const buildCliDependencyContainer = async (
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<CliDependencyContainer>> => {
-
-  const storage = new Storage();
-  await storage.load();
 
   const container = awilix.createContainer<CliDependencyContainer>({
     injectionMode: awilix.InjectionMode.PROXY,
