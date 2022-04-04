@@ -4,6 +4,7 @@ import { EnsStateManager } from "./EnsStateManager";
 import { EthereumNetwork } from "./EthereumNetwork";
 import { EnsConfig } from "../config/EnsConfig";
 import { EnsIndexingService } from "./EnsIndexingService";
+import { Result } from "../types/Result";
 
 interface IDependencies {
   ensIndexerConfig: EnsIndexerConfig;
@@ -25,7 +26,7 @@ export class EnsIndexerApp {
   async run(fromBlock: number) {
     const tasks: Promise<void>[] = [];
 
-    for(let i = 0; i < this.ensStateManagers.length; i++) {
+    for (let i = 0; i < this.ensStateManagers.length; i++) {
       const ensStateManager = this.ensStateManagers[i];
       const network = this.indexingNetworks[i];
       await ensStateManager.load();
@@ -47,5 +48,23 @@ export class EnsIndexerApp {
   containsIpfsHash(ipfsHash: string): boolean {
     return this.ensStateManagers
       .some(ensStateManager => ensStateManager.containsIpfsHash(ipfsHash));
+  }
+
+  async resolveName(networkName: string, ensDomainName: string): Promise<Result> {
+    const network = this.indexingNetworks
+      .filter(n => n.getNetworkAddress() === networkName)
+      [0];
+
+    if (network == null) {
+      return Result.Error("No ethereum network with that name")
+    }
+
+    const address = await network.ethersProvider.resolveName(ensDomainName);
+
+    if (address == null) {
+      return Result.Error("ENS domain can't be resolved")
+    }
+
+    return Result.Ok(address);
   }
 }
