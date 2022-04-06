@@ -6,31 +6,27 @@ import { Logger } from "../../services/Logger";
 import { PersistenceNodeApi } from "../../services/PersistenceNodeApi";
 import { IPFS } from "ipfs-core";
 import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
-import { EnsConfig } from "../../config/EnsConfig";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { IpfsConfig } from "../../config/IpfsConfig";
-import { EnsIndexerConfig } from "../../config/EnsIndexerConfig";
 import { PersistenceService } from "../../services/PersistenceService";
 import { PersistenceStateManager } from "../../services/PersistenceStateManager";
-import { Contract } from "ethers";
-import { EnsIndexerApp } from "../../services/EnsIndexerApp";
+import { IndexerConfig } from "../../config/IndexerConfig";
+import { CIDRetriever } from "../../services/CIDRetriever";
 
 export interface MainDependencyContainer {
   ipfsConfig: IpfsConfig;
-  ensConfig: EnsConfig;
   loggerConfig: LoggerConfig;
   persistenceNodeApiConfig: PersistenceNodeApiConfig;
+  indexerConfig: IndexerConfig;
 
-  ensIndexerConfig: EnsIndexerConfig;
   logger: Logger;
-  ensIndexerApp: EnsIndexerApp;
-  ensPublicResolver: Contract;
   ipfsNode: IPFS;
 
   ipfsGatewayApi: IpfsGatewayApi
   persistenceNodeApi: PersistenceNodeApi
   persistenceService: PersistenceService;
   persistenceStateManager: PersistenceStateManager;
+  cidRetriever: CIDRetriever;
 }
 
 export const buildMainDependencyContainer = async (
@@ -44,14 +40,14 @@ export const buildMainDependencyContainer = async (
   const persistenceStateManager = new PersistenceStateManager();
   await persistenceStateManager.load();
 
+  
+
   container.register({
     ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
-    ensConfig: awilix.asClass(EnsConfig).singleton(),
     loggerConfig: awilix.asClass(LoggerConfig).singleton(),
     persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
-    ensIndexerConfig: awilix.asClass(EnsIndexerConfig).singleton(),
+    indexerConfig: awilix.asClass(IndexerConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
-    ensIndexerApp: awilix.asClass(EnsIndexerApp).singleton(),
     persistenceStateManager: awilix
     .asFunction(({ }) => {
       return persistenceStateManager;
@@ -60,6 +56,7 @@ export const buildMainDependencyContainer = async (
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),
+    cidRetriever: awilix.asClass(CIDRetriever).singleton(),
     ...extensionsAndOverrides,
   });
 

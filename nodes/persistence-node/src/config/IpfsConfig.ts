@@ -2,12 +2,12 @@ import { isValidUrl } from "../utils/isValidUrl";
 import config from "./config.json";
 
 export class IpfsConfig {
-  externalIpfsProvider = getValidUrlOrUndefined(config.persistenceNode.ipfs.provider);
-  gatewayURI = config.persistenceNode.ipfs.gateway ?? "https://ipfs.io/ipfs";
-  objectGetTimeout = tryParseInt(config.persistenceNode.timeouts.objectGetTimeout) ?? 15000;
-  pinTimeout = tryParseInt(config.persistenceNode.timeouts.pinTimeout) ?? 30000;
-  unpinTimeout = tryParseInt(config.persistenceNode.timeouts.unpinTimeout) ?? 30000;
-  gatewayTimeout = tryParseInt(config.persistenceNode.timeouts.gatewayTimeout) ?? 15000;
+  externalIpfsProvider = getValidUrlOrUndefined(config.ipfs.provider);
+  gatewayURI = config.ipfs.gateway ?? "https://ipfs.io/ipfs";
+  objectGetTimeout = tryParseInt(config.timeouts.objectGetTimeout) ?? 15000;
+  pinTimeout = tryParseInt(config.timeouts.pinTimeout) ?? 30000;
+  unpinTimeout = tryParseInt(config.timeouts.unpinTimeout) ?? 30000;
+  gatewayTimeout = tryParseInt(config.timeouts.gatewayTimeout) ?? 15000;
 }
 
 function tryParseInt(num: number | string) {

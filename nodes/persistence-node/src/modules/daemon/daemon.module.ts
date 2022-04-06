@@ -1,6 +1,5 @@
 import { HttpConfig } from "../../api-server/HttpConfig";
 import { HttpsConfig } from "../../api-server/HttpsConfig";
-import { EthereumNetwork } from "../../services/EthereumNetwork";
 import { buildMainDependencyContainer, MainDependencyContainer } from "./daemon.deps";
 
 export class DaemonModule {
@@ -18,14 +17,13 @@ export class DaemonModule {
         return new DaemonModule(container.cradle, shouldLog);
     }
 
-    async run(fromBlockNumber: number, httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
+    async run(httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
         Promise.all([
             this.deps.persistenceNodeApi.run(),
             this.deps.ipfsGatewayApi.run(
                 httpConfig,
                 httpsConfig
             ),
-            this.deps.ensIndexerApp.run(fromBlockNumber),
             this.deps.persistenceService.run()
         ]);
     }

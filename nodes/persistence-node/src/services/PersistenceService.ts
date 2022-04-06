@@ -4,17 +4,16 @@ import { Logger } from "./Logger";
 import { isWrapper } from "../isWrapper";
 import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
 import { addSeconds } from "../utils/addSeconds";
-import { EnsStateManager } from "./EnsStateManager";
 import { PersistenceStateManager } from "./PersistenceStateManager";
 import { sleep } from "../sleep";
 import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
-import { EnsIndexerApp } from "./EnsIndexerApp";
+import { CIDRetriever } from "./CIDRetriever";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
-  ensIndexerApp: EnsIndexerApp;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
+  cidRetriever: CIDRetriever;
   logger: Logger;
 }
 
@@ -27,7 +26,7 @@ export class PersistenceService {
 
   async run(): Promise<void> {
     while(true) {
-      const state = this.deps.ensIndexerApp.getIpfsHashes(); 
+      const state = await this.deps.cidRetriever.getCIDs(); 
       const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashes();
   
       const { toTrack, toUntrack } = await this.getDifference(state, tracked);
@@ -50,6 +49,11 @@ export class PersistenceService {
     toTrack: string[], 
     toUntrack: TrackedIpfsHashInfo[]
   }> {
+    const indexedIpfsMap: Record<string, boolean> = {};
+    for(const ipfsHash of state) {
+      indexedIpfsMap[ipfsHash] = true;
+    }
+
     const toTrack: string[] = [];
     const toUntrack: TrackedIpfsHashInfo[] = [];
 
@@ -60,7 +64,7 @@ export class PersistenceService {
     }
 
     for(const ipfsHash of tracked) {
-      if(!this.deps.ensIndexerApp.containsIpfsHash(ipfsHash)) {
+      if(!indexedIpfsMap[ipfsHash]) {
         toUntrack.push(this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash));
       } else {
         const info = this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash);
@@ -140,6 +144,7 @@ export class PersistenceService {
   
   async tryUntrackIpfsHash(info: TrackedIpfsHashInfo): Promise<void> {
     if(!info.isWrapper) {
+      this.deps.logger.log(`Stopping tracking of ${info.ipfsHash} (not a wrapper)`);
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
       return;
     }
@@ -189,7 +194,7 @@ export class PersistenceService {
       this.deps.logger.log(`Unpinned ${cid}`);
         return true;
     } catch (err) {
-      this.deps.logger.log(JSON.stringify(err));
+      this.deps.logger.log(`Failed to unpin ${cid}, error: ${JSON.stringify(err)}`);
       return false;
     }
   }

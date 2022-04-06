@@ -14,8 +14,8 @@ export function initializeCliCommands() {
     });
 
   program
-    .command("setup")
-    .description("Delete the storage file")
+    .command("init")
+    .description("Initialize the node")
     .action(async (options) => {
 
       // TODO: implement actual logic here
