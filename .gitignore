@@ -1,0 +1,16 @@
+node_modules
+bin
+build
+dist
+
+.data
+config.json
+
+# Environment
+.env
+
+# Logging
+*.log
+
+# Test
+coverage
