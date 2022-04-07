@@ -24,11 +24,8 @@ export class DaemonModule {
                 httpConfig,
                 httpsConfig
             ),
-            this.deps.cacheRunner.startIndexing(fromBlockNumber)
+            this.deps.ensIndexer.startIndexing(fromBlockNumber),
+            this.deps.persistenceService.run()
         ]);
-    }
-
-    async processUnresponsive() {
-        await this.deps.cacheRunner.processUnresponsive();
     }
 }

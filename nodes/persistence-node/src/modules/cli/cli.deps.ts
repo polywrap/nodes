@@ -1,11 +1,6 @@
 import * as awilix from "awilix";
-import { ethers } from "ethers";
 import { NameAndRegistrationPair } from "awilix";
-import { EthersConfig } from "../../config/EthersConfig";
-import { IpfsConfig } from "../../config/IpfsConfig";
-import { EnsConfig } from "../../config/EnsConfig";
 import { Storage } from "../../types/Storage";
-import { CacheRunner } from "../../services/CacheRunner";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { Logger } from "../../services/Logger";
 import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
