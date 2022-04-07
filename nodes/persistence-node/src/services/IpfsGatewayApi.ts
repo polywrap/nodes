@@ -148,7 +148,7 @@ export class IpfsGatewayApi {
         ensDomain,
       } = req.params as any
 
-      const [error, ipfsHash] = await this.deps.ensIndexerApp.resolveContentHash(network, ensDomain);
+      const [error, ipfsHash] = await this.deps.ensIndexerApp.resolveContenthash(network, ensDomain);
 
       if (ipfsHash) {
         res.redirect(`/ipfs/${ipfsHash}`)

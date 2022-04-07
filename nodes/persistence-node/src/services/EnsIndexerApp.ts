@@ -49,21 +49,21 @@ export class EnsIndexerApp {
       .some(ensStateManager => ensStateManager.containsIpfsHash(ipfsHash));
   }
 
-  async resolveContentHash(networkName: string, ensDomainName: string): Promise<[
-    error: string | null, result?: string
+  async resolveContenthash(networkName: string, ensDomainName: string): Promise<[
+    error: string | undefined, result?: string
   ]> {
     const network = this.indexingNetworks
       .filter(n => n.getNetworkAddress() === networkName)
       [0];
 
-    if (network == null) {
+    if (!network) {
       return ["No Ethereum network with that name."];
     }
 
     const resolver = await network.ethersProvider.getResolver(ensDomainName);
     const contentHash = await resolver?.getContentHash();
 
-    if (contentHash == null) {
+    if (!contentHash) {
       return ["No content hash for that ENS domain."];
     }
 
@@ -71,10 +71,10 @@ export class EnsIndexerApp {
       return ["Content not a valid IPFS hash."];
     }
 
-    const contentHashWithoutScheme = contentHash
+    const contentHashWithoutProtocol = contentHash
       .split('ipfs://')
       .pop();
 
-    return [null, contentHashWithoutScheme];
+    return [undefined, contentHashWithoutProtocol];
   }
 }
