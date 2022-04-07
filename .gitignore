@@ -5,6 +5,8 @@ dist
 
 .data
 config.json
+persistence-state.json
+ens-state.*.json
 
 # Environment
 .env
