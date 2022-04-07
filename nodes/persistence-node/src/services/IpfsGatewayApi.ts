@@ -148,13 +148,13 @@ export class IpfsGatewayApi {
         ensDomain,
       } = req.params as any
 
-      const result = await this.deps.ensIndexerApp.resolveContentHash(network, ensDomain);
+      const [error, ipfsHash] = await this.deps.ensIndexerApp.resolveContentHash(network, ensDomain);
 
-      const ipfsHash = result.unwrapOr(error =>
+      if (ipfsHash) {
+        res.redirect(`/ipfs/${ipfsHash}`)
+      } else {
         res.status(422).send(error)
-      );
-
-      res.redirect(`/ipfs/${ipfsHash}`)
+      }
     }));
 
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {

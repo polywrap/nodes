@@ -1,10 +1,9 @@
-import { Logger } from "./Logger";
+import { EnsConfig } from "../config/EnsConfig";
 import { EnsIndexerConfig } from "../config/EnsIndexerConfig";
+import { EnsIndexingService } from "./EnsIndexingService";
 import { EnsStateManager } from "./EnsStateManager";
 import { EthereumNetwork } from "./EthereumNetwork";
-import { EnsConfig } from "../config/EnsConfig";
-import { EnsIndexingService } from "./EnsIndexingService";
-import { Result } from "../types/Result";
+import { Logger } from "./Logger";
 
 interface IDependencies {
   ensIndexerConfig: EnsIndexerConfig;
@@ -50,30 +49,32 @@ export class EnsIndexerApp {
       .some(ensStateManager => ensStateManager.containsIpfsHash(ipfsHash));
   }
 
-  async resolveContentHash(networkName: string, ensDomainName: string): Promise<Result> {
+  async resolveContentHash(networkName: string, ensDomainName: string): Promise<[
+    error: string | null, result?: string
+  ]> {
     const network = this.indexingNetworks
       .filter(n => n.getNetworkAddress() === networkName)
       [0];
 
     if (network == null) {
-      return Result.Error("No Ethereum network with that name.");
+      return ["No Ethereum network with that name."];
     }
 
     const resolver = await network.ethersProvider.getResolver(ensDomainName);
     const contentHash = await resolver?.getContentHash();
 
     if (contentHash == null) {
-      return Result.Error("No content hash for that ENS domain.");
+      return ["No content hash for that ENS domain."];
     }
 
     if (!contentHash.startsWith('ipfs://')) {
-      return Result.Error("Content not a valid IPFS hash.");
+      return ["Content not a valid IPFS hash."];
     }
 
     const contentHashWithoutScheme = contentHash
       .split('ipfs://')
       .pop();
 
-    return Result.Ok(contentHashWithoutScheme);
+    return [null, contentHashWithoutScheme];
   }
 }
