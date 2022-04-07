@@ -11,6 +11,7 @@ import { MulterFile } from "../MulterFile";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getIpfsFileContents } from "../getIpfsFileContents";
+import { handleError } from "../api-server/handleError";
 
 export class IpfsGatewayApi {
   deps: MainDependencyContainer;
@@ -53,10 +54,17 @@ export class IpfsGatewayApi {
       if (req.method === 'OPTIONS') {
         res.send(200);
       } else {
-        this.deps.logger.log("Request: " + req.method + " " + req.url);
+        this.deps.logger.log(`Request:  ${req.method} --- ${req.url}`);
         next();
       }
     }));
+
+    app.use((req, res, next) => {
+      res.on('finish', () => {
+        this.deps.logger.log(`Response: ${req.method} ${res.statusCode} ${req.url}`);
+      });
+      next();
+    });
 
     app.get('/api/v0/cat', handleError(async (req, res) => {
       const hash = req.query.arg as string;
@@ -84,8 +92,8 @@ export class IpfsGatewayApi {
     app.get('/pin/ls', handleError(async (req, res) => {
       let pinnedIpfsHashes: string[] = [];
 
-      for(const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
-        if(!info.isPinned) {
+      for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
+        if (!info.isPinned) {
           continue;
         }
 
@@ -114,8 +122,8 @@ export class IpfsGatewayApi {
         //The stat API doesn't show size for subdirectories
         //So we need to go through the contents of the directory to find subdirectories
         //and get their size
-        for(const item of items) {
-          if(item.type === "dir") {
+        for (const item of items) {
+          if (item.type === "dir") {
             const stat = await ipfs.files.stat(`/ipfs/${item.path}`, { size: true });
             item.size = stat.cumulativeSize;
           }
@@ -196,12 +204,5 @@ export class IpfsGatewayApi {
     });
 
     runServer(httpConfig, httpsConfig, app);
-  }
-}
-
-function handleError(callback: (req: Request<{}>, res: Response, next: NextFunction) => Promise<void>) {
-  return function (req: Request<{}>, res: Response, next: NextFunction) {
-    callback(req, res, next)
-      .catch(next)
   }
 }

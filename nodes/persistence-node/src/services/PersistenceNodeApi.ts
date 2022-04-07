@@ -1,5 +1,6 @@
 import express, { NextFunction, Request, Response } from "express";
 import http from "http";
+import { handleError } from "../api-server/handleError";
 import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 
 export class PersistenceNodeApi {
@@ -22,12 +23,5 @@ export class PersistenceNodeApi {
     server.listen(port, function () {
       console.log(`Internal HTTP server started at http://localhost:${port}`);
     });
-  }
-}
-
-function handleError(callback: (req: Request<{}>, res: Response, next: NextFunction) => Promise<void>) {
-  return function (req: Request<{}>, res: Response, next: NextFunction) {
-    callback(req, res, next)
-      .catch(next)
   }
 }
