@@ -109,7 +109,7 @@ export class IpfsGatewayApi {
 
     app.get('/api/v0/resolve', handleError(async (req, res) => {
       const hash = req.query.arg as string;
-      
+
       const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`);
 
       res.json({
