@@ -35,6 +35,8 @@ export class PersistenceService {
       const trackTasks = toTrack.map(this.tryTrackIpfsHash.bind(this));
       const untrackTasks = toUntrack.map(this.tryUntrackIpfsHash.bind(this));
   
+      this.deps.logger.log(`${toTrack.length} wrappers to track, ${toUntrack.length} to untrack`);
+
       await Promise.all([
         Promise.all(trackTasks), 
         Promise.all(untrackTasks)
@@ -97,10 +99,23 @@ export class PersistenceService {
             toTrackMap[info.ipfsHash] = true;
           }
         }
+
+        //Add all indexes which were returned this IPFS hash
+        const updatedIndexes: Set<string> = new Set(indexedIpfsMap[info.ipfsHash]);
         
-        info.indexes = [...new Set([...info.indexes, ...indexedIpfsMap[info.ipfsHash]])];
+        //Also add all unresponsive indexes which were present in the info before
+        //If an index is unresponsive, it does not mean it does not have the IPFS hash
+        for(const index of info.indexes) {
+          if(unresponsiveIndexMap[index]) {
+            updatedIndexes.add(index);
+          }
+        }
+
+        info.indexes = [...updatedIndexes];
       }
     }
+
+    this.deps.persistenceStateManager.save();
 
     const ipfsHashesToTrack = Object.keys(toTrackMap).map(x => x);
     const toTrack: {

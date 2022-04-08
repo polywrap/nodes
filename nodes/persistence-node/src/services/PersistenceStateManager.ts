@@ -43,7 +43,7 @@ export class PersistenceStateManager {
     this.state = JSON.parse(fs.readFileSync(persistenceStateFilePath, 'utf8'));
   }
 
-  private async save(): Promise<void> {
+  public async save(): Promise<void> {
     fs.writeFileSync(persistenceStateFilePath, JSON.stringify(this.state, null, 2));
   }
 }

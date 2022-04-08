@@ -31,19 +31,28 @@ export class IndexerService {
 
     while(true) {
       const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
-      
-      let latestBlock = await this.deps.ethereumNetwork.ethersProvider.getBlockNumber();
+      let latestBlock: number | undefined;
 
-      if(latestBlock < nextBlockToIndex) {
-        await sleep(this.deps.ensIndexerConfig.requestInterval);
-        continue;
+      try {
+        latestBlock = await this.deps.ethereumNetwork.ethersProvider.getBlockNumber();
+      }
+      catch(ex) {
+        this.deps.logger.log(`Error getting block number`);
+        this.deps.logger.log(JSON.stringify(ex));
       }
 
-      await this.indexBlockRange(nextBlockToIndex, latestBlock);
+      if(latestBlock) {
+        if(latestBlock < nextBlockToIndex) {
+          await sleep(this.deps.ensIndexerConfig.requestInterval);
+          continue;
+        }
 
-      this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
-      await this.deps.ensStateManager.save(); 
-      
+        await this.indexBlockRange(nextBlockToIndex, latestBlock);
+
+        this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
+        await this.deps.ensStateManager.save(); 
+      }
+
       await sleep(this.deps.ensIndexerConfig.requestInterval);
     }
   }
@@ -73,6 +82,7 @@ export class IndexerService {
           queryStart, 
           queryEnd
         );
+        await sleep(1000);
       } catch {
         this.deps.logger.log(`Error querying logs for block range ${queryStart}-${queryEnd}`);
         await sleep(1000);
