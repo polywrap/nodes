@@ -16,6 +16,7 @@ import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { getIpfsFileContents } from "../getIpfsFileContents";
+import { FileNotFoundError } from "../types/FileNotFoundError";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -183,7 +184,11 @@ export class IpfsGatewayApi {
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
       this.deps.logger.log(JSON.stringify(err, Object.getOwnPropertyNames(err)));
-      res.status(500).send("Something went wrong. Check the logs for more info.");
+      if (err.name === FileNotFoundError.name) {
+        res.status(404).send("Not found");
+      } else {
+        res.status(500).send("Something went wrong. Check the logs for more info.");
+      }
       this.deps.logger.log(err.message);
     });
 
