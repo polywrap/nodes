@@ -1,0 +1,24 @@
+name: CI
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Create identity file
+      env:
+        DEPLOYMENT_KEY: ${{ secrets.DEPLOYMENT_KEY_DEVELOP }}
+      run: |
+        echo "$DEPLOYMENT_KEY" | base64 --decode  >deployment.key
+        chmod 400 deployment.key
+    - name: Update Polywrap Nodes on development server
+      run: |
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i deployment.key ubuntu@54.162.102.213 git -C /home/ubuntu/polywrap/nodes fetch origin
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i deployment.key ubuntu@54.162.102.213 git -C /home/ubuntu/polywrap/nodes checkout "${GITHUB_SHA}"
+        ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i deployment.key ubuntu@54.162.102.213 sudo /home/ubuntu/polywrap/nodes/admin/update.bash
