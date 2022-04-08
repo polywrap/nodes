@@ -1,6 +1,6 @@
-import { isValidUrl } from "../utils/isValidUrl";
+import { IPFSIndexConfig } from "../types/IPFSIndexConfig";
 import config from "./config.json";
 
 export class IndexerConfig {
-  indexers: string[] = config.indexers;
+  indexes: IPFSIndexConfig[] = config.indexes;
 }

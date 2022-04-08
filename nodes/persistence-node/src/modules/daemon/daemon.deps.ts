@@ -11,7 +11,7 @@ import { IpfsConfig } from "../../config/IpfsConfig";
 import { PersistenceService } from "../../services/PersistenceService";
 import { PersistenceStateManager } from "../../services/PersistenceStateManager";
 import { IndexerConfig } from "../../config/IndexerConfig";
-import { CIDRetriever } from "../../services/CIDRetriever";
+import { IndexRetriever } from "../../services/IndexRetriever";
 
 export interface MainDependencyContainer {
   ipfsConfig: IpfsConfig;
@@ -26,7 +26,7 @@ export interface MainDependencyContainer {
   persistenceNodeApi: PersistenceNodeApi
   persistenceService: PersistenceService;
   persistenceStateManager: PersistenceStateManager;
-  cidRetriever: CIDRetriever;
+  indexRetriever: IndexRetriever;
 }
 
 export const buildMainDependencyContainer = async (
@@ -56,7 +56,7 @@ export const buildMainDependencyContainer = async (
     ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
     persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),
-    cidRetriever: awilix.asClass(CIDRetriever).singleton(),
+    indexRetriever: awilix.asClass(IndexRetriever).singleton(),
     ...extensionsAndOverrides,
   });
 

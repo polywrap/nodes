@@ -7,13 +7,14 @@ import { addSeconds } from "../utils/addSeconds";
 import { PersistenceStateManager } from "./PersistenceStateManager";
 import { sleep } from "../sleep";
 import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
-import { CIDRetriever } from "./CIDRetriever";
+import { IndexRetriever } from "./IndexRetriever";
+import { IPFSIndex } from "../types/IPFSIndex";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
-  cidRetriever: CIDRetriever;
+  indexRetriever: IndexRetriever;
   logger: Logger;
 }
 
@@ -26,10 +27,10 @@ export class PersistenceService {
 
   async run(): Promise<void> {
     while(true) {
-      const state = await this.deps.cidRetriever.getCIDs(); 
-      const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashes();
+      const indexes = await this.deps.indexRetriever.getCIDs(); 
+      const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashInfos();
   
-      const { toTrack, toUntrack } = await this.getDifference(state, tracked);
+      const { toTrack, toUntrack } = await this.getDifference(indexes, tracked);
   
       const trackTasks = toTrack.map(this.tryTrackIpfsHash.bind(this));
       const untrackTasks = toUntrack.map(this.tryUntrackIpfsHash.bind(this));
@@ -43,38 +44,75 @@ export class PersistenceService {
   }
 
   async getDifference(
-    state: string[],
-    tracked: string[]
+    indexes: IPFSIndex[],
+    trackedInfos: TrackedIpfsHashInfo[]
   ): Promise<{
-    toTrack: string[], 
+    toTrack: {
+      ipfsHash: string,
+      indexes: string[]
+    }[], 
     toUntrack: TrackedIpfsHashInfo[]
   }> {
-    const indexedIpfsMap: Record<string, boolean> = {};
-    for(const ipfsHash of state) {
-      indexedIpfsMap[ipfsHash] = true;
-    }
+    const indexedIpfsMap: Record<string, Set<string>> = {};
 
-    const toTrack: string[] = [];
+    const toTrackMap: Record<string, boolean> = {};
     const toUntrack: TrackedIpfsHashInfo[] = [];
 
-    for(const ipfsHash of state) {
-      if(!this.deps.persistenceStateManager.containsIpfsHash(ipfsHash)) {
-        toTrack.push(ipfsHash);
+    //Go through all CIDs of all indexes and add to "toTrack" 
+    //if they're not already being tracked
+    for(const index of indexes) {
+      for(const cid of index.cids) {
+        if(!this.deps.persistenceStateManager.containsIpfsHash(cid)) {
+          toTrackMap[cid] = true;
+        }
+
+        //Add to shorten lookup later
+        indexedIpfsMap[cid] = !indexedIpfsMap[cid]
+          ? new Set([index.name])
+          : new Set(indexedIpfsMap[cid].add(index.name));
       }
     }
 
-    for(const ipfsHash of tracked) {
-      if(!indexedIpfsMap[ipfsHash]) {
-        toUntrack.push(this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash));
-      } else {
-        const info = this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash);
+    const unresponsiveIndexMap: Record<string, boolean> = {};
+    for (const index of indexes) {
+      if(index.error) {
+        unresponsiveIndexMap[index.name] = true;
+      }
+    }
 
+    //Go through all tracked CIDs and add to "toUntrack" if they're not in the indexes,
+    //provided the index was able to be retrieved
+    //If they are in an index and they're logged as unresponsive, check if their scheduledRetryDate is past
+    //if true, add to "toTrack"
+    for(const info of trackedInfos) {
+      //If the IPFS hash is not in any index
+      if(!indexedIpfsMap[info.ipfsHash]) {
+        //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved
+        if(!info.indexes.some(x => unresponsiveIndexMap[x])) {
+          toUntrack.push(this.deps.persistenceStateManager.getTrackedIpfsHashInfo(info.ipfsHash));
+        }
+      } else {
         if(info?.unresponsiveInfo) {
-          if(info.unresponsiveInfo.scheduledRetryDate < new Date()) {
-            toTrack.push(ipfsHash);
+          if(new Date(info.unresponsiveInfo.scheduledRetryDate) < new Date()) {
+            toTrackMap[info.ipfsHash] = true;
           }
         }
+        
+        info.indexes = [...new Set([...info.indexes, ...indexedIpfsMap[info.ipfsHash]])];
       }
+    }
+
+    const ipfsHashesToTrack = Object.keys(toTrackMap).map(x => x);
+    const toTrack: {
+      ipfsHash: string,
+      indexes: string[]
+    }[] = [];
+
+    for(const ipfsHash of ipfsHashesToTrack) {
+      toTrack.push({
+        ipfsHash,
+        indexes: [...indexedIpfsMap[ipfsHash]]
+      });
     }
 
     return {
@@ -83,60 +121,56 @@ export class PersistenceService {
     };
   }
 
-  async tryTrackIpfsHash(ipfsHash: string): Promise<void> {
+  async tryTrackIpfsHash(ipfsHashToTrack: {
+    ipfsHash: string,
+    indexes: string[]
+  }): Promise<void> {
+    const { ipfsHash, indexes } = ipfsHashToTrack;
+
     const info = this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash);
     const retryCount = info?.unresponsiveInfo?.retryCount ?? 0;
 
-    console.log(ipfsHash);
     if(info) {
-    console.log("info");
-
       if(info.isPinned) {
-        console.log("pinned");
         return;
       }
 
       if(info.isWrapper === true) {
-        console.log("isWrapper");
-        await this.pinCID(ipfsHash, retryCount);  
+        await this.pinCID(ipfsHash, retryCount, indexes);  
       } else if(info.isWrapper === false) {
-        console.log("!isWrapper");
         return;
       } else if(info.isWrapper === undefined) {
-        console.log("isWrapper undefined");
-        await this.pinIfWrapper(ipfsHash, retryCount);
+        await this.pinIfWrapper(ipfsHash, retryCount, indexes);
       }
     } else {
-      await this.pinIfWrapper(ipfsHash, retryCount);
+      await this.pinIfWrapper(ipfsHash, retryCount, indexes);
     }
-
-    this.deps.persistenceStateManager.save();
   }
-  async pinIfWrapper(ipfsHash: string, retryCount: number): Promise<void> {
+  async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
 
     const result = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
 
     if(result === "yes") {
-      console.log("is a wrapper");
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         isWrapper: true,
         isPinned: false,
+        indexes,
       });
 
-      await this.pinCID(ipfsHash, retryCount);  
+      await this.pinCID(ipfsHash, retryCount, indexes);  
     } else if (result === "no") {
-      console.log("not a wrapper");
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         isWrapper: false,
         isPinned: false,
+        indexes,
       });
     } else if (result === "timeout") {
-      console.log("timed out check if wrapper");
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         isPinned: false,
+        indexes,
         unresponsiveInfo: scheduleRetry(retryCount)
       });
     }
@@ -147,17 +181,16 @@ export class PersistenceService {
       this.deps.logger.log(`Stopping tracking of ${info.ipfsHash} (not a wrapper)`);
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
       return;
-    }
+    } 
 
     const success = await this.unpinCID(info.ipfsHash);
     if(success) {
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
     }
     //If failed to unpin, we will try again later
-    this.deps.persistenceStateManager.save();
   }
 
-  async pinCID(cid: string, retryCount: number): Promise<void> {
+  async pinCID(cid: string, retryCount: number, indexes: string[]): Promise<void> {
     this.deps.logger.log(`Pinning ${cid}...`);
    
     try {
@@ -169,6 +202,7 @@ export class PersistenceService {
         ipfsHash: cid,
         isWrapper: true,
         isPinned: true,
+        indexes
       });
   
       this.deps.logger.log(`Pinned ${cid}`);
@@ -180,6 +214,7 @@ export class PersistenceService {
         ipfsHash: cid,
         isWrapper: true,
         isPinned: false,
+        indexes,
         unresponsiveInfo: scheduleRetry(retryCount)
       });
     }
