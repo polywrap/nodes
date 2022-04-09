@@ -1,5 +1,5 @@
 import * as IPFS from 'ipfs-core';
-import { FileNotFoundError } from './types/FileNotFoundError';
+import { NotFoundError } from './types/FileNotFoundError';
 
 export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string): Promise<Buffer> => {
   try {
@@ -21,7 +21,7 @@ export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string): Promis
     const errorMessage: string | null = typeof err?.message === "string" ? err.message : null;
     
     if (errorMessage?.includes("Invalid CID version")) {
-      throw new FileNotFoundError(`File not found for hash: ${hash}`);
+      throw new NotFoundError(`File not found for hash: ${hash}`);
     }
 
     if (errorMessage?.includes("this dag node is a directory")) {
