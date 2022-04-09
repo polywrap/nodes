@@ -16,7 +16,7 @@ import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { getIpfsFileContents } from "../getIpfsFileContents";
-import { NotFoundError } from "../types/FileNotFoundError";
+import { NotFoundError } from "../types/NotFoundError";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;

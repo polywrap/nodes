@@ -1,5 +1,5 @@
 import * as IPFS from 'ipfs-core';
-import { NotFoundError } from './types/FileNotFoundError';
+import { NotFoundError } from './types/NotFoundError';
 
 export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string): Promise<Buffer> => {
   try {
