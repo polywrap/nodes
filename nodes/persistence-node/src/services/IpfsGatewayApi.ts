@@ -15,7 +15,9 @@ import path from "path";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
-import { getIpfsFileContents } from "../getIpfsFileContents";
+import { getIpfsFileContents } from "../ipfs-operations/getIpfsFileContents";
+import { resolveIpfsPath } from "../ipfs-operations/resolveIpfsPath";
+import { getIpfsFileStat } from "../ipfs-operations/getIpfsFileStat";
 import { NotFoundError } from "../types/NotFoundError";
 
 interface IDependencies {
@@ -88,16 +90,7 @@ export class IpfsGatewayApi {
 
     app.get('/api/v0/resolve', handleError(async (req, res) => {
       const hash = req.query.arg as string;
-
-      const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`)
-        .catch(err => {
-          const errorMessage: string | null = typeof err?.message === "string" ? err.message : null;
-          if (errorMessage?.includes("invalid argument")) {
-            throw new NotFoundError(`Could not resolve hash: ${hash}`);
-          }
-          throw err;
-        });
-
+      const resolvedPath = await resolveIpfsPath(ipfs, hash);
       res.json({
         path: resolvedPath
       });
@@ -115,14 +108,7 @@ export class IpfsGatewayApi {
     app.get("/ipfs/:path(*)", handleError(async (req, res) => {
       const ipfsPath = (req.params as any).path as string;
 
-      const contentDescription = await ipfs.files.stat(`/ipfs/${ipfsPath}`)
-        .catch(err => {
-          const errorMessage: string | null = typeof err?.message === "string" ? err.message : null;
-          if (errorMessage?.includes("Invalid CID version")) {
-            throw new NotFoundError(`Could not resolve ipfs path: ${ipfsPath}`)
-          }
-          throw err;
-        });
+      const contentDescription = await getIpfsFileStat(ipfs, ipfsPath);
 
       if (contentDescription.type === "file") {
         const fileContent = await getIpfsFileContents(ipfs, ipfsPath);
