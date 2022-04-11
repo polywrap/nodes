@@ -93,7 +93,7 @@ export class IpfsGatewayApi {
       }
 
       res.render('ipfs-pinned-files', {
-        pinnedIpfsHashes,
+        pinned: pinnedIpfsHashes,
         count: pinnedIpfsHashes.length,
       })
     }));
