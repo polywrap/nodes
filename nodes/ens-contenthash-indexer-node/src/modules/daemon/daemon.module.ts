@@ -39,7 +39,7 @@ export class DaemonModule {
        
         const configFilePath = path.join(dataDirPath, "config.json");
         if(!fs.existsSync(configFilePath)) {
-            console.log("No config file found. Run the 'init' command before running the daemon.");
+            console.log(`No config file found at ${configFilePath}. Run the 'init' command before running the daemon.`);
             process.exit(1);
         }
 
