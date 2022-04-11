@@ -188,7 +188,6 @@ export class IpfsGatewayApi {
     }));
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-      this.deps.logger.log(JSON.stringify(err, Object.getOwnPropertyNames(err)));
       if (err instanceof NotFoundError) {
         res.status(404).send("Not found");
       } else {
