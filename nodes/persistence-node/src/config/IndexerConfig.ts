@@ -1,6 +1,10 @@
 import { IPFSIndexConfig } from "../types/IPFSIndexConfig";
-import config from "./config.json";
+import { Config } from "./Config";
 
 export class IndexerConfig {
-  indexes: IPFSIndexConfig[] = config.indexes;
+  indexes: IPFSIndexConfig[];
+
+  constructor({ config }: { config: Config }) {
+    this.indexes = config.indexes;
+  }
 }

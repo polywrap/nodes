@@ -30,7 +30,8 @@
     "dev": "ts-node src/main.ts",
     "start": "node bin/main.js",
     "test": "yarn test:jest",
-    "daemon": "yarn dev daemon --log --http 8081",
+    "dev-init": "yarn dev init --data ./.data --log",
+    "daemon": "yarn dev daemon --data ./.data --http 8081 --log",
     "copy-ui-files": "npx rimraf ./bin/ui && mkdir -p ./bin/ui/ && npx copyfiles -u 2 ./src/ui/* ./bin/ui/",
     "test:jest": "jest test --passWithNoTests"
   },

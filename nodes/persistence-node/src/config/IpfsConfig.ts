@@ -1,17 +1,22 @@
 import { isValidUrl } from "../utils/isValidUrl";
-import config from "./config.json";
+import { Config } from "./Config";
 
 export class IpfsConfig {
-  externalIpfsProvider = getValidUrlOrUndefined(config.ipfs.provider);
-  gatewayURI = config.ipfs.gateway ?? "https://ipfs.io/ipfs";
-  objectGetTimeout = tryParseInt(config.timeouts.objectGetTimeout) ?? 15000;
-  pinTimeout = tryParseInt(config.timeouts.pinTimeout) ?? 30000;
-  unpinTimeout = tryParseInt(config.timeouts.unpinTimeout) ?? 30000;
-  gatewayTimeout = tryParseInt(config.timeouts.gatewayTimeout) ?? 15000;
-}
+  externalIpfsProvider?: string;
+  gatewayURI: string;
+  objectGetTimeout: number;
+  pinTimeout: number;
+  unpinTimeout: number;
+  gatewayTimeout: number;
 
-function tryParseInt(num: number | string) {
-  return parseInt(num as string);
+  constructor({ config }: { config: Config }) {
+    this.externalIpfsProvider = getValidUrlOrUndefined(config.ipfs.provider);
+    this.gatewayURI = config.ipfs.gateway;
+    this.objectGetTimeout = config.timeouts.objectGetTimeout;
+    this.pinTimeout = config.timeouts.pinTimeout;
+    this.unpinTimeout = config.timeouts.unpinTimeout;
+    this.gatewayTimeout = config.timeouts.gatewayTimeout;
+  }
 }
 
 function getValidUrlOrUndefined(url: string | undefined) {
