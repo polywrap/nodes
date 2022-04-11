@@ -15,9 +15,14 @@ function tryParseInt(num: number | string) {
 }
 
 function getValidUrlOrUndefined(url: string | undefined) {
+  if (url?.length === 0) {
+    return undefined;
+  }
+
   if (isValidUrl(url)) {
     return url;
   } else {
-    return undefined;
+    console.log("Invalid URL supplied for EXTERNAL_IPFS_PROVIDER setting");
+    process.exit();
   }
 }
