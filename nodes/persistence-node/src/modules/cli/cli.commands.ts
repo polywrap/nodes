@@ -14,12 +14,11 @@ export function initializeCliCommands() {
     });
 
   program
-    .command("reset")
-    .description("Delete the storage file")
+    .command("init")
+    .description("Initialize the node")
     .action(async (options) => {
 
-      const cli = await CliModule.build(!!options.log);
-      await cli.resetStorage();
+      // TODO: implement actual logic here
 
       process.exit(0);
     });

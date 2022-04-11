@@ -30,6 +30,7 @@
     "dev": "ts-node src/main.ts",
     "start": "node bin/main.js",
     "test": "yarn test:jest",
+    "daemon": "yarn dev daemon --log --http 8081",
     "copy-ui-files": "npx rimraf ./bin/ui && mkdir -p ./bin/ui/ && npx copyfiles -u 2 ./src/ui/* ./bin/ui/",
     "test:jest": "jest test --passWithNoTests"
   },
@@ -40,7 +41,6 @@
     "axios": "^0.24.0",
     "commander": "^8.3.0",
     "cors": "^2.8.5",
-    "custom-env": "^2.0.1",
     "ethers": "^5.5.2",
     "express": "^4.17.2",
     "ipfs-core": "0.14.1",
@@ -57,7 +57,6 @@
     "@types/multer": "^1.4.7",
     "@types/node": "^16.11.11",
     "@web3api/cli": "0.0.1-prealpha.64",
-    "@web3api/test-env-js": "0.0.1-prealpha.64",
     "copyfiles": "^2.4.1",
     "jest": "27.1.1",
     "rimraf": "^3.0.2",

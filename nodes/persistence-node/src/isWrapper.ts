@@ -1,9 +1,9 @@
 import * as IPFS from 'ipfs-core';
 import { IpfsConfig } from './config/IpfsConfig';
-import { nudgeIpfsHash } from './nudgeIpfsHash';
 import { isValidWrapperManifestName } from './isValidWrapperManifestName';
-import { sleep } from './sleep';
+import { nudgeIpfsHash } from './nudgeIpfsHash';
 import { Logger } from './services/Logger';
+import { sleep } from './sleep';
 
 export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, logger: Logger, cid: string): Promise<"yes" | "no" | "timeout"> => {
   try {

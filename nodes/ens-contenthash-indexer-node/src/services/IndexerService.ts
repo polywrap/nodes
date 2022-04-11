@@ -1,32 +1,24 @@
 import { ethers } from "ethers";
-import { getIpfsHashFromContenthash } from "../getIpfsHashFromContenthash";
-import * as IPFS from 'ipfs-core';
-import { IpfsConfig } from "../config/IpfsConfig";
 import { Logger } from "./Logger";
 import { sleep } from "../sleep";
 import { EnsIndexerConfig } from "../config/EnsIndexerConfig";
 import { EnsStateManager } from "./EnsStateManager";
+import { EthereumNetwork } from "./EthereumNetwork";
 
 type EnsNodeChangeEvent = {
   ensNode: string;
-  cid?: string;
+  contenthash?: string;
 };
 
 interface IDependencies {
-  ethersProvider: ethers.providers.Provider;
-  ensPublicResolver: ethers.Contract;
-  ipfsNode: IPFS.IPFS;
-  ipfsConfig: IpfsConfig;
-  ensIndexerConfig: EnsIndexerConfig;
-  ensStateManager: EnsStateManager;
-  logger: Logger;
+  ensIndexerConfig: EnsIndexerConfig,
+  ensStateManager: EnsStateManager,
+  ethereumNetwork: EthereumNetwork,
+  logger: Logger
 }
 
-export class EnsIndexer {
-  deps: IDependencies;
-
-  constructor(deps: IDependencies) {
-    this.deps = deps;
+export class IndexerService {
+  constructor(private readonly deps: IDependencies) {
   }
 
   async startIndexing(fromBlock: number) {
@@ -39,19 +31,28 @@ export class EnsIndexer {
 
     while(true) {
       const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
-      
-      let latestBlock = await this.deps.ethersProvider.getBlockNumber();
+      let latestBlock: number | undefined;
 
-      if(latestBlock < nextBlockToIndex) {
-        await sleep(this.deps.ensIndexerConfig.requestInterval);
-        continue;
+      try {
+        latestBlock = await this.deps.ethereumNetwork.ethersProvider.getBlockNumber();
+      }
+      catch(ex) {
+        this.deps.logger.log(`Error getting block number`);
+        this.deps.logger.log(JSON.stringify(ex));
       }
 
-      await this.indexBlockRange(nextBlockToIndex, latestBlock);
+      if(latestBlock) {
+        if(latestBlock < nextBlockToIndex) {
+          await sleep(this.deps.ensIndexerConfig.requestInterval);
+          continue;
+        }
 
-      this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
-      await this.deps.ensStateManager.save(); 
-      
+        await this.indexBlockRange(nextBlockToIndex, latestBlock);
+
+        this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
+        await this.deps.ensStateManager.save(); 
+      }
+
       await sleep(this.deps.ensIndexerConfig.requestInterval);
     }
   }
@@ -75,11 +76,13 @@ export class EnsIndexer {
       let logs: ethers.Event[];
 
       try {
-        logs = await this.deps.ensPublicResolver.queryFilter(
-          this.deps.ensPublicResolver.filters.ContenthashChanged(), 
+        this.deps.logger.log(`Querying from ${queryStart} to ${queryEnd}(${queryEnd - queryStart + 1} blocks) for ${this.deps.ethereumNetwork.name}`);
+        logs = await this.deps.ethereumNetwork.ensPublicResolver.queryFilter(
+          this.deps.ethereumNetwork.ensPublicResolver.filters.ContenthashChanged(), 
           queryStart, 
           queryEnd
         );
+        await sleep(1000);
       } catch {
         this.deps.logger.log(`Error querying logs for block range ${queryStart}-${queryEnd}`);
         await sleep(1000);
@@ -94,14 +97,12 @@ export class EnsIndexer {
           continue;
         }
 
-        const cid =  getIpfsHashFromContenthash(contenthash);
-
         const existingEvent = ensNodeEventMap.get(ensNode);
         if(existingEvent) {
-          existingEvent.cid = cid;
+          existingEvent.contenthash = contenthash;
         } else {
           const event = {
-            cid,
+            contenthash,
             ensNode
           };
 
@@ -110,15 +111,18 @@ export class EnsIndexer {
         }
       }
 
+      const blocksLeft = toBlock - queryEnd;
       queryStart = queryEnd + 1;
 
       if(uniqueEventList.length > prevUniqueEventListLength) {
-        this.deps.logger.log(`Found ${uniqueEventList.length} events`);
+        this.deps.logger.log(`Found a total of ${uniqueEventList.length} events`);
       }
+
+      this.deps.logger.log(`${blocksLeft} blocks left to index`);
     }
 
     for(const event of uniqueEventList) {
-      await this.processEnsIpfs(event.ensNode, event.cid);
+      await this.processEnsIpfs(event.ensNode, event.contenthash);
     }
   }
 

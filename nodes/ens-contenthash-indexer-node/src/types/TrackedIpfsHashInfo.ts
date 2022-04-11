@@ -5,5 +5,4 @@ export type TrackedIpfsHashInfo = {
   isWrapper?: boolean;
   isPinned: boolean;
   unresponsiveInfo?: UnresponsiveIpfsHashInfo;
-  indexes: string[];
 };

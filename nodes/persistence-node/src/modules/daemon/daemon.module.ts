@@ -6,9 +6,9 @@ export class DaemonModule {
 
     private constructor(
         private deps: MainDependencyContainer,
-        shouldLog: boolean
+        loggerEnabled: boolean
     ) {
-        this.deps.loggerConfig.shouldLog = shouldLog;
+        this.deps.loggerConfig.loggerEnabled = loggerEnabled;
      }
 
     static async build(shouldLog: boolean): Promise<DaemonModule> {
@@ -17,14 +17,13 @@ export class DaemonModule {
         return new DaemonModule(container.cradle, shouldLog);
     }
 
-    async run(fromBlockNumber: number, httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
+    async run(httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
         Promise.all([
             this.deps.persistenceNodeApi.run(),
             this.deps.ipfsGatewayApi.run(
                 httpConfig,
                 httpsConfig
             ),
-            this.deps.ensIndexer.startIndexing(fromBlockNumber),
             this.deps.persistenceService.run()
         ]);
     }

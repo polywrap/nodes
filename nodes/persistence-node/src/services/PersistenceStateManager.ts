@@ -25,16 +25,14 @@ export class PersistenceStateManager {
     return !!this.state.trackedIpfsHashes[ipfsHash];
   }
 
-  setIpfsHashInfo(ipfsHash: string, info: TrackedIpfsHashInfo) {
+  async setIpfsHashInfo(ipfsHash: string, info: TrackedIpfsHashInfo): Promise<void> {
     this.state.trackedIpfsHashes[ipfsHash] = info;
+    await this.save();
   }
 
-  removeIpfsHash(ipfsHash: string): void {
+  async removeIpfsHash(ipfsHash: string): Promise<void> {
     delete this.state.trackedIpfsHashes[ipfsHash];
-  }
-
-  async save(): Promise<void> {
-    fs.writeFileSync(persistenceStateFilePath, JSON.stringify(this.state, null, 2));
+    await this.save();
   }
 
   async load(): Promise<void> {
@@ -43,5 +41,9 @@ export class PersistenceStateManager {
     }
 
     this.state = JSON.parse(fs.readFileSync(persistenceStateFilePath, 'utf8'));
+  }
+
+  public async save(): Promise<void> {
+    fs.writeFileSync(persistenceStateFilePath, JSON.stringify(this.state, null, 2));
   }
 }

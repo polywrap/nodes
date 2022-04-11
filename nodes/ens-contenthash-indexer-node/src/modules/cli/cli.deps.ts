@@ -1,17 +1,15 @@
 import * as awilix from "awilix";
 import { NameAndRegistrationPair } from "awilix";
-import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
 import { Logger } from "../../services/Logger";
 import { LoggerConfig } from "../../config/LoggerConfig";
 
 export interface CliDependencyContainer {
-  persistenceNodeApiConfig: PersistenceNodeApiConfig
   loggerConfig: LoggerConfig
-
   logger: Logger
 }
 
 export const buildCliDependencyContainer = async (
+  shouldLog: boolean,
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<CliDependencyContainer>> => {
 
@@ -20,8 +18,11 @@ export const buildCliDependencyContainer = async (
   });
 
   container.register({
-    persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
-    loggerConfig: awilix.asClass(LoggerConfig).singleton(),
+    loggerConfig: awilix
+      .asFunction(({ }) => {
+        return new LoggerConfig(shouldLog);
+      })
+      .singleton(),
     logger: awilix.asClass(Logger).singleton(),
     ...extensionsAndOverrides,
   });

@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directory contents</title>
+</head>
+
+<body>
+    <h2>Index of /ipfs/{{path}}</h2>
+    <h3>Size: {{totalSizeInKb}}</h3>
+
+    <table>
+        <th>
+            <tr>
+                <th>Name</th>
+                <th>CID</th>
+                <th>Size</th>
+            </tr>
+        </th>
+        <tbody>
+            {{#items}}
+            <tr>
+                <td>
+                    <a href="/ipfs/{{path}}">
+                        {{name}}
+                    </a>
+                </td>
+                <td>
+                    {{cid}}
+                </td>
+                <td>
+                    {{sizeInKb}}
+                </td>
+            </tr>
+            {{/items}}
+        </tbody>
+    </table>
+
+
+</body>
+
+</html>

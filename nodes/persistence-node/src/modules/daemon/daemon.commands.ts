@@ -32,7 +32,7 @@ export function initializeDaemonCommands() {
         : undefined;
 
       const daemon = await DaemonModule.build(!!options.log);
-      daemon.run(parseInt(options.fromBlock) ?? 0, httpConfig, httpsConfig);
+      daemon.run(httpConfig, httpsConfig);
 
     });
 }

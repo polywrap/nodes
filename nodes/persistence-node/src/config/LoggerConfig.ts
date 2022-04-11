@@ -1,3 +1,5 @@
+import config from "./config.json";
+
 export class LoggerConfig {
-  shouldLog = !!process.env.LOG;
+  loggerEnabled = !!config.loggerEnabled;
 }
