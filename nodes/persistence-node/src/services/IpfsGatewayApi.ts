@@ -40,6 +40,11 @@ export class IpfsGatewayApi {
     httpConfig: HttpConfig,
     httpsConfig: HttpsConfig
   ) {
+    const app = this.createExpressApp();
+    runServer(httpConfig, httpsConfig, app);
+  }
+
+  createExpressApp() {
     const ipfs = this.deps.ipfsNode;
 
     const app = express();
@@ -97,12 +102,12 @@ export class IpfsGatewayApi {
     }));
 
     app.get('/pin/ls', handleError(async (req, res) => {
-      const pinned = await getPinnedWrapperCIDs(this.deps.storage, this.deps.ipfsNode, this.deps.logger)
+      const pinned = await getPinnedWrapperCIDs(this.deps.storage, this.deps.ipfsNode, this.deps.logger);
 
       res.render('ipfs-pinned-files', {
         pinned,
         count: pinned.length,
-      })
+      });
     }));
 
     app.get("/ipfs/:path(*)", handleError(async (req, res) => {
@@ -121,8 +126,8 @@ export class IpfsGatewayApi {
         //The stat API doesn't show size for subdirectories
         //So we need to go through the contents of the directory to find subdirectories
         //and get their size
-        for(const item of items) {
-          if(item.type === "dir") {
+        for (const item of items) {
+          if (item.type === "dir") {
             const stat = await ipfs.files.stat(`/ipfs/${item.path}`, { size: true });
             item.size = stat.cumulativeSize;
           }
@@ -133,7 +138,7 @@ export class IpfsGatewayApi {
           path: ipfsPath,
           totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
           sizeInKb: function () {
-            return formatFileSize((this as any).size)
+            return formatFileSize((this as any).size);
           },
         });
       } else {
@@ -191,8 +196,7 @@ export class IpfsGatewayApi {
       }
       this.deps.logger.log(err.message);
     });
-
-    runServer(httpConfig, httpsConfig, app);
+    return app;
   }
 }
 

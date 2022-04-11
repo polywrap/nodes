@@ -24,6 +24,11 @@ export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string): Promis
       throw new NotFoundError(`File not found for hash: ${hash}`);
     }
 
+    if (errorMessage?.includes("To parse non base32 or base58btc encoded CID multibase decoder must be provided")) {
+      throw new NotFoundError(`To parse non base32 or base58btc encoded CID multibase decoder must be provided. 
+        Hash argument: ${hash}`);
+    }
+
     if (errorMessage?.includes("this dag node is a directory")) {
       //TODO: should we handle this differently?
       throw err;
