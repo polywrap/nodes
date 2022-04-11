@@ -142,21 +142,6 @@ export class IpfsGatewayApi {
       }
     }));
 
-    app.get("/ens/:network/:ensDomain", handleError(async (req, res) => {
-      const {
-        network,
-        ensDomain,
-      } = req.params as any
-
-      const [error, ipfsHash] = await this.deps.ensIndexerApp.resolveContenthash(network, ensDomain);
-
-      if (ipfsHash) {
-        res.redirect(`/ipfs/${ipfsHash}`)
-      } else {
-        res.status(422).send(error)
-      }
-    }));
-
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {
       if (!req.files) {
         res.json({
