@@ -32,17 +32,4 @@ export class CliModule {
             console.log("Already initialized. Skipping initialization.");
         }
     }
-
-    // private async performApiCall(url: string): Promise<string> {
-    //     try {
-    //         const res = await axios({
-    //             method: 'GET',
-    //             url: `http://localhost:${this.deps.persistenceNodeApiConfig.adminRpcApiPort}/${url}`,
-    //         });
-
-    //         return res.data;
-    //     } catch (error) {
-    //         return "ERROR: Persistence node daemon not running.";
-    //     }
-    // }
 }

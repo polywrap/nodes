@@ -1,5 +1,9 @@
-import config from "./config.json";
+import { Config } from "./Config";
 
 export class PersistenceNodeApiConfig {
-  adminRpcApiPort = config.adminRpcApiPort ?? 6051;
+  adminRpcApiPort: number;
+
+  constructor({ config }: { config: Config }) {
+    this.adminRpcApiPort = config.adminRpcApiPort;
+  }
 }

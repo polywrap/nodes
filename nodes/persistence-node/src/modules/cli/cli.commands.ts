@@ -3,22 +3,14 @@ import { CliModule } from "./cli.module";
 
 export function initializeCliCommands() {
   program
-    .command("info")
-    .description("Display useful information about the current state (pinned hash count, unresponsive count, etc)")
-    .action(async (options) => {
-
-      const cli = await CliModule.build(!!options.log);
-      await cli.getInfo();
-
-      process.exit(0);
-    });
-
-  program
     .command("init")
+    .option("--data <string>", "Path to the data directory")
+    .option("--network <string>", "Network name (defaults to mainnet)")
+    .option("--log", "Enable logging")
     .description("Initialize the node")
     .action(async (options) => {
-
-      // TODO: implement actual logic here
+      const cli = await CliModule.build(!!options.log);
+      await cli.initialize(options.data, options.network);
 
       process.exit(0);
     });

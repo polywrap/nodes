@@ -9,6 +9,7 @@ export function initializeDaemonCommands() {
     .option("--http <number>", "Http port")
     .option("--https <number>", "Https port")
     .option("--ssl <string>", "Directory with SSL certificates")
+    .option("--data <string>", "Path to the data directory")
     .option("--log", "Enable logging")
     .option("--from-block <number>", "Block number to start listening from")
     .action(async (options) => {
@@ -31,7 +32,7 @@ export function initializeDaemonCommands() {
         }
         : undefined;
 
-      const daemon = await DaemonModule.build(!!options.log);
+      const daemon = await DaemonModule.build(!!options.log, options.data);
       daemon.run(httpConfig, httpsConfig);
 
     });

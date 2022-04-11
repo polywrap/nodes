@@ -1,5 +1,7 @@
-import config from "./config.json";
-
 export class LoggerConfig {
-  loggerEnabled = !!config.loggerEnabled;
+  loggerEnabled: boolean;
+
+  constructor(loggerEnabled: boolean) {
+    this.loggerEnabled = loggerEnabled;
+  }
 }

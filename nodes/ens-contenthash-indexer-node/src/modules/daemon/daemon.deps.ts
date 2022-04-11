@@ -38,7 +38,11 @@ export const buildMainDependencyContainer = async (
   container.register({
     dataDirPath: awilix.asValue(dataDirPath),
     config: awilix.asValue(config),
-    loggerConfig: awilix.asValue(new LoggerConfig(config.loggerEnabled)),
+    loggerConfig: awilix
+      .asFunction(({ config }) => {
+        return new LoggerConfig(config.shouldLog);
+      })
+      .singleton(),
     ensNetworkConfig: awilix.asClass(EnsNetworkConfig).singleton(),
     ensIndexerConfig: awilix.asClass(EnsIndexerConfig).singleton(),
     ensStateManager: awilix.asClass(EnsStateManager).singleton(),
