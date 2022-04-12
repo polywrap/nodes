@@ -56,4 +56,4 @@ jobs:
             key: ${{ secrets.DEPLOYMENT_KEY_DEVELOP }}
             port: ${{ secrets.SSH_PORT_DEVELOP }}
             script: |
-              curl -o- https://raw.githubusercontent.com/nerfZael/nodes/develop/deployment/develop/update.sh | bash
+              curl -o- https://raw.githubusercontent.com/polywrap/nodes/develop/deployment/develop/update.sh | bash
