@@ -24,6 +24,10 @@ pm2 delete ens-indexer-node-ropsten
 
 set -e
 
+rm $data/persistence-node -rf
+rm $data/ens-indexer-node/rinkeby -rf
+rm $data/ens-indexer-node/ropsten -rf
+
 cd $hosting/$persistenceNode
 cp -r $staging/$persistenceNode/bin ./
 cp -r $staging/$persistenceNode/node_modules ./

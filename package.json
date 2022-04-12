@@ -1,8 +1,6 @@
 {
   "name": "@polywrap/nodes",
   "version": "0.1.0",
-  "main": "bin/main.js",
-  "types": "bin/main.d.ts",
   "author": "nerfZael",
   "license": "MIT",
   "private": false,
