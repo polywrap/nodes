@@ -146,7 +146,7 @@ export class GatewayServer {
     }));
 
     app.get("/", handleError(async (req, res) => {
-      res.send(`Status: running<br>Versions: ${VERSION}`);
+      res.send(`Status: running<br>Version: ${VERSION}`);
     }));
 
     app.get("/status", handleError(async (req, res) => {
