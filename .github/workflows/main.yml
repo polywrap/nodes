@@ -45,7 +45,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME_DEVELOP }}
           key: ${{ secrets.DEPLOYMENT_KEY_DEVELOP }}
           port: ${{ secrets.SSH_PORT_DEVELOP }}
-          source: "./nodes/persistence-node/bin,./nodes/persistence-node/bin,./nodes/ens-contenthash-indexer-node/node_modules,./nodes/ens-contenthash-indexer-node/node_modules"
+          source: "./nodes/persistence-node/bin,./nodes/persistence-node/node_modules,./nodes/ens-contenthash-indexer-node/bin,./nodes/ens-contenthash-indexer-node/node_modules"
           target: "/home/ubuntu/staging/polywrap/nodes"
 
       - name: Deploy nodes to development server
