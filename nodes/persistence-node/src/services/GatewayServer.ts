@@ -22,7 +22,7 @@ export class GatewayServer {
   async run(
     port?: number
   ) {
-    const gatewayPort = port ?? this.deps.persistenceNodeApiConfig.gatewayPort;
+    const gatewayPort = port ?? this.deps.gatewayPort;
 
     const ipfs = this.deps.ipfsNode;
 

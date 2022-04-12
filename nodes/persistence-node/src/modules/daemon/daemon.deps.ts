@@ -3,7 +3,6 @@ import { NameAndRegistrationPair } from "awilix";
 import { createIpfsNode } from "../../createIpfsNode";
 import { Logger } from "../../services/Logger";
 import { IPFS } from "ipfs-core";
-import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
 import { IpfsConfig } from "../../config/IpfsConfig";
 import { PersistenceService } from "../../services/PersistenceService";
 import { PersistenceStateManager } from "../../services/PersistenceStateManager";
@@ -17,9 +16,10 @@ import { ApiServer } from "../../services/ApiServer";
 export interface MainDependencyContainer {
   dataDirPath: string;
   config: Config;
+  apiPort: number;
+  gatewayPort: number;
   ipfsConfig: IpfsConfig;
   loggerConfig: LoggerConfig;
-  persistenceNodeApiConfig: PersistenceNodeApiConfig;
   indexerConfig: IndexerConfig;
 
   logger: Logger;
@@ -48,13 +48,14 @@ export const buildMainDependencyContainer = async (
   container.register({
     dataDirPath: awilix.asValue(dataDirPath),
     config: awilix.asValue(config),
+    apiPort: awilix.asValue(config.apiPort),
+    gatewayPort: awilix.asValue(config.gatewayPort),
     ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
     loggerConfig: awilix
       .asFunction(({ config }) => {
         return new LoggerConfig(config.shouldLog);
       })
       .singleton(),
-    persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
     indexerConfig: awilix.asClass(IndexerConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
     persistenceStateManager: awilix

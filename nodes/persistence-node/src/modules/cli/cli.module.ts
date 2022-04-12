@@ -13,7 +13,7 @@ export class CliModule {
         this.deps.loggerConfig.loggerEnabled = loggerEnabled;
     }
 
-    async initialize(dataDirPath?: string, networkName?: string) {
+    async initialize(dataDirPath?: string) {
         if(!dataDirPath) {
             dataDirPath = "./";
         }
@@ -34,30 +34,5 @@ export class CliModule {
         const container = await buildCliDependencyContainer(shouldLog);
 
         return new CliModule(container.cradle, shouldLog);
-    }
-
-    async getInfo() {
-        const data = await this.performApiCall('api/info')
-
-        console.log(data);
-    }
-
-    async resetStorage() {
-        const data = await this.performApiCall('api/reset')
-
-        console.log(data);
-    }
-
-    private async performApiCall(url: string): Promise<string> {
-        try {
-            const res = await axios({
-                method: 'GET',
-                url: `http://localhost:${this.deps.persistenceNodeApiConfig.apiPort}/${url}`,
-            });
-
-            return res.data;
-        } catch (error) {
-            return "ERROR: Persistence node daemon not running.";
-        }
     }
 }

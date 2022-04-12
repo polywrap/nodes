@@ -10,7 +10,7 @@ export class ApiServer {
   async run(port?: number) {
     const app = express();
 
-    const apiPort = port ?? this.deps.persistenceNodeApiConfig.apiPort;
+    const apiPort = port ?? this.deps.apiPort;
 
     runServer(
       app,

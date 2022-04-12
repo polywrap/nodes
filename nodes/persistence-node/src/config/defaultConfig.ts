@@ -3,15 +3,15 @@ import { Config } from "./Config";
 export const defaultConfig: Config = {
   "apiPort": 6051,
   "gatewayPort": 8081,
-  "timeouts": {
-      "objectGetTimeout": 15000,
-      "pinTimeout": 30000,
-      "unpinTimeout": 30000,
-      "gatewayTimeout": 15000
-  },
   "ipfs": {
       "provider": "http://localhost:5001",
-      "gateway": "https://ipfs.io/ipfs"
+      "gateway": "https://ipfs.io/ipfs",
+      "timeouts": {
+        "objectGetTimeout": 15000,
+        "pinTimeout": 30000,
+        "unpinTimeout": 30000,
+        "gatewayTimeout": 15000
+    }
   },
   "loggerEnabled": true,
   "indexes": [

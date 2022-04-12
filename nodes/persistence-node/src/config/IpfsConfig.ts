@@ -12,10 +12,10 @@ export class IpfsConfig {
   constructor({ config }: { config: Config }) {
     this.externalIpfsProvider = getValidUrlOrUndefined(config.ipfs.provider);
     this.gatewayURI = config.ipfs.gateway;
-    this.objectGetTimeout = config.timeouts.objectGetTimeout;
-    this.pinTimeout = config.timeouts.pinTimeout;
-    this.unpinTimeout = config.timeouts.unpinTimeout;
-    this.gatewayTimeout = config.timeouts.gatewayTimeout;
+    this.objectGetTimeout = config.ipfs.timeouts.objectGetTimeout;
+    this.pinTimeout = config.ipfs.timeouts.pinTimeout;
+    this.unpinTimeout = config.ipfs.timeouts.unpinTimeout;
+    this.gatewayTimeout = config.ipfs.timeouts.gatewayTimeout;
   }
 }
 
