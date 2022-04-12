@@ -1,0 +1,39 @@
+{
+  "name": "@polywrap/nodes",
+  "version": "0.1.0",
+  "main": "bin/main.js",
+  "types": "bin/main.d.ts",
+  "author": "nerfZael",
+  "license": "MIT",
+  "private": false,
+  "files": [
+    "/bin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/polywrap/nodes"
+  },
+  "keywords": [
+    "polywrap",
+    "ipfs",
+    "persistence",
+    "wrap",
+    "ens",
+    "indexer",
+    "indexing",
+    "polywrapper",
+    "wrapper"
+  ],
+  "scripts": {
+    "build": "yarn build:persistence && yarn build:ens",
+    "build:persistence": "cd ./nodes/persistence-node && yarn build",
+    "build:ens": "cd ./nodes/ens-contenthash-indexer-node && yarn build",
+    "install:ci": "yarn install:ci:persistence && yarn install:ci:ens",
+    "install:ci:persistence": "cd ./nodes/persistence-node && yarn install --nonInteractive --frozen-lockfile --prefer-offline",
+    "install:ci:ens": "cd ./nodes/ens-contenthash-indexer-node && yarn install --nonInteractive --frozen-lockfile --prefer-offline"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}
