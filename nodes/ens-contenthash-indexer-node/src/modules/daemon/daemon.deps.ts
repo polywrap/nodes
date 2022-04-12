@@ -8,12 +8,13 @@ import { Contract } from "ethers";
 import { EnsNetworkConfig } from "../../config/EnsNetworkConfig";
 import { EnsStateManager } from "../../services/EnsStateManager";
 import { EthereumNetwork } from "../../services/EthereumNetwork";
-import { APIServer } from "../../services/APIServer";
+import { ApiServer } from "../../services/ApiServer";
 import { Config } from "../../config/Config";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
   config: Config;
+  apiPort: number;
   ensNetworkConfig: EnsNetworkConfig;
   loggerConfig: LoggerConfig;
   logger: Logger;
@@ -22,12 +23,13 @@ export interface MainDependencyContainer {
   ensIndexerConfig: EnsIndexerConfig;
   ensStateManager: EnsStateManager;
   ethereumNetwork: EthereumNetwork;
-  apiServer: APIServer;
+  apiServer: ApiServer;
 }
 
 export const buildMainDependencyContainer = async (
   dataDirPath: string,
   config: Config,
+  apiPort?: number,
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<MainDependencyContainer>> => {
 
@@ -35,9 +37,14 @@ export const buildMainDependencyContainer = async (
     injectionMode: awilix.InjectionMode.PROXY,
   });
 
+  apiPort = apiPort 
+  ? apiPort 
+  : config.apiPort;
+
   container.register({
     dataDirPath: awilix.asValue(dataDirPath),
     config: awilix.asValue(config),
+    apiPort: awilix.asValue(apiPort),
     loggerConfig: awilix
       .asFunction(({ config }) => {
         return new LoggerConfig(config.shouldLog);
@@ -49,7 +56,7 @@ export const buildMainDependencyContainer = async (
     ethereumNetwork: awilix.asClass(EthereumNetwork).singleton(),
     logger: awilix.asClass(Logger).singleton(),
     indexerService: awilix.asClass(IndexerService).singleton(),
-    apiServer: awilix.asClass(APIServer).singleton(),
+    apiServer: awilix.asClass(ApiServer).singleton(),
     ...extensionsAndOverrides,
   });
 

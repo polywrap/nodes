@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [ develop ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-20.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Read .nvmrc
+        run: echo ::set-output name=NVMRC::$(cat .nvmrc)
+        id: nvm
+
+      - name: Setup Node.js
+        uses: actions/setup-node@master
+        with:
+          node-version: '${{ steps.nvm.outputs.NVMRC }}'
+
+      - name: Get yarn cache directory path
+        id: yarn-cache-dir-path
+        run: echo "::set-output name=dir::$(yarn cache dir)"
+
+      - uses: actions/cache@v2
+        with:
+          path: ${{ steps.yarn-cache-dir-path.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-yarn-
+
+      - name: Install dependencies
+        run: yarn install:ci
+
+      - name: Build
+        run: yarn build
+        
+      - name: "Copy persistence node build artifacts to development server"
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_DEVELOP }}
+          username: ${{ secrets.SSH_USERNAME_DEVELOP }}
+          key: ${{ secrets.DEPLOYMENT_KEY_DEVELOP }}
+          port: ${{ secrets.SSH_PORT_DEVELOP }}
+          source: "./nodes/persistence-node/bin,./nodes/persistence-node/bin,./nodes/ens-contenthash-indexer-node/node_modules,./nodes/ens-contenthash-indexer-node/node_modules"
+          target: "/home/ubuntu/staging/polywrap/nodes"
+
+      - name: Deploy nodes to development server
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{ secrets.SSH_HOST_DEVELOP }}
+            username: ${{ secrets.SSH_USERNAME_DEVELOP }}
+            key: ${{ secrets.DEPLOYMENT_KEY_DEVELOP }}
+            port: ${{ secrets.SSH_PORT_DEVELOP }}
+            script: |
+              curl -o- https://raw.githubusercontent.com/polywrap/nodes/develop/deployment/develop/update.sh | bash

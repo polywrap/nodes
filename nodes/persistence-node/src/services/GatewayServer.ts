@@ -2,18 +2,17 @@ import express, { NextFunction, Request, Response } from "express";
 import multer, { memoryStorage } from "multer";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { HttpConfig } from "../api-server/HttpConfig";
-import { HttpsConfig } from "../api-server/HttpsConfig";
-import { runServer } from "../api-server/runServer";
+import { runServer } from "../http-server/runServer";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
 import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 import { MulterFile } from "../MulterFile";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getIpfsFileContents } from "../getIpfsFileContents";
-import { handleError } from "../api-server/handleError";
+import { handleError } from "../http-server/handleError";
+import { VERSION } from "../constants/version";
 
-export class IpfsGatewayApi {
+export class GatewayServer {
   deps: MainDependencyContainer;
 
   constructor(deps: MainDependencyContainer) {
@@ -21,8 +20,7 @@ export class IpfsGatewayApi {
   }
 
   async run(
-    httpConfig: HttpConfig,
-    httpsConfig: HttpsConfig
+    port?: number
   ) {
     const ipfs = this.deps.ipfsNode;
 
@@ -38,32 +36,6 @@ export class IpfsGatewayApi {
         fileSize: 1 * 1024 * 1024,
         files: 7
       }
-    });
-
-    app.all('*', handleError(async (req, res, next) => {
-      res.header('Access-Control-Allow-Origin', '*');
-      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-
-      //Trim and redirect multiple slashes in URL
-      if (req.url.match(/[/]{2,}/g)) {
-        req.url = req.url.replace(/[/]+/g, '/');
-        res.redirect(req.url);
-        return;
-      }
-
-      if (req.method === 'OPTIONS') {
-        res.send(200);
-      } else {
-        this.deps.logger.log(`Request:  ${req.method} --- ${req.url}`);
-        next();
-      }
-    }));
-
-    app.use((req, res, next) => {
-      res.on('finish', () => {
-        this.deps.logger.log(`Response: ${req.method} ${res.statusCode} ${req.url}`);
-      });
-      next();
     });
 
     app.get('/api/v0/cat', handleError(async (req, res) => {
@@ -174,7 +146,7 @@ export class IpfsGatewayApi {
     }));
 
     app.get("/", handleError(async (req, res) => {
-      res.send("Status: running");
+      res.send(`Status: running<br>Versions: ${VERSION}`);
     }));
 
     app.get("/status", handleError(async (req, res) => {
@@ -183,11 +155,11 @@ export class IpfsGatewayApi {
       });
     }));
 
-    app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-      res.status(500).send("Something went wrong. Check the logs for more info.");
-      this.deps.logger.log(err.message);
-    });
-
-    runServer(httpConfig, httpsConfig, app);
+    runServer(
+      app,
+      this.deps.gatewayPort, 
+      this.deps.logger,
+      () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayPort}`)
+    );
   }
 }

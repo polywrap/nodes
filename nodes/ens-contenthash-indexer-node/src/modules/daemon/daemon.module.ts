@@ -12,18 +12,18 @@ export class DaemonModule {
         this.deps.loggerConfig.loggerEnabled = loggerEnabled;
      }
 
-    static async build(shouldLog: boolean, dataDirPathForSetup?: string): Promise<DaemonModule> {
+    static async build(shouldLog: boolean, dataDirPathForSetup?: string, apiPort?: number): Promise<DaemonModule> {
         const { config, dataDirPath } = await DaemonModule.setupDataDirectory(dataDirPathForSetup);
 
-        const container = await buildMainDependencyContainer(dataDirPath, config);
+        const container = await buildMainDependencyContainer(dataDirPath, config, apiPort);
 
         return new DaemonModule(container.cradle, shouldLog);
     }
 
-    async run(fromBlockNumber: number, apiPort: number): Promise<void> {
+    async run(fromBlockNumber: number): Promise<void> {
         await Promise.all([
             this.deps.indexerService.startIndexing(fromBlockNumber),
-            this.deps.apiServer.run(apiPort)
+            this.deps.apiServer.run()
         ]);
     }
 
