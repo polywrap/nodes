@@ -1,39 +1,46 @@
-import { HttpConfig } from "./HttpConfig";
-import fs from "fs";
-import https from "https";
 import http from "http";
-import path from "path";
-import { HttpsConfig } from "./HttpsConfig";
 import cors from "cors";
+import { Request, Response, NextFunction } from "express";
+import { Logger } from "../services/Logger";
+import { handleError } from "./handleError";
 
-export const runServer = (httpConfig: HttpConfig, httpsConfig: HttpsConfig, app: any) => {
+export const runServer = (app: any, port: number, logger: Logger, onStart: () => void) => {
+  app.all('*', handleError(async (req: Request, res: Response, next: NextFunction) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+
+    //Trim and redirect multiple slashes in URL
+    if (req.url.match(/[/]{2,}/g)) {
+      req.url = req.url.replace(/[/]+/g, '/');
+      res.redirect(req.url);
+      return;
+    }
+
+    if (req.method === 'OPTIONS') {
+      res.send(200);
+    } else {
+      logger.log(`Request:  ${req.method} --- ${req.url}`);
+      next();
+    }
+  }));
+
+
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    res.on('finish', () => {
+      logger.log(`Response: ${req.method} ${res.statusCode} ${req.url}`);
+    });
+    next();
+  });
+  
   app.use(cors({
     origin: "*",
   }));
 
-  if(httpConfig) {
-    const server = http.createServer({}, app);
-    
-    server.listen(httpConfig.port, function(){
-      console.log(`HTTP server started at http://localhost:${httpConfig.port}` );
-    });
-  } 
-
-  if(httpsConfig) {
-    if(!httpsConfig.sslDir) {
-      throw new Error("SSL directory not specified");
-    }
-
-    const options = {
-      key: fs.readFileSync(path.join(httpsConfig.sslDir, "key.pem"), { encoding: "utf-8" }),
-      cert: fs.readFileSync(path.join(httpsConfig.sslDir, "cert.pem"), { encoding: "utf-8" }),
-      ca: fs.readFileSync(path.join(httpsConfig.sslDir, "ca.pem"), { encoding: "utf-8" }),
-    };
-
-    const server = https.createServer(options, app);
-    
-    server.listen(httpsConfig.port, function(){
-      console.log(`HTTPS server started at http://localhost:${httpsConfig.port}` );
-    });
-  }
+  app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+    res.status(500).send("Something went wrong. Check the logs for more info.");
+    logger.log(err.message);
+  });
+  const server = http.createServer({}, app);
+  
+  server.listen(port, onStart);
 };

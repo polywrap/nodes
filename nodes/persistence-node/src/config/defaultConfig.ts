@@ -1,7 +1,8 @@
 import { Config } from "./Config";
 
 export const defaultConfig: Config = {
-  "adminRpcApiPort": 6051,
+  "apiPort": 6051,
+  "gatewayPort": 8081,
   "timeouts": {
       "objectGetTimeout": 15000,
       "pinTimeout": 30000,

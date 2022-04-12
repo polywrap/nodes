@@ -52,7 +52,7 @@ export class CliModule {
         try {
             const res = await axios({
                 method: 'GET',
-                url: `http://localhost:${this.deps.persistenceNodeApiConfig.adminRpcApiPort}/${url}`,
+                url: `http://localhost:${this.deps.persistenceNodeApiConfig.apiPort}/${url}`,
             });
 
             return res.data;

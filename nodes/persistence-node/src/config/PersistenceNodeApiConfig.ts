@@ -1,9 +1,11 @@
 import { Config } from "./Config";
 
 export class PersistenceNodeApiConfig {
-  adminRpcApiPort: number;
+  apiPort: number;
+  gatewayPort: number;
 
   constructor({ config }: { config: Config }) {
-    this.adminRpcApiPort = config.adminRpcApiPort;
+    this.apiPort = config.apiPort;
+    this.gatewayPort = config.gatewayPort;
   }
 }

@@ -1,7 +1,8 @@
 import { IPFSIndexConfig } from "../types/IPFSIndexConfig";
 
 export type Config = {
-    adminRpcApiPort: number,
+    apiPort: number,
+    gatewayPort: number,
     timeouts: {
         objectGetTimeout: number,
         pinTimeout: number,

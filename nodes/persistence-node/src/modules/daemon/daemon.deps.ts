@@ -1,9 +1,7 @@
 import * as awilix from "awilix";
 import { NameAndRegistrationPair } from "awilix";
 import { createIpfsNode } from "../../createIpfsNode";
-import { IpfsGatewayApi } from "../../services/IpfsGatewayApi";
 import { Logger } from "../../services/Logger";
-import { PersistenceNodeApi } from "../../services/PersistenceNodeApi";
 import { IPFS } from "ipfs-core";
 import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
 import { IpfsConfig } from "../../config/IpfsConfig";
@@ -13,6 +11,8 @@ import { IndexerConfig } from "../../config/IndexerConfig";
 import { IndexRetriever } from "../../services/IndexRetriever";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { Config } from "../../config/Config";
+import { GatewayServer } from "../../services/GatewayServer";
+import { ApiServer } from "../../services/ApiServer";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
@@ -25,8 +25,8 @@ export interface MainDependencyContainer {
   logger: Logger;
   ipfsNode: IPFS;
 
-  ipfsGatewayApi: IpfsGatewayApi
-  persistenceNodeApi: PersistenceNodeApi
+  gatewayServer: GatewayServer;
+  apiServer: ApiServer;
   persistenceService: PersistenceService;
   persistenceStateManager: PersistenceStateManager;
   indexRetriever: IndexRetriever;
@@ -45,8 +45,6 @@ export const buildMainDependencyContainer = async (
   const persistenceStateManager = new PersistenceStateManager();
   await persistenceStateManager.load();
 
-  
-
   container.register({
     dataDirPath: awilix.asValue(dataDirPath),
     config: awilix.asValue(config),
@@ -64,8 +62,8 @@ export const buildMainDependencyContainer = async (
       return persistenceStateManager;
     })
     .singleton(),
-    ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
-    persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
+    gatewayServer: awilix.asClass(GatewayServer).singleton(),
+    apiServer: awilix.asClass(ApiServer).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),
     indexRetriever: awilix.asClass(IndexRetriever).singleton(),
     ...extensionsAndOverrides,

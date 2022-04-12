@@ -1,5 +1,3 @@
-import { HttpConfig } from "../../api-server/HttpConfig";
-import { HttpsConfig } from "../../api-server/HttpsConfig";
 import { buildMainDependencyContainer, MainDependencyContainer } from "./daemon.deps";
 import fs from "fs";
 import path from "path";
@@ -22,13 +20,10 @@ export class DaemonModule {
         return new DaemonModule(container.cradle, shouldLog);
     }
 
-    async run(httpConfig: HttpConfig, httpsConfig: HttpsConfig) {
+    async run(apiPort?: number, gatewayPort?: number) {
         Promise.all([
-            this.deps.persistenceNodeApi.run(),
-            this.deps.ipfsGatewayApi.run(
-                httpConfig,
-                httpsConfig
-            ),
+            this.deps.apiServer.run(apiPort),
+            this.deps.gatewayServer.run(gatewayPort),
             this.deps.persistenceService.run()
         ]);
     }
