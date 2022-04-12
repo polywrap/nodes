@@ -2,14 +2,14 @@ import express, { NextFunction, Request, Response } from "express";
 import multer, { memoryStorage } from "multer";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { runServer } from "../api-server/runServer";
+import { runServer } from "../http-server/runServer";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
 import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 import { MulterFile } from "../MulterFile";
 import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getIpfsFileContents } from "../getIpfsFileContents";
-import { handleError } from "../api-server/handleError";
+import { handleError } from "../http-server/handleError";
 import { VERSION } from "../constants/version";
 
 export class GatewayServer {
@@ -22,8 +22,6 @@ export class GatewayServer {
   async run(
     port?: number
   ) {
-    const gatewayPort = port ?? this.deps.gatewayPort;
-
     const ipfs = this.deps.ipfsNode;
 
     const app = express();
@@ -159,9 +157,9 @@ export class GatewayServer {
 
     runServer(
       app,
-      gatewayPort, 
+      this.deps.gatewayPort, 
       this.deps.logger,
-      () => console.log(`Gateway started at http://localhost:${gatewayPort}`)
+      () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayPort}`)
     );
   }
 }

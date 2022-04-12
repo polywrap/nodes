@@ -2,22 +2,20 @@ import express, { NextFunction, Request, Response } from "express";
 import { EnsIndexerConfig } from "../config/EnsIndexerConfig";
 import { EnsStateManager } from "./EnsStateManager";
 import { Logger } from "./Logger";
+import { runServer } from "../http-server/runServer";
 
 interface IDependencies {
+  apiPort: number;
   ensIndexerConfig: EnsIndexerConfig,
   ensStateManager: EnsStateManager,
   logger: Logger
 }
 
-export class APIServer {
+export class ApiServer {
   constructor(private readonly deps: IDependencies) {
   }
 
-  async run(port: number) {
-    port = !!port
-      ? port
-      : this.deps.ensIndexerConfig.apiPort;
-
+  async run() {
     const app = express();
 
     app.all('*', handleError(async (req, res, next) => {
@@ -57,12 +55,12 @@ export class APIServer {
       });
     }));
 
-    app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-      res.status(500).send("Something went wrong. Check the logs for more info.");
-      this.deps.logger.log(err.message);
-    });
-
-    app.listen(port);
+    runServer(
+      app,
+      this.deps.apiPort, 
+      this.deps.logger,
+      () => console.log(`API listening on http://localhost:${this.deps.apiPort}`)
+    );
   }
 }
 

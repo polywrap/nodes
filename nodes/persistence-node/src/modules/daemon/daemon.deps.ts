@@ -35,6 +35,8 @@ export interface MainDependencyContainer {
 export const buildMainDependencyContainer = async (
   dataDirPath: string,
   config: Config,
+  apiPort?: number,
+  gatewayPort?: number,
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<MainDependencyContainer>> => {
 
@@ -42,14 +44,22 @@ export const buildMainDependencyContainer = async (
     injectionMode: awilix.InjectionMode.PROXY,
   });
 
+  apiPort = apiPort
+    ? apiPort
+    : config.apiPort;
+
+  gatewayPort = gatewayPort
+    ? gatewayPort
+    : config.gatewayPort;
+
   const persistenceStateManager = new PersistenceStateManager();
   await persistenceStateManager.load();
 
   container.register({
     dataDirPath: awilix.asValue(dataDirPath),
     config: awilix.asValue(config),
-    apiPort: awilix.asValue(config.apiPort),
-    gatewayPort: awilix.asValue(config.gatewayPort),
+    apiPort: awilix.asValue(apiPort),
+    gatewayPort: awilix.asValue(gatewayPort),
     ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
     loggerConfig: awilix
       .asFunction(({ config }) => {

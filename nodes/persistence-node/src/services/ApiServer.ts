@@ -1,5 +1,5 @@
-import express, { NextFunction, Request, Response } from "express";
-import { runServer } from "../api-server/runServer";
+import express from "express";
+import { runServer } from "../http-server/runServer";
 import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
 
 export class ApiServer {
@@ -10,13 +10,11 @@ export class ApiServer {
   async run(port?: number) {
     const app = express();
 
-    const apiPort = port ?? this.deps.apiPort;
-
     runServer(
       app,
-      apiPort, 
+      this.deps.apiPort, 
       this.deps.logger,
-      () => console.log(`Gateway started at http://localhost:${apiPort}`)
+      () => console.log(`Gateway listening on http://localhost:${this.deps.apiPort}`)
     );
   }
 }
