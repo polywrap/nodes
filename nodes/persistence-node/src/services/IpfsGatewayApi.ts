@@ -18,7 +18,7 @@ import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { getIpfsFileContents } from "../ipfs-operations/getIpfsFileContents";
 import { resolveIpfsPath } from "../ipfs-operations/resolveIpfsPath";
 import { getIpfsFileStat } from "../ipfs-operations/getIpfsFileStat";
-import { NotFoundError } from "../types/NotFoundError";
+import { IpfsApiError } from "../types/IpfsApiError";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -188,8 +188,8 @@ export class IpfsGatewayApi {
     }));
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-      if (err instanceof NotFoundError) {
-        res.status(404).send("Not found");
+      if (err instanceof IpfsApiError) {
+        res.status(500).send(err.message);
       } else {
         res.status(500).send("Something went wrong. Check the logs for more info.");
       }

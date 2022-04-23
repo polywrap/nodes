@@ -1,39 +1,27 @@
 import * as IPFS from 'ipfs-core';
-import { NotFoundError } from '../types/NotFoundError';
+import { IpfsApiError } from '../types/IpfsApiError';
+import { asyncIterableToArray } from '../utils/asyncIterableToArray';
 
 export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string): Promise<Buffer> => {
-  try {
-    const stream = ipfs.cat(hash);
-
-    let data: Uint8Array = new Uint8Array();
-
-    for await (const chunk of stream) {
-      const temp = new Uint8Array(data.length + chunk.length);
-      temp.set(data);
-      temp.set(chunk, data.length);
-      data = temp;
-    }
-
-    const buffer = Buffer.from(data);
-
-    return buffer;
-  } catch (err: any) {
-    const errorMessage: string | null = typeof err?.message === "string" ? err.message : null;
-    
-    if (errorMessage?.includes("Invalid CID version")) {
-      throw new NotFoundError(`File not found for hash: ${hash}`);
-    }
-
-    if (errorMessage?.includes("To parse non base32 or base58btc encoded CID multibase decoder must be provided")) {
-      throw new NotFoundError(`To parse non base32 or base58btc encoded CID multibase decoder must be provided. 
-        Hash argument: ${hash}`);
-    }
-
-    if (errorMessage?.includes("this dag node is a directory")) {
-      //TODO: should we handle this differently?
+  const chunks = await asyncIterableToArray(ipfs.cat(hash))
+    .catch(err => { 
+      const errorMessage: string | null = typeof err?.message === "string" ? err.message : null;
+      if (!!errorMessage) {
+        throw new IpfsApiError(errorMessage);
+      }
       throw err;
-    }
+    });
 
-    throw err;
+  let data: Uint8Array = new Uint8Array();
+
+  for (const chunk of chunks) {
+    const temp = new Uint8Array(data.length + chunk.length);
+    temp.set(data);
+    temp.set(chunk, data.length);
+    data = temp;
   }
+
+  const buffer = Buffer.from(data);
+
+  return buffer;
 };
