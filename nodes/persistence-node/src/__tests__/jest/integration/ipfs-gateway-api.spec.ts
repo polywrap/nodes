@@ -9,45 +9,64 @@ describe("ipfs-gateway-api", () => {
 
   const nonExistentHash = "QmcnrHegojMFqHkRhixazY67Zb9mSbMLv6sSxyDpUtnrQSy";
   const nonBase32Hash = "SomeInvalidHash";
+  const genericErrorResponseMessage = "Something went wrong. Check the logs for more info.";
 
   beforeAll(async () => {
     const container = await buildMainDependencyContainer();
     app = container.cradle.ipfsGatewayApi.createExpressApp();
   });
 
-  it("cat returns 404 for unknown hash", async () => {
+  it("cat returns 500 with message for unknown hash", async () => {
     await supertest(app)
       .get(`/api/v0/cat?arg=${nonExistentHash}`)
-      .expect(404);
+      .expect(500)
+      .then(response => {
+        expect(response.body).not.toBe(genericErrorResponseMessage);
+      });
   });
 
-  it("cat returns 404 for invalid hash", async () => {
+  it("cat returns 500 with message for invalid hash", async () => {
     await supertest(app)
       .get(`/api/v0/cat?arg=${nonBase32Hash}`)
-      .expect(404);
+      .expect(500)
+      .then(response => {
+        expect(response.body).not.toBe(genericErrorResponseMessage);
+      });
   });
 
-  it("resolve returns 404 for unknown path", async () => {
+  it("resolve returns 500 with message for unknown path", async () => {
     await supertest(app)
       .get(`/api/v0/resolve?arg=${nonExistentHash}`)
-      .expect(404);
+      .expect(500)
+      .then(response => {
+        expect(response.body).not.toBe(genericErrorResponseMessage);
+      });
   });
 
-  it("resolve returns 404 for invalid path", async () => {
+  it("resolve returns 500 with message for invalid path", async () => {
     await supertest(app)
       .get(`/api/v0/resolve?arg=${nonBase32Hash}`)
-      .expect(404);
+      .expect(500)
+      .then(response => {
+        expect(response.body).not.toBe(genericErrorResponseMessage);
+      });
   });
 
-  it("ipfs returns 404 for unknown path", async () => {
+  it("ipfs returns 500 with message for unknown path", async () => {
     await supertest(app)
       .get(`/ipfs/${nonExistentHash}`)
-      .expect(404);
+      .expect(500)
+      .then(response => {
+        expect(response.body).not.toBe(genericErrorResponseMessage);
+      });
   });
 
-  it("ipfs returns 404 for invalid path", async () => {
+  it("ipfs returns 500 with message for invalid path", async () => {
     await supertest(app)
       .get(`/ipfs/${nonBase32Hash}`)
-      .expect(404);
+      .expect(500)
+      .then(response => {
+        expect(response.body).not.toBe(genericErrorResponseMessage);
+      });
   });
 });
