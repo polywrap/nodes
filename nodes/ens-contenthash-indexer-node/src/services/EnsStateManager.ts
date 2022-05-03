@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { EnsState } from "../types/EnsState";
+import { SavedEnsState } from "../types/SavedEnsState";
 import { getIpfsHashFromContenthash } from '../utils/getIpfsHashFromContenthash';
 import { EthereumNetwork } from './EthereumNetwork';
 
@@ -44,6 +45,13 @@ export class EnsStateManager {
       .map(getIpfsHashFromContenthash)
       .filter(x => !!x)
       .map(x => x as string);
+  }
+
+  getState(): SavedEnsState {
+    return {
+      ensContenthash: this.state.ensContenthash,
+      lastBlockNumber: this.state.lastBlockNumber,
+    };
   }
 
   getContenthashes(): string[] {
