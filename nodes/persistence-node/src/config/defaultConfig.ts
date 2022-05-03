@@ -23,5 +23,11 @@ export const defaultConfig: Config = {
           "name": "ens-rinkeby",
           "provider": "http://localhost:8082/api/ipfs/ls"
       }
-  ]
+  ],
+  "wrapperResolution": {
+    "retries": {
+        "max": 10,
+        "startingDelayInSec": 300
+    }
+  }
 };

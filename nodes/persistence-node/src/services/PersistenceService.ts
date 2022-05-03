@@ -9,11 +9,13 @@ import { sleep } from "../sleep";
 import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
 import { IndexRetriever } from "./IndexRetriever";
 import { IPFSIndex } from "../types/IPFSIndex";
+import { PersistenceConfig } from "../config/PersistenceConfig";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
+  persistenceConfig: PersistenceConfig;
   indexRetriever: IndexRetriever;
   logger: Logger;
 }
@@ -143,10 +145,12 @@ export class PersistenceService {
     const { ipfsHash, indexes } = ipfsHashToTrack;
 
     const info = this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash);
-    const retryCount = info?.unresponsiveInfo?.retryCount ?? 0;
+    const retryCount = info?.unresponsiveInfo?.retryCount || info?.unresponsiveInfo?.retryCount === 0
+      ? info?.unresponsiveInfo?.retryCount + 1
+      : 0;
 
     if(info) {
-      if(info.isPinned) {
+      if(info.isPinned || info.isLost) {
         return;
       }
 
@@ -155,6 +159,7 @@ export class PersistenceService {
       } else if(info.isWrapper === false) {
         return;
       } else if(info.isWrapper === undefined) {
+        console.log("aaa");
         await this.pinIfWrapper(ipfsHash, retryCount, indexes);
       }
     } else {
@@ -182,12 +187,7 @@ export class PersistenceService {
         indexes,
       });
     } else if (result === "timeout") {
-      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        isPinned: false,
-        indexes,
-        unresponsiveInfo: scheduleRetry(retryCount)
-      });
+      await this.scheduleRetry(ipfsHash, retryCount, indexes);
     }
   }
   
@@ -225,12 +225,35 @@ export class PersistenceService {
     } catch (err) {
       this.deps.logger.log(JSON.stringify(err));
      
-      this.deps.persistenceStateManager.setIpfsHashInfo(cid, {
-        ipfsHash: cid,
-        isWrapper: true,
+      await this.scheduleRetry(cid, retryCount, indexes, true);
+    }
+  }
+
+  async scheduleRetry(ipfsHash: string, retryCount: number, indexes: string[], isWrapper?: boolean): Promise<void> {
+    this.deps.logger.log(`Scheduling retry for ${ipfsHash}`);
+   
+    if(retryCount >= this.deps.persistenceConfig.wrapperResolution.retries.max) {
+      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+        ipfsHash,
+        isWrapper,
         isPinned: false,
         indexes,
-        unresponsiveInfo: scheduleRetry(retryCount)
+        isLost: true,
+      });
+
+      this.deps.logger.log(`Wrapper ${ipfsHash} is now considered lost`);
+    } else {
+      const startingDelayInSec = this.deps.persistenceConfig.wrapperResolution.retries.startingDelayInSec;
+
+      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+        ipfsHash,
+        isWrapper,
+        isPinned: false,
+        indexes,
+        unresponsiveInfo: {
+          scheduledRetryDate: addSeconds(new Date(), startingDelayInSec * Math.pow(2, retryCount)),
+          retryCount: retryCount,
+        }
       });
     }
   }
@@ -249,10 +272,3 @@ export class PersistenceService {
     }
   }
 }
-
-const scheduleRetry = (retryCount: number): UnresponsiveIpfsHashInfo => {
-  return {
-    scheduledRetryDate: addSeconds(new Date(), 60*Math.pow(2, retryCount)),
-    retryCount: retryCount + 1,
-  };
-};

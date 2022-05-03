@@ -13,6 +13,12 @@ export type Config = {
             gatewayTimeout: number
         }
     },
-    loggerEnabled: true,
-    indexes: IPFSIndexConfig[]
+    loggerEnabled: boolean,
+    indexes: IPFSIndexConfig[],
+    wrapperResolution: {
+        retries: {
+            max: number,
+            startingDelayInSec: number
+        }
+    }
 };
