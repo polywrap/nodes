@@ -7,7 +7,7 @@ export class ApiServer {
     private deps: MainDependencyContainer
   ) { }
 
-  async run(port?: number) {
+  async run() {
     const app = express();
 
     runServer(

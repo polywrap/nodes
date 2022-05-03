@@ -12,6 +12,7 @@ import { LoggerConfig } from "../../config/LoggerConfig";
 import { Config } from "../../config/Config";
 import { GatewayServer } from "../../services/GatewayServer";
 import { ApiServer } from "../../services/ApiServer";
+import { PersistenceConfig } from "../../config/PersistenceConfig";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
@@ -21,6 +22,7 @@ export interface MainDependencyContainer {
   ipfsConfig: IpfsConfig;
   loggerConfig: LoggerConfig;
   indexerConfig: IndexerConfig;
+  persistenceConfig: PersistenceConfig;
 
   logger: Logger;
   ipfsNode: IPFS;
@@ -67,6 +69,7 @@ export const buildMainDependencyContainer = async (
       })
       .singleton(),
     indexerConfig: awilix.asClass(IndexerConfig).singleton(),
+    persistenceConfig: awilix.asClass(PersistenceConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
     persistenceStateManager: awilix
     .asFunction(({ }) => {

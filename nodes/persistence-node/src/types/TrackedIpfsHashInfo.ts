@@ -6,4 +6,5 @@ export type TrackedIpfsHashInfo = {
   isPinned: boolean;
   unresponsiveInfo?: UnresponsiveIpfsHashInfo;
   indexes: string[];
+  isLost?: boolean;
 };

@@ -12,18 +12,23 @@ export class DaemonModule {
         this.deps.loggerConfig.loggerEnabled = loggerEnabled;
      }
 
-     static async build(shouldLog: boolean, dataDirPathForSetup?: string): Promise<DaemonModule> {
+    static async build(
+        shouldLog: boolean, 
+        dataDirPathForSetup?: string, 
+        apiPort?: number,
+        gatewayPort?: number
+    ): Promise<DaemonModule> {
         const { config, dataDirPath } = await DaemonModule.setupDataDirectory(dataDirPathForSetup);
 
-        const container = await buildMainDependencyContainer(dataDirPath, config);
+        const container = await buildMainDependencyContainer(dataDirPath, config, apiPort, gatewayPort);
 
         return new DaemonModule(container.cradle, shouldLog);
     }
 
-    async run(apiPort?: number, gatewayPort?: number) {
+    async run() {
         Promise.all([
-            this.deps.apiServer.run(apiPort),
-            this.deps.gatewayServer.run(gatewayPort),
+            this.deps.apiServer.run(),
+            this.deps.gatewayServer.run(),
             this.deps.persistenceService.run()
         ]);
     }
