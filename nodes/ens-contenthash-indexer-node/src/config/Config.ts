@@ -5,6 +5,9 @@ export type Config = {
         chainId: number;
         ensResolverAddress: string;
     },
+    ipfs: {
+        provider: string,
+    },
     requestInterval: number;
     maxBlockRangePerRequest: number;
     loggerEnabled: boolean;
