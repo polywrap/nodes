@@ -4,6 +4,10 @@ export type Config = {
         provider: string;
         chainId: number;
         ensResolverAddress: string;
+        fastSync: {
+            domain: string;
+            network: string;
+        };
     },
     ipfs: {
         provider: string,

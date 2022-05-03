@@ -6,6 +6,10 @@ export class EnsNetworkConfig {
   chainId: number;
   resolverAddr: string;
   resolverAbi: string[];
+  fastSync: {
+    domain: string;
+    network: string;
+  };
 
   constructor({ config }: { config: Config }) {
     this.name = config.network.name;
@@ -16,5 +20,6 @@ export class EnsNetworkConfig {
       "function contenthash(bytes32 node) external view returns (bytes memory)",
       "event ContenthashChanged(bytes32 indexed node, bytes hash)"
     ];
+    this.fastSync = config.network.fastSync;
   }
 }

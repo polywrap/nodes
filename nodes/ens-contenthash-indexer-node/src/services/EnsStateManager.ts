@@ -54,6 +54,29 @@ export class EnsStateManager {
     };
   }
 
+  updateState(state: SavedEnsState) {
+    const newState: EnsState = {
+      ensContenthash: state.ensContenthash,
+      contenthashEns: {},
+      lastBlockNumber: state.lastBlockNumber
+    };
+
+    for (const [ensNode, contenthash] of Object.entries(state.ensContenthash)) {
+      const ensMap = newState.contenthashEns[contenthash];
+
+      if(!ensMap) {
+        newState.contenthashEns[contenthash] = {
+          [ensNode]: true,
+        };
+      } else {
+        ensMap[ensNode] = true;
+      }
+    }
+
+    this.state = newState;
+    this.save();
+  }
+
   getContenthashes(): string[] {
     return Object.keys(this.state.contenthashEns);
   }
