@@ -11,7 +11,7 @@ export function initializeDaemonCommands() {
     .option("--data <string>", "Path to the data directory")
     .option("--log", "Enable logging")
     .action(async (options) => {
-      const daemon = await DaemonModule.build(!!options.log, options.data);
-      daemon.run(options.apiPort, options.gatewayPort);
+      const daemon = await DaemonModule.build(!!options.log, options.data, options.apiPort, options.gatewayPort);
+      daemon.run();
     });
 }

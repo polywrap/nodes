@@ -38,7 +38,7 @@ export class IndexerService {
       }
       catch(ex) {
         this.deps.logger.log(`Error getting block number`);
-        this.deps.logger.log(JSON.stringify(ex));
+        console.log(ex);
       }
 
       if(latestBlock) {

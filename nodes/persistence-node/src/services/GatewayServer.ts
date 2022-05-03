@@ -19,9 +19,7 @@ export class GatewayServer {
     this.deps = deps;
   }
 
-  async run(
-    port?: number
-  ) {
+  async run() {
     const ipfs = this.deps.ipfsNode;
 
     const app = express();
