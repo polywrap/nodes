@@ -19,6 +19,7 @@ import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { getIpfsFileContents } from "../getIpfsFileContents";
 import { IpfsAddResult } from "../types/IpfsAddResult";
 import { isValidWrapperManifestName } from "../isValidWrapperManifestName";
+import { IpfsErrorResponse } from "../types/IpfsErrorResponse";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -139,15 +140,14 @@ export class IpfsGatewayApi {
           },
         });
       } else {
-        throw Error("Unsupported file type");
+        res.status(500).json(this.buildIpfsError("Unsupported file type"));
       }
     }));
 
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {
       if (!req.files) {
-        res.json({
-          error: "No files were uploaded"
-        });
+        res.status(500).json(this.buildIpfsError("No files were uploaded"));
+        return;
       }
 
       const options = req.body.options
@@ -176,9 +176,8 @@ export class IpfsGatewayApi {
 
     app.post('/api/v0/add', upload.any(), handleError(async (req, res) => {
       if (!req.files) {
-        res.json({
-          error: "No files were uploaded"
-        });
+        res.status(500).json(this.buildIpfsError("No files were uploaded"));
+        return;
       }
 
       const files: MulterFile[] = req.files as MulterFile[];
@@ -206,7 +205,8 @@ export class IpfsGatewayApi {
       });
 
       if(!hasWrapManifest) {
-        throw Error("No wrap manifest found");
+        res.status(500).json(this.buildIpfsError("No valid wrapper manifest found in upload"));
+        return;
       }
 
       const addedFiles = await addFilesToIpfs(
@@ -245,11 +245,20 @@ export class IpfsGatewayApi {
     }));
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-      res.status(500).send("Something went wrong. Check the logs for more info.");
+      res.status(500).json(this.buildIpfsError("Something went wrong. Check the logs for more info."));
       this.deps.logger.log(err.message);
     });
 
     runServer(httpConfig, httpsConfig, app);
+  }
+
+  buildIpfsError(message: string): IpfsErrorResponse {
+    this.deps.logger.log("Gateway error: " + message);
+  
+    return {
+      Message: message,
+      Type: "error"
+    };
   }
 }
 
