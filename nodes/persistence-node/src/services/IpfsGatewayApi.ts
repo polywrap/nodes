@@ -9,6 +9,7 @@ import { HttpConfig } from "../api-server/HttpConfig";
 import { HttpsConfig } from "../api-server/HttpsConfig";
 import { runServer } from "../api-server/runServer";
 import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
+import { addFilesToIpfs } from "../ipfs-operations/addFilesToIpfs";
 import { Logger } from "./Logger";
 import mustacheExpress from "mustache-express";
 import path from "path";
@@ -16,6 +17,8 @@ import { asyncIterableToArray } from "../utils/asyncIterableToArray";
 import { formatFileSize } from "../utils/formatFileSize";
 import { getPinnedWrapperCIDs } from "../getPinnedWrapperCIDs";
 import { getIpfsFileContents } from "../getIpfsFileContents";
+import { IpfsAddResult } from "../types/IpfsAddResult";
+import { isValidWrapperManifestName } from "../isValidWrapperManifestName";
 
 interface IDependencies {
   ethersProvider: ethers.providers.Provider;
@@ -48,8 +51,8 @@ export class IpfsGatewayApi {
     const upload = multer({
       storage: memoryStorage(),
       limits: {
-        fileSize: 1 * 1024 * 1024,
-        files: 7
+        fileSize: 5 * 1024 * 1024,
+        files: 50
       }
     });
 
@@ -169,6 +172,66 @@ export class IpfsGatewayApi {
       res.json({
         cid,
       });
+    }));
+
+    app.post('/api/v0/add', upload.any(), handleError(async (req, res) => {
+      if (!req.files) {
+        res.json({
+          error: "No files were uploaded"
+        });
+      }
+
+      const files: MulterFile[] = req.files as MulterFile[];
+
+      let hasWrapManifest = false;
+
+      const filesToAdd = files.map(x => {
+        const pathToFile = decodeURIComponent(x.originalname);
+
+        if(isValidWrapperManifestName(path.basename(pathToFile))) {
+          hasWrapManifest = true;
+        }
+
+        //If the file is a directory, we don't add the buffer, otherwise we get a different CID than expected
+        if(x.mimetype === "application/x-directory") {
+          return {
+            path: pathToFile,
+          };
+        } else {
+          return {
+            path: pathToFile,
+            content: x.buffer,
+          };
+        }
+      });
+
+      if(!hasWrapManifest) {
+        throw Error("No wrap manifest found");
+      }
+
+      const addedFiles = await addFilesToIpfs(
+        filesToAdd,
+        { onlyHash: !!req.query["only-hash"] },
+        ipfs
+      );
+
+      const rootCID = addedFiles.filter((x: IpfsAddResult) => x.path.indexOf("/") === -1)[0].cid;
+
+      this.deps.logger.log(`Gateway add: ${rootCID}`);
+
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+      });
+   
+      for(const file of addedFiles) {
+        res.write(JSON.stringify({
+          Name: file.path,
+          Hash: file.cid.toString(),
+          Size: file.size,
+        }) + "\n");
+      }
+
+      res.end();
     }));
 
     app.get("/", handleError(async (req, res) => {
