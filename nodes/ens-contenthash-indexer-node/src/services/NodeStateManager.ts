@@ -26,6 +26,10 @@ export class NodeStateManager {
     await this.save();
   }
 
+  lastIpfsHashForFastSync(): string {
+    return this.state.fastSync.lastIpfsHash;
+  }
+
   async save(): Promise<void> {
     fs.writeFileSync(this.stateFilePath, JSON.stringify(this.state, null, 2));
   }

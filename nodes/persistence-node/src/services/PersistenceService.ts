@@ -37,7 +37,7 @@ export class PersistenceService {
       const trackTasks = toTrack.map(this.tryTrackIpfsHash.bind(this));
       const untrackTasks = toUntrack.map(this.tryUntrackIpfsHash.bind(this));
   
-      this.deps.logger.log(`${toTrack.length} wrappers to track, ${toUntrack.length} to untrack`);
+      this.deps.logger.log(`${toTrack.length} CIDs to track, ${toUntrack.length} to untrack`);
 
       await Promise.all([
         Promise.all(trackTasks), 
@@ -159,7 +159,6 @@ export class PersistenceService {
       } else if(info.isWrapper === false) {
         return;
       } else if(info.isWrapper === undefined) {
-        console.log("aaa");
         await this.pinIfWrapper(ipfsHash, retryCount, indexes);
       }
     } else {
@@ -211,6 +210,7 @@ export class PersistenceService {
    
     try {
       await this.deps.ipfsNode.pin.add(cid, {
+        recursive: true,
         timeout: this.deps.ipfsConfig.pinTimeout,
       });
 
@@ -262,6 +262,7 @@ export class PersistenceService {
   private async unpinCID(cid: string): Promise<boolean> {
     try {
       await this.deps.ipfsNode.pin.rm(cid, {
+        recursive: true,
         timeout: this.deps.ipfsConfig.unpinTimeout,
       });
   

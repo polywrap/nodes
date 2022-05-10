@@ -7,6 +7,7 @@ import { EthereumNetwork } from "./EthereumNetwork";
 import { EnsNetworkConfig } from "../config/EnsNetworkConfig";
 import { IPFS } from "ipfs-core";
 import { getIpfsFileContents } from "../getIpfsFileContents";
+import { NodeStateManager } from "./NodeStateManager";
 
 type EnsNodeChangeEvent = {
   ensNode: string;
@@ -16,6 +17,7 @@ type EnsNodeChangeEvent = {
 interface IDependencies {
   ensIndexerConfig: EnsIndexerConfig;
   ensNetworkConfig: EnsNetworkConfig;
+  nodeStateManager: NodeStateManager;
   ensStateManager: EnsStateManager;
   ethereumNetwork: EthereumNetwork;
   logger: Logger;
@@ -39,8 +41,21 @@ export class IndexerService {
   }
 
   private async tryFastSync() {
-    const resolver = await this.deps.ethereumNetwork.ethersProvider.getResolver(this.deps.ensNetworkConfig.fastSync.domain);
-    const contenthash = await resolver?.getContentHash();
+    const fastSyncProvider = ethers.providers.getDefaultProvider(
+      this.deps.ensNetworkConfig.fastSync.network,
+    );
+    const resolver = await fastSyncProvider.getResolver(this.deps.ensNetworkConfig.fastSync.domain);
+
+    let contenthash: string | undefined = "";
+
+    try {
+      contenthash = await resolver?.getContentHash();
+    } catch(ex: any) {
+      if(!ex.message.startsWith("invalid or unsupported content hash data")) {
+        throw ex;
+      }
+    }
+
     if(!contenthash) {
       this.deps.logger.log(`No contenthash found for ${this.deps.ensNetworkConfig.fastSync.domain}`);
       return;
@@ -61,8 +76,21 @@ export class IndexerService {
       return;
     }
 
-    await this.deps.ipfsNode.pin.add(ipfsHash);
-    this.deps.logger.log(`Pinned fast sync state at ${ipfsHash}`);
+    const lastIpfsHashForFastSync = this.deps.nodeStateManager.lastIpfsHashForFastSync();
+    if(lastIpfsHashForFastSync !== ipfsHash) {
+      if(lastIpfsHashForFastSync) {
+        this.deps.logger.log(`Unpinning old fast sync state: ${lastIpfsHashForFastSync}`);
+        await this.deps.ipfsNode.pin.rm(lastIpfsHashForFastSync).catch(err => {
+          if(!err.message.startsWith("not pinned")) {
+            throw err;
+          }
+        });
+      }
+
+      this.deps.logger.log(`Pinning fast sync state at ${ipfsHash}`);
+      await this.deps.ipfsNode.pin.add(ipfsHash);
+      this.deps.nodeStateManager.updateLastIpfsHashForFastSync(ipfsHash);
+    }
 
     const ensState = JSON.parse(ensStateJson.toString());
 
@@ -77,13 +105,13 @@ export class IndexerService {
     this.deps.logger.log(`Fast sync successful`);
   }
 
-  private getIpfsHashFromContenthash(contenthash: string): [error: string | undefined, result?: string] {
+  private getIpfsHashFromContenthash(contenthash: string): [error: string | undefined, result: string | undefined] {
     if (!contenthash) {
-      return ["No content hash for that ENS domain."];
+      return ["No content hash for that ENS domain.", undefined];
     }
 
     if (!contenthash.startsWith('ipfs://')) {
-      return ["Content not a valid IPFS hash."];
+      return ["Content not a valid IPFS hash.", undefined];
     }
 
     const contentHashWithoutProtocol = contenthash
