@@ -22,7 +22,7 @@ export class CliModule {
         return new CliModule(container.cradle, shouldLog);
     }
 
-    async initialize(dataDirPath?: string, networkName?: string) {
+    static async initialize(dataDirPath?: string, networkName?: string) {
         if(!dataDirPath) {
             dataDirPath = "./";
         }
@@ -39,7 +39,7 @@ export class CliModule {
         }
     }
 
-    async updateFastSyncFile() {
+    async uploadFastSyncFile() {
         const ipfsHash = await this.performApiPost('api/fast-sync/upload')
 
         console.log(`Fast sync file uploaded to ${ipfsHash}`);
