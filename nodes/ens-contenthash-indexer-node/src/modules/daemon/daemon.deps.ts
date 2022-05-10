@@ -10,6 +10,10 @@ import { EnsStateManager } from "../../services/EnsStateManager";
 import { EthereumNetwork } from "../../services/EthereumNetwork";
 import { ApiServer } from "../../services/ApiServer";
 import { Config } from "../../config/Config";
+import { createIpfsNode } from "../../createIpfsNode";
+import { IpfsConfig } from "../../config/IpfsConfig";
+import { IPFS } from "ipfs-core";
+import { NodeStateManager } from "../../services/NodeStateManager";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
@@ -21,9 +25,12 @@ export interface MainDependencyContainer {
   indexerService: IndexerService;
   ensPublicResolver: Contract;
   ensIndexerConfig: EnsIndexerConfig;
+  nodeStateManager: NodeStateManager;
   ensStateManager: EnsStateManager;
   ethereumNetwork: EthereumNetwork;
   apiServer: ApiServer;
+  ipfsConfig: IpfsConfig;
+  ipfsNode: IPFS;
 }
 
 export const buildMainDependencyContainer = async (
@@ -52,6 +59,8 @@ export const buildMainDependencyContainer = async (
       .singleton(),
     ensNetworkConfig: awilix.asClass(EnsNetworkConfig).singleton(),
     ensIndexerConfig: awilix.asClass(EnsIndexerConfig).singleton(),
+    ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
+    nodeStateManager: awilix.asClass(NodeStateManager).singleton(),
     ensStateManager: awilix.asClass(EnsStateManager).singleton(),
     ethereumNetwork: awilix.asClass(EthereumNetwork).singleton(),
     logger: awilix.asClass(Logger).singleton(),
@@ -59,6 +68,17 @@ export const buildMainDependencyContainer = async (
     apiServer: awilix.asClass(ApiServer).singleton(),
     ...extensionsAndOverrides,
   });
+
+  const ipfsNode = await createIpfsNode(container.cradle);
+
+  container.register({
+    ipfsNode: awilix
+      .asFunction(() => ipfsNode)
+      .singleton()
+  });
+
+  const nodeStateManager = container.cradle.nodeStateManager;
+  nodeStateManager.load();
 
   const ensStateManager = container.cradle.ensStateManager;
   ensStateManager.load();

@@ -37,7 +37,7 @@ export class PersistenceService {
       const trackTasks = toTrack.map(this.tryTrackIpfsHash.bind(this));
       const untrackTasks = toUntrack.map(this.tryUntrackIpfsHash.bind(this));
   
-      this.deps.logger.log(`${toTrack.length} wrappers to track, ${toUntrack.length} to untrack`);
+      this.deps.logger.log(`${toTrack.length} CIDs to track, ${toUntrack.length} to untrack`);
 
       await Promise.all([
         Promise.all(trackTasks), 
@@ -47,7 +47,7 @@ export class PersistenceService {
     }
   }
 
-  async getDifference(
+  private async getDifference(
     indexes: IPFSIndex[],
     trackedInfos: TrackedIpfsHashInfo[]
   ): Promise<{
@@ -138,7 +138,7 @@ export class PersistenceService {
     };
   }
 
-  async tryTrackIpfsHash(ipfsHashToTrack: {
+  private async tryTrackIpfsHash(ipfsHashToTrack: {
     ipfsHash: string,
     indexes: string[]
   }): Promise<void> {
@@ -159,14 +159,14 @@ export class PersistenceService {
       } else if(info.isWrapper === false) {
         return;
       } else if(info.isWrapper === undefined) {
-        console.log("aaa");
         await this.pinIfWrapper(ipfsHash, retryCount, indexes);
       }
     } else {
       await this.pinIfWrapper(ipfsHash, retryCount, indexes);
     }
   }
-  async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
+
+  private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
 
     const result = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
 
@@ -191,7 +191,7 @@ export class PersistenceService {
     }
   }
   
-  async tryUntrackIpfsHash(info: TrackedIpfsHashInfo): Promise<void> {
+  private async tryUntrackIpfsHash(info: TrackedIpfsHashInfo): Promise<void> {
     if(!info.isWrapper) {
       this.deps.logger.log(`Stopping tracking of ${info.ipfsHash} (not a wrapper)`);
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
@@ -205,11 +205,12 @@ export class PersistenceService {
     //If failed to unpin, we will try again later
   }
 
-  async pinCID(cid: string, retryCount: number, indexes: string[]): Promise<void> {
+  private async pinCID(cid: string, retryCount: number, indexes: string[]): Promise<void> {
     this.deps.logger.log(`Pinning ${cid}...`);
    
     try {
       await this.deps.ipfsNode.pin.add(cid, {
+        recursive: true,
         timeout: this.deps.ipfsConfig.pinTimeout,
       });
 
@@ -229,7 +230,7 @@ export class PersistenceService {
     }
   }
 
-  async scheduleRetry(ipfsHash: string, retryCount: number, indexes: string[], isWrapper?: boolean): Promise<void> {
+  private async scheduleRetry(ipfsHash: string, retryCount: number, indexes: string[], isWrapper?: boolean): Promise<void> {
     this.deps.logger.log(`Scheduling retry for ${ipfsHash}`);
    
     if(retryCount >= this.deps.persistenceConfig.wrapperResolution.retries.max) {
@@ -258,9 +259,10 @@ export class PersistenceService {
     }
   }
   
-  async unpinCID(cid: string): Promise<boolean> {
+  private async unpinCID(cid: string): Promise<boolean> {
     try {
       await this.deps.ipfsNode.pin.rm(cid, {
+        recursive: true,
         timeout: this.deps.ipfsConfig.unpinTimeout,
       });
   

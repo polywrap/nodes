@@ -3,12 +3,14 @@ import { EnsIndexerConfig } from "../config/EnsIndexerConfig";
 import { EnsStateManager } from "./EnsStateManager";
 import { Logger } from "./Logger";
 import { runServer } from "../http-server/runServer";
+import { IPFS } from "ipfs-core";
 
 interface IDependencies {
   apiPort: number;
   ensIndexerConfig: EnsIndexerConfig,
   ensStateManager: EnsStateManager,
-  logger: Logger
+  logger: Logger;
+  ipfsNode: IPFS;
 }
 
 export class ApiServer {
@@ -43,6 +45,14 @@ export class ApiServer {
 
     app.get('/api/ipfs/ls', handleError(async (req, res) => {
       res.json(this.deps.ensStateManager.getIpfsCIDs());
+    }));
+
+    app.post('/api/fast-sync/upload', handleError(async (req, res) => {
+      const syncState = this.deps.ensStateManager.getState();
+
+      const resp = await this.deps.ipfsNode.add(JSON.stringify(syncState));
+
+      res.json(resp.cid.toString());
     }));
 
     app.get("/", handleError(async (req, res) => {
