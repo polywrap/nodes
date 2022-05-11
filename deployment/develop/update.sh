@@ -27,11 +27,6 @@ pm2 delete ens-indexer-node-mainnet
 
 set -e
 
-rm $data/persistence-node -rf
-rm $data/ens-indexer-node/ropsten -rf
-rm $data/ens-indexer-node/rinkeby -rf
-rm $data/ens-indexer-node/mainnet -rf
-
 cd $hosting/$persistenceNode
 cp -r $staging/$persistenceNode/bin ./
 cp -r $staging/$persistenceNode/node_modules ./
