@@ -32,10 +32,12 @@ rm $data/ens-indexer-node/ropsten -rf
 rm $data/ens-indexer-node/rinkeby -rf
 rm $data/ens-indexer-node/mainnet -rf
 
+mkdir -p $hosting/$persistenceNode
 cd $hosting/$persistenceNode
 cp -r $staging/$persistenceNode/bin ./
 cp -r $staging/$persistenceNode/node_modules ./
 
+mkdir -p $hosting/$ensIndexerNode
 cd $hosting/$ensIndexerNode
 cp -r $staging/$ensIndexerNode/bin ./
 cp -r $staging/$ensIndexerNode/node_modules ./
