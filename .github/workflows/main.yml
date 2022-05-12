@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ develop ]
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -38,22 +38,42 @@ jobs:
       - name: Build
         run: yarn build
         
-      - name: "Copy persistence node build artifacts to development server"
+      - name: "Copy node build artifacts to production server 1"
         uses: appleboy/scp-action@master
         with:
-          host: ${{ secrets.SSH_HOST_DEVELOP }}
-          username: ${{ secrets.SSH_USERNAME_DEVELOP }}
-          key: ${{ secrets.DEPLOYMENT_KEY_DEVELOP }}
-          port: ${{ secrets.SSH_PORT_DEVELOP }}
+          host: ${{ secrets.SSH_HOST_1_PROD }}
+          username: ${{ secrets.SSH_USERNAME_PROD }}
+          key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
+          port: ${{ secrets.SSH_PORT_PROD }}
+          source: "./nodes/persistence-node/bin,./nodes/persistence-node/node_modules,./nodes/ens-contenthash-indexer-node/bin,./nodes/ens-contenthash-indexer-node/node_modules"
+          target: "/home/ubuntu/staging/polywrap/nodes"
+      
+      - name: "Copy node build artifacts to production server 2"
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST_2_PROD }}
+          username: ${{ secrets.SSH_USERNAME_PROD }}
+          key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
+          port: ${{ secrets.SSH_PORT_PROD }}
           source: "./nodes/persistence-node/bin,./nodes/persistence-node/node_modules,./nodes/ens-contenthash-indexer-node/bin,./nodes/ens-contenthash-indexer-node/node_modules"
           target: "/home/ubuntu/staging/polywrap/nodes"
 
-      - name: Deploy nodes to development server
+      - name: Deploy nodes to production server 1
         uses: appleboy/ssh-action@master
         with:
-            host: ${{ secrets.SSH_HOST_DEVELOP }}
-            username: ${{ secrets.SSH_USERNAME_DEVELOP }}
-            key: ${{ secrets.DEPLOYMENT_KEY_DEVELOP }}
-            port: ${{ secrets.SSH_PORT_DEVELOP }}
+            host: ${{ secrets.SSH_HOST_1_PROD }}
+            username: ${{ secrets.SSH_USERNAME_PROD }}
+            key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
+            port: ${{ secrets.SSH_PORT_PROD }}
             script: |
-              curl -o- https://raw.githubusercontent.com/polywrap/nodes/develop/deployment/develop/update.sh | bash
+              curl -o- https://raw.githubusercontent.com/polywrap/nodes/main/deployment/main/update.sh | bash
+
+      - name: Deploy nodes to production server 2
+        uses: appleboy/ssh-action@master
+        with:
+            host: ${{ secrets.SSH_HOST_2_PROD }}
+            username: ${{ secrets.SSH_USERNAME_PROD }}
+            key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
+            port: ${{ secrets.SSH_PORT_PROD }}
+            script: |
+              curl -o- https://raw.githubusercontent.com/polywrap/nodes/main/deployment/main/update.sh | bash
