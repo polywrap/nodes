@@ -1,18 +1,33 @@
 import { isValidUrl } from "../utils/isValidUrl";
+import { Config } from "./Config";
 
 export class IpfsConfig {
-  externalIpfsProvider = getValidUrlOrUndefined(process.env.EXTERNAL_IPFS_PROVIDER);
-  gatewayURI = process.env.IPFS_GATEWAY ?? "https://ipfs.io/ipfs";
-  objectGetTimeout = parseInt(process.env.IPFS_OBJECT_GET_TIMEOUT!) ?? 15000;
-  pinTimeout = parseInt(process.env.IPFS_PIN_TIMEOUT!) ?? 30000;
-  unpinTimeout = parseInt(process.env.IPFS_UNPIN_TIMEOUT!) ?? 30000;
-  gatewayTimeout = parseInt(process.env.IPFS_GATEWAY_TIMEOUT!) ?? 15000;
+  externalIpfsProvider?: string;
+  gatewayURI: string;
+  objectGetTimeout: number;
+  pinTimeout: number;
+  unpinTimeout: number;
+  gatewayTimeout: number;
+
+  constructor({ config }: { config: Config }) {
+    this.externalIpfsProvider = getValidUrlOrUndefined(config.ipfs.provider);
+    this.gatewayURI = config.ipfs.gateway;
+    this.objectGetTimeout = config.ipfs.timeouts.objectGetTimeout;
+    this.pinTimeout = config.ipfs.timeouts.pinTimeout;
+    this.unpinTimeout = config.ipfs.timeouts.unpinTimeout;
+    this.gatewayTimeout = config.ipfs.timeouts.gatewayTimeout;
+  }
 }
 
 function getValidUrlOrUndefined(url: string | undefined) {
+  if (url?.length === 0) {
+    return undefined;
+  }
+
   if (isValidUrl(url)) {
     return url;
   } else {
-    return undefined;
+    console.log("Invalid URL supplied for EXTERNAL_IPFS_PROVIDER setting");
+    process.exit();
   }
 }

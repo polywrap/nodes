@@ -1,75 +1,85 @@
 import * as awilix from "awilix";
-import { Contract, ethers, providers } from "ethers";
 import { NameAndRegistrationPair } from "awilix";
-import { EthersConfig } from "../../config/EthersConfig";
-import { IpfsConfig } from "../../config/IpfsConfig";
-import { EnsConfig } from "../../config/EnsConfig";
-import { Storage } from "../../types/Storage";
-import { CacheRunner } from "../../services/CacheRunner";
 import { createIpfsNode } from "../../createIpfsNode";
-import { IpfsGatewayApi } from "../../services/IpfsGatewayApi";
-import { LoggerConfig } from "../../config/LoggerConfig";
 import { Logger } from "../../services/Logger";
-import { PersistenceNodeApi } from "../../services/PersistenceNodeApi";
-import { PersistenceNodeApiConfig } from "../../config/PersistenceNodeApiConfig";
 import { IPFS } from "ipfs-core";
+import { IpfsConfig } from "../../config/IpfsConfig";
+import { PersistenceService } from "../../services/PersistenceService";
+import { PersistenceStateManager } from "../../services/PersistenceStateManager";
+import { IndexerConfig } from "../../config/IndexerConfig";
+import { IndexRetriever } from "../../services/IndexRetriever";
+import { LoggerConfig } from "../../config/LoggerConfig";
+import { Config } from "../../config/Config";
+import { GatewayServer } from "../../services/GatewayServer";
+import { ApiServer } from "../../services/ApiServer";
+import { PersistenceConfig } from "../../config/PersistenceConfig";
 
 export interface MainDependencyContainer {
-  ipfsConfig: IpfsConfig
-  ethersConfig: EthersConfig
-  ensConfig: EnsConfig
-  loggerConfig: LoggerConfig
-  persistenceNodeApiConfig: PersistenceNodeApiConfig
-  logger: Logger
-  cacheRunner: CacheRunner
-  ipfsGatewayApi: IpfsGatewayApi
-  persistenceNodeApi: PersistenceNodeApi
-  storage: Storage
-  ethersProvider: providers.BaseProvider,
-  ensPublicResolver: Contract,
-  ipfsNode: IPFS
+  dataDirPath: string;
+  config: Config;
+  apiPort: number;
+  gatewayPort: number;
+  ipfsConfig: IpfsConfig;
+  loggerConfig: LoggerConfig;
+  indexerConfig: IndexerConfig;
+  persistenceConfig: PersistenceConfig;
+
+  logger: Logger;
+  ipfsNode: IPFS;
+
+  gatewayServer: GatewayServer;
+  apiServer: ApiServer;
+  persistenceService: PersistenceService;
+  persistenceStateManager: PersistenceStateManager;
+  indexRetriever: IndexRetriever;
 }
 
 export const buildMainDependencyContainer = async (
+  dataDirPath: string,
+  config: Config,
+  apiPort?: number,
+  gatewayPort?: number,
   extensionsAndOverrides?: NameAndRegistrationPair<unknown>
 ): Promise<awilix.AwilixContainer<MainDependencyContainer>> => {
-
-  const storage = new Storage();
-  await storage.load();
 
   const container = awilix.createContainer<MainDependencyContainer>({
     injectionMode: awilix.InjectionMode.PROXY,
   });
 
-  container.register({
-    ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
-    ethersConfig: awilix.asClass(EthersConfig).singleton(),
-    ensConfig: awilix.asClass(EnsConfig).singleton(),
-    loggerConfig: awilix.asClass(LoggerConfig).singleton(),
-    persistenceNodeApiConfig: awilix.asClass(PersistenceNodeApiConfig).singleton(),
-    logger: awilix.asClass(Logger).singleton(),
-    ethersProvider: awilix
-      .asFunction(({ ethersConfig }) => {
-        return ethers.providers.getDefaultProvider(
-          ethersConfig.providerNetwork
-        );
-      })
-      .singleton(),
-    ensPublicResolver: awilix
-      .asFunction(({ ensConfig, ethersProvider }) => {
-        const contract = new ethers.Contract(ensConfig.ResolverAddr, ensConfig.ResolverAbi, ethersProvider);
+  apiPort = apiPort
+    ? apiPort
+    : config.apiPort;
 
-        return contract;
+  gatewayPort = gatewayPort
+    ? gatewayPort
+    : config.gatewayPort;
+
+  const persistenceStateManager = new PersistenceStateManager();
+  await persistenceStateManager.load();
+
+  container.register({
+    dataDirPath: awilix.asValue(dataDirPath),
+    config: awilix.asValue(config),
+    apiPort: awilix.asValue(apiPort),
+    gatewayPort: awilix.asValue(gatewayPort),
+    ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
+    loggerConfig: awilix
+      .asFunction(({ config }) => {
+        return new LoggerConfig(config.shouldLog);
       })
       .singleton(),
-    storage: awilix
-      .asFunction(({ }) => {
-        return storage;
-      })
-      .singleton(),
-    cacheRunner: awilix.asClass(CacheRunner).singleton(),
-    ipfsGatewayApi: awilix.asClass(IpfsGatewayApi).singleton(),
-    persistenceNodeApi: awilix.asClass(PersistenceNodeApi).singleton(),
+    indexerConfig: awilix.asClass(IndexerConfig).singleton(),
+    persistenceConfig: awilix.asClass(PersistenceConfig).singleton(),
+    logger: awilix.asClass(Logger).singleton(),
+    persistenceStateManager: awilix
+    .asFunction(({ }) => {
+      return persistenceStateManager;
+    })
+    .singleton(),
+    gatewayServer: awilix.asClass(GatewayServer).singleton(),
+    apiServer: awilix.asClass(ApiServer).singleton(),
+    persistenceService: awilix.asClass(PersistenceService).singleton(),
+    indexRetriever: awilix.asClass(IndexRetriever).singleton(),
     ...extensionsAndOverrides,
   });
 
