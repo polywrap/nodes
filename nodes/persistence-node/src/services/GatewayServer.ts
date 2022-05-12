@@ -96,7 +96,6 @@ export class GatewayServer {
     }));
 
     app.get('/pin/ls', handleError(async (req, res) => {
-      console.log("das", req.url);
       let pinnedIpfsHashes: string[] = [];
 
       for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
