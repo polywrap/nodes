@@ -40,6 +40,7 @@ export const runServer = (app: any, port: number, logger: Logger, onStart: () =>
     res.status(500).send("Something went wrong. Check the logs for more info.");
     logger.log(err.message);
   });
+  
   const server = http.createServer({}, app);
   
   server.listen(port, onStart);

@@ -15,6 +15,8 @@ import { VERSION } from "../constants/version";
 import { IpfsAddResult } from "../types/IpfsAddResult";
 import { isValidWrapperManifestName } from "../isValidWrapperManifestName";
 import { IpfsErrorResponse } from "../types/IpfsErrorResponse";
+import cors from "cors";
+import http from "http";
 
 export class GatewayServer {
   deps: MainDependencyContainer;
@@ -40,6 +42,36 @@ export class GatewayServer {
       }
     });
 
+    app.all('*', handleError(async (req: Request, res: Response, next: NextFunction) => {
+      res.header('Access-Control-Allow-Origin', '*');
+      res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
+  
+      //Trim and redirect multiple slashes in URL
+      if (req.url.match(/[/]{2,}/g)) {
+        req.url = req.url.replace(/[/]+/g, '/');
+        res.redirect(req.url);
+        return;
+      }
+  
+      if (req.method === 'OPTIONS') {
+        res.send(200);
+      } else {
+        this.deps.logger.log(`Request:  ${req.method} --- ${req.url}`);
+        next();
+      }
+    }));
+
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      res.on('finish', () => {
+        this.deps.logger.log(`Response: ${req.method} ${res.statusCode} ${req.url}`);
+      });
+      next();
+    });
+
+    app.use(cors({
+      origin: "*",
+    }));
+
     app.get('/api/v0/cat', handleError(async (req, res) => {
       const hash = req.query.arg as string;
 
@@ -64,6 +96,7 @@ export class GatewayServer {
     }));
 
     app.get('/pin/ls', handleError(async (req, res) => {
+      console.log("das", req.url);
       let pinnedIpfsHashes: string[] = [];
 
       for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
@@ -221,12 +254,9 @@ export class GatewayServer {
       this.deps.logger.log(err.message);
     });
 
-    runServer(
-      app,
-      this.deps.gatewayPort, 
-      this.deps.logger,
-      () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayPort}`)
-    );
+    const server = http.createServer({}, app);
+  
+    server.listen(this.deps.gatewayPort, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayPort}`));
   }
 
   buildIpfsError(message: string): IpfsErrorResponse {
