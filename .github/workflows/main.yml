@@ -66,7 +66,7 @@ jobs:
             key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
             port: ${{ secrets.SSH_PORT_PROD }}
             script: |
-              curl -o- https://raw.githubusercontent.com/polywrap/nodes/main/deployment/main/update.sh | bash
+              curl -o- https://raw.githubusercontent.com/polywrap/nodes/main/deployment/prod/update.sh | bash
 
       - name: Deploy nodes to production server 2
         uses: appleboy/ssh-action@master
@@ -76,4 +76,4 @@ jobs:
             key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
             port: ${{ secrets.SSH_PORT_PROD }}
             script: |
-              curl -o- https://raw.githubusercontent.com/polywrap/nodes/main/deployment/main/update.sh | bash
+              curl -o- https://raw.githubusercontent.com/polywrap/nodes/main/deployment/prod/update.sh | bash
