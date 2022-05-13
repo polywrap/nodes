@@ -1,13 +1,26 @@
 import fs from 'fs';
 import { PersistenceState } from '../types/PersistenceState';
 import { TrackedIpfsHashInfo } from '../types/TrackedIpfsHashInfo';
+import path from "path";
 
 const persistenceStateFilePath = './persistence-state.json';
+
+
+interface IDependencies {
+  dataDirPath: string;
+}
 
 export class PersistenceStateManager {
   state: PersistenceState = {
     trackedIpfsHashes: {}
   };
+
+  constructor(private readonly deps: IDependencies) {
+  }
+
+  get stateFilePath(): string {
+    return path.join(this.deps.dataDirPath, persistenceStateFilePath);
+  }
     
   getTrackedIpfsHashes(): string[] {
     return Object.keys(this.state.trackedIpfsHashes);
@@ -36,14 +49,14 @@ export class PersistenceStateManager {
   }
 
   async load(): Promise<void> {
-    if (!fs.existsSync(persistenceStateFilePath)) {
+    if (!fs.existsSync(this.stateFilePath)) {
       await this.save();
     }
 
-    this.state = JSON.parse(fs.readFileSync(persistenceStateFilePath, 'utf8'));
+    this.state = JSON.parse(fs.readFileSync(this.stateFilePath, 'utf8'));
   }
 
   public async save(): Promise<void> {
-    fs.writeFileSync(persistenceStateFilePath, JSON.stringify(this.state, null, 2));
+    fs.writeFileSync(this.stateFilePath, JSON.stringify(this.state, null, 2));
   }
 }
