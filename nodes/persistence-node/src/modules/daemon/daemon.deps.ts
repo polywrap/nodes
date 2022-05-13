@@ -54,9 +54,6 @@ export const buildMainDependencyContainer = async (
     ? gatewayPort
     : config.gatewayPort;
 
-  const persistenceStateManager = new PersistenceStateManager();
-  await persistenceStateManager.load();
-
   container.register({
     dataDirPath: awilix.asValue(dataDirPath),
     config: awilix.asValue(config),
@@ -71,11 +68,7 @@ export const buildMainDependencyContainer = async (
     indexerConfig: awilix.asClass(IndexerConfig).singleton(),
     persistenceConfig: awilix.asClass(PersistenceConfig).singleton(),
     logger: awilix.asClass(Logger).singleton(),
-    persistenceStateManager: awilix
-    .asFunction(({ }) => {
-      return persistenceStateManager;
-    })
-    .singleton(),
+    persistenceStateManager: awilix.asClass(PersistenceStateManager).singleton(),
     gatewayServer: awilix.asClass(GatewayServer).singleton(),
     apiServer: awilix.asClass(ApiServer).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),
@@ -84,6 +77,9 @@ export const buildMainDependencyContainer = async (
   });
 
   const ipfsNode = await createIpfsNode(container.cradle);
+
+  const persistenceStateManager = container.cradle.persistenceStateManager;
+  await persistenceStateManager.load();
 
   container.register({
     ipfsNode: awilix
