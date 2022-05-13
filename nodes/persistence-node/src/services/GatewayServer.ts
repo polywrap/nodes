@@ -17,6 +17,7 @@ import { isValidWrapperManifestName } from "../isValidWrapperManifestName";
 import { IpfsErrorResponse } from "../types/IpfsErrorResponse";
 import cors from "cors";
 import http from "http";
+import { WRAPPER_DEFAULT_NAME } from "../constants/wrappers";
 
 export class GatewayServer {
   deps: MainDependencyContainer;
@@ -110,6 +111,93 @@ export class GatewayServer {
         pinned: pinnedIpfsHashes,
         count: pinnedIpfsHashes.length,
       })
+    }));
+
+    app.get('/pins', handleError(async (req, res) => {
+      const wrappers: { 
+        cid: string, 
+        name: string,
+        manifest: {
+          cid: string,
+          name: string,
+        },
+        schema: {
+          cid: string,
+          name: string,
+        },
+        size: string,
+      }[] = [];
+
+      for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
+        if (!info.isPinned) {
+          continue;
+        }
+
+        const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`);
+        const wrapperSize = formatFileSize(statResult.cumulativeSize);
+
+        const items = await asyncIterableToArray(
+          ipfs.ls(info.ipfsHash)
+        );
+
+        let hasProperName = false;
+        const manifestFile = items.find(x => isValidWrapperManifestName(x.name));
+        const schemaFile = items.find(x => x.name === "schema.graphql");
+
+        if(!manifestFile) {
+          this.deps.logger.log(`No manifest file found for pinned wrapper ${info.ipfsHash}, this should not happen.`);
+          continue;
+        }
+
+        if(!schemaFile) {
+          this.deps.logger.log(`No schema file found for pinned wrapper ${info.ipfsHash}, this should not happen.`);
+          continue;
+        }
+
+        if(manifestFile?.name === "web3api.json") {
+          const fileContents = await getIpfsFileContents(ipfs, manifestFile.cid.toString());
+          const manifest = fileContents.toString();
+          const parsed = JSON.parse(manifest);
+
+          if(parsed.name) {
+            wrappers.push({
+              cid: info.ipfsHash,
+              name: parsed.name,
+              manifest: {
+                cid: manifestFile.cid.toString(),
+                name: manifestFile.name,
+              },
+              schema: {
+                cid: schemaFile.cid.toString(),
+                name: schemaFile.name,
+              },
+              size: wrapperSize
+            });
+            hasProperName = true;
+          } 
+        }
+
+        if(!hasProperName) {
+          wrappers.push({
+            cid: info.ipfsHash,
+            name: WRAPPER_DEFAULT_NAME,
+            manifest: {
+              cid: manifestFile.cid.toString(),
+              name: manifestFile.name,
+            },
+            schema: {
+              cid: schemaFile.cid.toString(),
+              name: schemaFile.name,
+            },
+            size: wrapperSize
+          });
+        }
+      }
+
+      res.render('pins', {
+        wrappers: wrappers,
+        count: wrappers.length,
+      });
     }));
 
     app.get("/ipfs/:path(*)", handleError(async (req, res) => {
