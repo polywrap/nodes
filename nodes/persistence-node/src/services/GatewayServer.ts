@@ -152,7 +152,11 @@ export class GatewayServer {
       } | undefined)[] = [];
 
 
-      const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos().filter(x => x.isPinned);
+      const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
+        .filter(x => x.isPinned)
+        .reverse();
+      console.log("Found pinned files: " + infos.length);
+
       const wrapperSizes = await Promise.all(infos.map(async info => {
         const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`, {
           signal: controller.signal,
@@ -171,6 +175,7 @@ export class GatewayServer {
           })
         );
       }));
+      console.log("Processing pinned files: " + itemLists.length);
 
       wrappers = await Promise.all(itemLists.map(async (items, index) => {
         const info = infos[index];
