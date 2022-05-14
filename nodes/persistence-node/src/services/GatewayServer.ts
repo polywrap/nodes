@@ -18,6 +18,7 @@ import { IpfsErrorResponse } from "../types/IpfsErrorResponse";
 import cors from "cors";
 import http from "http";
 import { WRAPPER_DEFAULT_NAME } from "../constants/wrappers";
+import timeout from "connect-timeout";
 
 export class GatewayServer {
   deps: MainDependencyContainer;
@@ -30,6 +31,7 @@ export class GatewayServer {
     const ipfs = this.deps.ipfsNode;
 
     const app = express();
+    app.use(timeout(this.deps.gatewayConfig.requestTimeout));
 
     app.engine('html', mustacheExpress());
     app.set('view engine', 'html');
@@ -74,6 +76,12 @@ export class GatewayServer {
     }));
 
     app.get('/api/v0/cat', handleError(async (req, res) => {
+      const controller = new AbortController();
+
+      req.on('close', () => {
+        controller.abort();
+      });
+
       const hash = req.query.arg as string;
 
       if (!hash) {
@@ -81,15 +89,24 @@ export class GatewayServer {
         return;
       }
 
-      const fileContents = await getIpfsFileContents(ipfs, hash);
+      const fileContents = await getIpfsFileContents(ipfs, hash, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
 
       res.send(fileContents);
     }));
 
     app.get('/api/v0/resolve', handleError(async (req, res) => {
+      const controller = new AbortController();
+
+      req.on('close', () => {
+        controller.abort();
+      });
+      
       const hash = req.query.arg as string;
 
-      const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`);
+      const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`, {
+        signal: controller.signal,
+        timeout: this.deps.gatewayConfig.ipfsTimeout
+      });
 
       res.json({
         path: resolvedPath
@@ -114,7 +131,13 @@ export class GatewayServer {
     }));
 
     app.get('/pins', handleError(async (req, res) => {
-      const wrappers: { 
+      const controller = new AbortController();
+
+      req.on('close', () => {
+        controller.abort();
+      });
+
+      let wrappers: ({ 
         cid: string, 
         name: string,
         manifest: {
@@ -126,41 +149,53 @@ export class GatewayServer {
           name: string,
         },
         size: string,
-      }[] = [];
+      } | undefined)[] = [];
 
-      for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
-        if (!info.isPinned) {
-          continue;
-        }
 
-        const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`);
+      const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos().filter(x => x.isPinned);
+      const wrapperSizes = await Promise.all(infos.map(async info => {
+        const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`, {
+          signal: controller.signal,
+          timeout: this.deps.gatewayConfig.ipfsTimeout
+        });
+
         const wrapperSize = formatFileSize(statResult.cumulativeSize);
-
-        const items = await asyncIterableToArray(
-          ipfs.ls(info.ipfsHash)
+        return wrapperSize;
+      }));
+  
+      const itemLists = await Promise.all(infos.map(async info => {
+        return asyncIterableToArray(
+          ipfs.ls(info.ipfsHash, {
+            signal: controller.signal,
+            timeout: this.deps.gatewayConfig.ipfsTimeout
+          })
         );
+      }));
 
-        let hasProperName = false;
+      wrappers = await Promise.all(itemLists.map(async (items, index) => {
+        const info = infos[index];
+        const wrapperSize = wrapperSizes[index];
+
         const manifestFile = items.find(x => isValidWrapperManifestName(x.name));
         const schemaFile = items.find(x => x.name === "schema.graphql");
-
+  
         if(!manifestFile) {
           this.deps.logger.log(`No manifest file found for pinned wrapper ${info.ipfsHash}, this should not happen.`);
-          continue;
+          return undefined;
         }
-
+  
         if(!schemaFile) {
           this.deps.logger.log(`No schema file found for pinned wrapper ${info.ipfsHash}, this should not happen.`);
-          continue;
+          return undefined;
         }
-
+  
         if(manifestFile?.name === "web3api.json") {
-          const fileContents = await getIpfsFileContents(ipfs, manifestFile.cid.toString());
+          const fileContents = await getIpfsFileContents(ipfs, manifestFile.cid.toString(), controller.signal, this.deps.gatewayConfig.ipfsTimeout);
           const manifest = fileContents.toString();
           const parsed = JSON.parse(manifest);
-
+  
           if(parsed.name) {
-            wrappers.push({
+            return {
               cid: info.ipfsHash,
               name: parsed.name,
               manifest: {
@@ -172,27 +207,26 @@ export class GatewayServer {
                 name: schemaFile.name,
               },
               size: wrapperSize
-            });
-            hasProperName = true;
+            };
           } 
         }
+  
+        return {
+          cid: infos[index].ipfsHash,
+          name: WRAPPER_DEFAULT_NAME,
+          manifest: {
+            cid: manifestFile.cid.toString(),
+            name: manifestFile.name,
+          },
+          schema: {
+            cid: schemaFile.cid.toString(),
+            name: schemaFile.name,
+          },
+          size: wrapperSize
+        };
+      }));
 
-        if(!hasProperName) {
-          wrappers.push({
-            cid: info.ipfsHash,
-            name: WRAPPER_DEFAULT_NAME,
-            manifest: {
-              cid: manifestFile.cid.toString(),
-              name: manifestFile.name,
-            },
-            schema: {
-              cid: schemaFile.cid.toString(),
-              name: schemaFile.name,
-            },
-            size: wrapperSize
-          });
-        }
-      }
+      wrappers = wrappers.filter(x => !!x);
 
       res.render('pins', {
         wrappers: wrappers,
@@ -202,15 +236,26 @@ export class GatewayServer {
 
     app.get("/ipfs/:path(*)", handleError(async (req, res) => {
       const ipfsPath = (req.params as any).path as string;
+      const controller = new AbortController();
 
-      const contentDescription = await ipfs.files.stat(`/ipfs/${ipfsPath}`);
+      req.on('close', () => {
+        controller.abort();
+      });
+
+      const contentDescription = await ipfs.files.stat(`/ipfs/${ipfsPath}`, {
+        signal: controller.signal,
+        timeout: this.deps.gatewayConfig.ipfsTimeout
+      });
 
       if (contentDescription.type === "file") {
-        const fileContent = await getIpfsFileContents(ipfs, ipfsPath);
+        const fileContent = await getIpfsFileContents(ipfs, ipfsPath, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
         const items = await asyncIterableToArray(
-          ipfs.ls(ipfsPath)
+          ipfs.ls(ipfsPath, {
+            signal: controller.signal,
+            timeout: this.deps.gatewayConfig.ipfsTimeout
+          })
         );
 
         //The stat API doesn't show size for subdirectories
@@ -218,7 +263,11 @@ export class GatewayServer {
         //and get their size
         for (const item of items) {
           if (item.type === "dir") {
-            const stat = await ipfs.files.stat(`/ipfs/${item.path}`, { size: true });
+            const stat = await ipfs.files.stat(`/ipfs/${item.path}`, {
+              size: true, 
+              signal: controller.signal,
+              timeout: this.deps.gatewayConfig.ipfsTimeout
+            });
             item.size = stat.cumulativeSize;
           }
         }
@@ -337,13 +386,13 @@ export class GatewayServer {
     }));
     
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-      res.status(500).json(this.buildIpfsError("Something went wrong. Check the logs for more info."));
+      res.status(500).json(this.buildIpfsError(err.message));
       this.deps.logger.log(err.message);
     });
 
     const server = http.createServer({}, app);
   
-    server.listen(this.deps.gatewayPort, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayPort}`));
+    server.listen(this.deps.gatewayConfig.port, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayConfig.port}`));
   }
 
   buildIpfsError(message: string): IpfsErrorResponse {

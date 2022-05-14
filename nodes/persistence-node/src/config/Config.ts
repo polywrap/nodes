@@ -2,7 +2,11 @@ import { IPFSIndexConfig } from "../types/IPFSIndexConfig";
 
 export type Config = {
     apiPort: number,
-    gatewayPort: number,
+    gateway: {
+        port: 8081,
+        requestTimeout: 5000,
+        ipfsTimeout: 10
+    },
     ipfs: {
         provider: string,
         gateway: string,
