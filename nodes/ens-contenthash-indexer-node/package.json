@@ -1,6 +1,6 @@
 {
   "name": "@polywrap/ens-contenthash-indexer-node",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
   "author": "nerfZael",
@@ -27,7 +27,7 @@
     "build": "tsc --project tsconfig.build.json",
     "dev": "ts-node src/main.ts",
     "start": "node bin/main.js",
-    "node-init": "ts-node src/main.ts init --data ./.data/rinkeby --network rinkeby --log",
+    "dev-init": "ts-node src/main.ts init --data ./.data/rinkeby --network rinkeby --log",
     "daemon": "ts-node src/main.ts daemon --data ./.data/rinkeby --log",
     "test": "yarn test:jest",
     "test:jest": "jest test --passWithNoTests"

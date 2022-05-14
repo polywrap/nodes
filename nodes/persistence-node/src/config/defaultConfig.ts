@@ -2,7 +2,11 @@ import { Config } from "./Config";
 
 export const defaultConfig: Config = {
   "apiPort": 6051,
-  "gatewayPort": 8081,
+  "gateway": {
+    "port": 8081,
+    "requestTimeout": 5000,
+    "ipfsTimeout": 10
+  },
   "ipfs": {
       "provider": "http://localhost:5001",
       "gateway": "https://ipfs.io/ipfs",

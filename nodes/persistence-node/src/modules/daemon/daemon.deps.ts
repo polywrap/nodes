@@ -13,16 +13,17 @@ import { Config } from "../../config/Config";
 import { GatewayServer } from "../../services/GatewayServer";
 import { ApiServer } from "../../services/ApiServer";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
+import { GatewayConfig } from "../../config/GatewayConfig";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
   config: Config;
   apiPort: number;
-  gatewayPort: number;
   ipfsConfig: IpfsConfig;
   loggerConfig: LoggerConfig;
   indexerConfig: IndexerConfig;
   persistenceConfig: PersistenceConfig;
+  gatewayConfig: GatewayConfig;
 
   logger: Logger;
   ipfsNode: IPFS;
@@ -50,15 +51,15 @@ export const buildMainDependencyContainer = async (
     ? apiPort
     : config.apiPort;
 
-  gatewayPort = gatewayPort
-    ? gatewayPort
-    : config.gatewayPort;
-
   container.register({
     dataDirPath: awilix.asValue(dataDirPath),
     config: awilix.asValue(config),
     apiPort: awilix.asValue(apiPort),
-    gatewayPort: awilix.asValue(gatewayPort),
+    gatewayConfig: awilix
+      .asFunction(({ config }) => {
+        return new GatewayConfig(config, gatewayPort);
+      })
+      .singleton(),
     ipfsConfig: awilix.asClass(IpfsConfig).singleton(),
     loggerConfig: awilix
       .asFunction(({ config }) => {
