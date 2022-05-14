@@ -176,6 +176,7 @@ export class GatewayServer {
         );
       }));
       console.log("Processing pinned files: " + itemLists.length);
+      console.log("Sum: " + itemLists.map(x => x.length).reduce((a, b) => a + b));
 
       wrappers = await Promise.all(itemLists.map(async (items, index) => {
         const info = infos[index];
