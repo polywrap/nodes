@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pinned wrappers</title>
+</head>
+<body>
+    <h2>Pinned wrappers ({{count}})</h2>
+
+    <table cellspacing="3" cellpadding="3">
+        <th>
+            <tr>
+                <th>Name</th>
+                <th>Size</th>
+                <th>Manifest</th>
+                <th>Schema</th>
+                <th>CID</th>
+            </tr>
+        </th>
+        <tbody>
+            {{#wrappers}}
+            <tr>
+                <td>
+                    <span>{{name}}</span>
+                </td>
+                <td>
+                    <span>{{size}}</span>
+                </td>
+                <td>
+                    <a href="/ipfs/{{manifest.cid}}">{{manifest.name}}</a>
+                </td>
+                <td>
+                    <a href="/ipfs/{{schema.cid}}">{{schema.name}}</a>
+                </td>
+                <td>
+                    <a href="/ipfs/{{cid}}">{{cid}}</a>
+                </td>
+            </tr>
+            {{/wrappers}}
+        </tbody>
+    </table>
+
+</body>
+</html>

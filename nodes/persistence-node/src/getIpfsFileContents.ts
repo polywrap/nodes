@@ -1,7 +1,10 @@
 import * as IPFS from 'ipfs-core';
 
-export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string): Promise<Buffer> => {
-  const stream = ipfs.cat(hash);
+export const getIpfsFileContents = async (ipfs: IPFS.IPFS, hash: string, signal: AbortSignal, timeout: number): Promise<Buffer> => {
+  const stream = ipfs.cat(hash, {
+    signal: signal,
+    timeout: timeout 
+  });
 
   let data: Uint8Array = new Uint8Array();
 

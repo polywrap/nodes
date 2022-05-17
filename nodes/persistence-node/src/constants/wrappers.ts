@@ -1,0 +1,1 @@
+export const WRAPPER_DEFAULT_NAME = "Unnamed";

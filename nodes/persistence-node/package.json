@@ -1,6 +1,6 @@
 {
   "name": "@polywrap/persistence-node",
-  "version": "0.3.1",
+  "version": "0.3.3",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
   "author": "nerfZael",
@@ -36,11 +36,13 @@
     "test:jest": "jest test --passWithNoTests"
   },
   "dependencies": {
+    "@types/connect-timeout": "^0.0.36",
     "@types/mustache": "^4.1.2",
     "@types/mustache-express": "^1.2.1",
     "awilix": "^6.0.0",
     "axios": "^0.24.0",
     "commander": "^8.3.0",
+    "connect-timeout": "^1.9.0",
     "cors": "^2.8.5",
     "ethers": "^5.5.2",
     "express": "^4.17.2",
