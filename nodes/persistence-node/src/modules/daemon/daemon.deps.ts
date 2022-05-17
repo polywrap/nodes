@@ -10,7 +10,7 @@ import { IndexerConfig } from "../../config/IndexerConfig";
 import { IndexRetriever } from "../../services/IndexRetriever";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { Config } from "../../config/Config";
-import { GatewayServer } from "../../services/GatewayServer";
+import { GatewayServer } from "../../services/gateway-server/GatewayServer";
 import { ApiServer } from "../../services/ApiServer";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { GatewayConfig } from "../../config/GatewayConfig";
