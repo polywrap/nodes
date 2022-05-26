@@ -2,10 +2,12 @@ import { IPFSIndexConfig } from "../types/IPFSIndexConfig";
 
 export type Config = {
     apiPort: number,
+    persistenceMaxParallelTaskCount: number,
+    persistenceIntervalSeconds: number,
     gateway: {
-        port: 8081,
-        requestTimeout: 5000,
-        ipfsTimeout: 10
+        port: number,
+        requestTimeout: number,
+        ipfsTimeout: number
     },
     ipfs: {
         provider: string,

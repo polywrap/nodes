@@ -6,10 +6,11 @@ import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
 import { addSeconds } from "../utils/addSeconds";
 import { PersistenceStateManager } from "./PersistenceStateManager";
 import { sleep } from "../sleep";
-import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
 import { IndexRetriever } from "./IndexRetriever";
 import { IPFSIndex } from "../types/IPFSIndex";
 import { PersistenceConfig } from "../config/PersistenceConfig";
+
+type ActionPromise = () => Promise<void>;
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
@@ -29,22 +30,56 @@ export class PersistenceService {
 
   async run(): Promise<void> {
     while(true) {
+      let timestamp = process.hrtime();
+
       const indexes = await this.deps.indexRetriever.getCIDs(); 
       const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashInfos();
   
       const { toTrack, toUntrack } = await this.getDifference(indexes, tracked);
   
-      const trackTasks = toTrack.map(this.tryTrackIpfsHash.bind(this));
-      const untrackTasks = toUntrack.map(this.tryUntrackIpfsHash.bind(this));
+      const trackTasks: ActionPromise[] = toTrack.map(x => () => this.tryTrackIpfsHash.bind(this)(x));
+      const untrackTasks: ActionPromise[] = toUntrack.map(x => () => this.tryUntrackIpfsHash.bind(this)(x));
   
       this.deps.logger.log(`${toTrack.length} CIDs to track, ${toUntrack.length} to untrack`);
 
-      await Promise.all([
-        Promise.all(trackTasks), 
-        Promise.all(untrackTasks)
-      ]);
-      await sleep(15000);
+      await this.processTasksInBatches([...trackTasks, ...untrackTasks]);
+    
+      timestamp = process.hrtime(timestamp);
+      await this.sleepUntilNextPersistenceRun(timestamp[0] * 1000 + timestamp[1] / 1000000);
     }
+  }
+
+  private async processTasksInBatches(tasks: ActionPromise[]): Promise<void> {
+    //Process tasks in batches of `persistenceMaxParallelTaskCount`
+    let tasksToProcess = this.takeTasks(tasks, this.deps.persistenceConfig.persistenceMaxParallelTaskCount);
+    while(tasksToProcess.length) {
+      await Promise.all(tasksToProcess.map(x => x()));
+      tasksToProcess = this.takeTasks(tasks, this.deps.persistenceConfig.persistenceMaxParallelTaskCount);
+    }
+  }
+
+  private async sleepUntilNextPersistenceRun(milisecondsFromLastRun: number): Promise<void> {
+    //If less than `persistenceConfig.persistenceInterval` seconds have passed, wait for a total of that time
+    if(milisecondsFromLastRun < this.deps.persistenceConfig.persistenceIntervalSeconds * 1000) {
+      //Get the difference to wait for
+      const difference = this.deps.persistenceConfig.persistenceIntervalSeconds * 1000 - milisecondsFromLastRun;
+
+      //Wait for the difference (in miliseconds)
+      await sleep(difference);
+    }
+  }
+
+  //Takes the first `count` tasks from `tasks` and returns them
+  //Additionally, it removes the taken tasks from `tasks`
+  private takeTasks(tasks: ActionPromise[], count: number): ActionPromise[] {
+    const result: ActionPromise[] = [];
+    for(let i = 0; i < count; i++) {
+      if(tasks.length > 0) {
+        result.push(tasks.shift()!);
+      }
+    }
+
+    return result;
   }
 
   private async getDifference(
