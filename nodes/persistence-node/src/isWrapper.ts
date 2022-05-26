@@ -15,7 +15,7 @@ export const isWrapper = async (ipfs: IPFS.IPFS, ipfsConfig: IpfsConfig, logger:
       ? "yes"
       : "no";
   } catch (e) {
-    const success = await nudgeIpfsHash(ipfsConfig, cid);
+    const success = await nudgeIpfsHash(ipfsConfig, cid, logger);
 
     if(!success) {
       return "timeout";

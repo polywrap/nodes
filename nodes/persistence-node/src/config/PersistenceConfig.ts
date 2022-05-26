@@ -8,8 +8,12 @@ export class PersistenceConfig {
         startingDelayInSec: number
     }
   };
+  persistenceMaxParallelTaskCount: number;
+  persistenceIntervalSeconds: number;
 
   constructor({ config }: { config: Config }) {
     this.wrapperResolution = config.wrapperResolution;
+    this.persistenceMaxParallelTaskCount = config.persistenceMaxParallelTaskCount;
+    this.persistenceIntervalSeconds = config.persistenceIntervalSeconds;
   }
 }
