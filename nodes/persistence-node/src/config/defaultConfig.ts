@@ -2,19 +2,21 @@ import { Config } from "./Config";
 
 export const defaultConfig: Config = {
   "apiPort": 6051,
+  "persistenceMaxParallelTaskCount": 10,
+  "persistenceIntervalSeconds": 15,
   "gateway": {
     "port": 8081,
     "requestTimeout": 5000,
     "ipfsTimeout": 10
   },
   "ipfs": {
-      "provider": "http://localhost:5001",
-      "gateway": "https://ipfs.io/ipfs",
-      "timeouts": {
-        "objectGetTimeout": 15000,
-        "pinTimeout": 30000,
-        "unpinTimeout": 30000,
-        "gatewayTimeout": 15000
+    "provider": "http://localhost:5001",
+    "gateway": "https://ipfs.io/ipfs",
+    "timeouts": {
+      "objectGetTimeout": 15000,
+      "pinTimeout": 30000,
+      "unpinTimeout": 30000,
+      "gatewayTimeout": 15000
     }
   },
   "loggerEnabled": true,
