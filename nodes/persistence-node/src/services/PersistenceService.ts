@@ -74,7 +74,6 @@ export class PersistenceService {
     return newTimestamp[0] * 1000 + newTimestamp[1] / 1000000;
   }
 
-
   private async sleepUntilNextPersistenceRun(lastTimestamp: [number, number]): Promise<void> {
     const milisecondsFromLastRun = this.getMilisecondsFromLastRun(lastTimestamp);
 
