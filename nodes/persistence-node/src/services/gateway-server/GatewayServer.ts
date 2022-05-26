@@ -258,34 +258,29 @@ export class GatewayServer {
         const fileContent = await getIpfsFileContents(ipfs, ipfsPath, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
-        const items = await asyncIterableToArray(
-          ipfs.ls(ipfsPath, {
-            signal: controller.signal,
-            timeout: this.deps.gatewayConfig.ipfsTimeout
-          })
-        );
+        const object = await ipfs.object.get(IPFS.CID.parse(ipfsPath), {
+          signal: controller.signal,
+          timeout: this.deps.gatewayConfig.ipfsTimeout
+        });
 
-        //The stat API doesn't show size for subdirectories
-        //So we need to go through the contents of the directory to find subdirectories
-        //and get their size
-        for (const item of items) {
-          if (item.type === "dir") {
-            const stat = await ipfs.files.stat(`/ipfs/${item.path}`, {
-              size: true, 
-              signal: controller.signal,
-              timeout: this.deps.gatewayConfig.ipfsTimeout
-            });
-            item.size = stat.cumulativeSize;
-          }
-        }
+        const stats = await Promise.all(
+          object.Links.map(
+            x => ipfs.files.stat(`/ipfs/${x.Hash.toString()}`)
+          )
+        );
+        
+        const items = object.Links.map((x, index) => ({
+          name: x.Name,
+          cid: x.Hash.toString(),
+          sizeInKb: stats[index].type === "file"
+            ? formatFileSize(stats[index].size)
+            : formatFileSize(stats[index].cumulativeSize)
+        }));
 
         return res.render("ipfs-directory-contents", {
-          items: items,
+          items,
           path: ipfsPath,
-          totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
-          sizeInKb: function () {
-            return formatFileSize((this as any).size)
-          },
+          totalSizeInKb: formatFileSize(contentDescription.cumulativeSize)
         });
       } else {
         res.status(500).json(this.buildIpfsError("Unsupported file type"));
