@@ -258,7 +258,7 @@ export class GatewayServer {
         const fileContent = await getIpfsFileContents(ipfs, ipfsPath, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
-        const object = await ipfs.object.get(IPFS.CID.parse(ipfsPath), {
+        const object = await ipfs.object.get(contentDescription.cid, {
           signal: controller.signal,
           timeout: this.deps.gatewayConfig.ipfsTimeout
         });
