@@ -4,7 +4,7 @@ import { createIpfsNode } from "../../createIpfsNode";
 import { Logger } from "../../services/Logger";
 import { IPFS } from "ipfs-core";
 import { IpfsConfig } from "../../config/IpfsConfig";
-import { PersistenceService } from "../../services/PersistenceService";
+import { PersistenceService } from "../../services/persistence-service/PersistenceService";
 import { PersistenceStateManager } from "../../services/PersistenceStateManager";
 import { IndexerConfig } from "../../config/IndexerConfig";
 import { IndexRetriever } from "../../services/IndexRetriever";

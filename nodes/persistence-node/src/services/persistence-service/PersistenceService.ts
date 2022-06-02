@@ -1,14 +1,14 @@
-import { IpfsConfig } from "../config/IpfsConfig";
+import { IpfsConfig } from "../../config/IpfsConfig";
 import * as IPFS from 'ipfs-core';
-import { Logger } from "./Logger";
-import { isWrapper } from "../isWrapper";
-import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
-import { addSeconds } from "../utils/addSeconds";
-import { PersistenceStateManager } from "./PersistenceStateManager";
-import { sleep } from "../sleep";
-import { IndexRetriever } from "./IndexRetriever";
-import { IPFSIndex } from "../types/IPFSIndex";
-import { PersistenceConfig } from "../config/PersistenceConfig";
+import { Logger } from "../Logger";
+import { isWrapper } from "../../isWrapper";
+import { TrackedIpfsHashInfo } from "../../types/TrackedIpfsHashInfo";
+import { addSeconds } from "../../utils/addSeconds";
+import { PersistenceStateManager } from "../PersistenceStateManager";
+import { sleep } from "../../sleep";
+import { IndexRetriever } from "../IndexRetriever";
+import { PersistenceConfig } from "../../config/PersistenceConfig";
+import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
 
 type ActionPromise = () => Promise<void>;
 
@@ -35,7 +35,7 @@ export class PersistenceService {
       const indexes = await this.deps.indexRetriever.getCIDs(); 
       const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashInfos();
   
-      const { toTrack, toUntrack } = await this.getDifference(indexes, tracked);
+      const { toTrack, toUntrack } = await calculateCIDsToTrackAndUntrack(indexes, tracked, this.deps.persistenceStateManager);
   
       const trackTasks: ActionPromise[] = toTrack.map(x => () => this.tryTrackIpfsHash.bind(this)(x));
       const untrackTasks: ActionPromise[] = toUntrack.map(x => () => this.tryUntrackIpfsHash.bind(this)(x));
@@ -100,111 +100,6 @@ export class PersistenceService {
     return result;
   }
 
-  private async getDifference(
-    indexes: IPFSIndex[],
-    trackedInfos: TrackedIpfsHashInfo[]
-  ): Promise<{
-    toTrack: {
-      ipfsHash: string,
-      indexes: string[]
-    }[], 
-    toUntrack: TrackedIpfsHashInfo[]
-  }> {
-    const indexedIpfsMap: Record<string, Set<string>> = {};
-
-    const toTrackMap: Record<string, boolean> = {};
-    const toUntrack: TrackedIpfsHashInfo[] = [];
-
-    //Go through all CIDs of all indexes and add to "toTrack" 
-    //if they're not already being tracked
-    for(const index of indexes) {
-      for(const cid of index.cids) {
-        if(!this.deps.persistenceStateManager.containsIpfsHash(cid)) {
-          toTrackMap[cid] = true;
-        }
-
-        //Add to shorten lookup later
-        indexedIpfsMap[cid] = !indexedIpfsMap[cid]
-          ? new Set([index.name])
-          : new Set(indexedIpfsMap[cid].add(index.name));
-      }
-    }
-
-    const unresponsiveIndexMap: Record<string, boolean> = {};
-    for (const index of indexes) {
-      if(index.error) {
-        unresponsiveIndexMap[index.name] = true;
-      }
-    }
-
-    const unresponsiveHashesToTrackMap: Record<string, boolean> = {};
-
-    //Go through all tracked CIDs and add to "toUntrack" if they're not in the indexes,
-    //provided the index was able to be retrieved
-    //If they are in an index and they're logged as unresponsive, check if their scheduledRetryDate is past
-    //if true, add to "unresponsiveHashesToTrackMap" to add them to the "toTrack" list at the end
-    //This puts the unresponsive hashes at the end of the processing queue
-    for(const info of trackedInfos) {
-      //If the IPFS hash is not in any index
-      if(!indexedIpfsMap[info.ipfsHash]) {
-        //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved
-        if(!info.indexes.some(x => unresponsiveIndexMap[x])) {
-          toUntrack.push(this.deps.persistenceStateManager.getTrackedIpfsHashInfo(info.ipfsHash));
-        }
-      } else {
-        if(info?.unresponsiveInfo) {
-          if(new Date(info.unresponsiveInfo.scheduledRetryDate) < new Date()) {
-            unresponsiveHashesToTrackMap[info.ipfsHash] = true;
-          }
-        }
-
-        //Add all indexes which were returned this IPFS hash
-        const updatedIndexes: Set<string> = new Set(indexedIpfsMap[info.ipfsHash]);
-        
-        //Also add all unresponsive indexes which were present in the info before
-        //If an index is unresponsive, it does not mean it does not have the IPFS hash
-        for(const index of info.indexes) {
-          if(unresponsiveIndexMap[index]) {
-            updatedIndexes.add(index);
-          }
-        }
-
-        info.indexes = [...updatedIndexes];
-      }
-    }
-
-    this.deps.persistenceStateManager.save();
-
-    const ipfsHashesToTrack = Object.keys(toTrackMap).map(x => x);
-    const toTrack: {
-      ipfsHash: string,
-      indexes: string[]
-    }[] = [];
-
-    for(const ipfsHash of ipfsHashesToTrack) {
-      toTrack.push({
-        ipfsHash,
-        indexes: [...indexedIpfsMap[ipfsHash]]
-      });
-    }
-
-    for(const ipfsHash of Object.keys(unresponsiveHashesToTrackMap)) {
-      if(toTrackMap[ipfsHash]) {
-        continue;
-      }
-
-      toTrack.push({
-        ipfsHash,
-        indexes: [...indexedIpfsMap[ipfsHash]]
-      });
-    }
-
-    return {
-      toTrack,
-      toUntrack
-    };
-  }
-
   private async tryTrackIpfsHash(ipfsHashToTrack: {
     ipfsHash: string,
     indexes: string[]
@@ -260,7 +155,7 @@ export class PersistenceService {
   
   private async tryUntrackIpfsHash(info: TrackedIpfsHashInfo): Promise<void> {
     if(!info.isWrapper) {
-      this.deps.logger.log(`Stopping tracking of ${info.ipfsHash} (not a wrapper)`);
+      this.deps.logger.log(`Stopping tracking of ${info.ipfsHash} (not a wrapper or undefined)`);
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
       return;
     } 
@@ -334,7 +229,7 @@ export class PersistenceService {
       });
   
       this.deps.logger.log(`Unpinned ${cid}`);
-        return true;
+      return true;
     } catch (err) {
       this.deps.logger.log(`Failed to unpin ${cid}, error: ${JSON.stringify(err)}`);
       return false;
