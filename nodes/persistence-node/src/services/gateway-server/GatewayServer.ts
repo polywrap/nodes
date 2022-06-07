@@ -1,29 +1,39 @@
 import express, { NextFunction, Request, Response } from "express";
 import multer, { memoryStorage } from "multer";
-import { addFilesToIpfs } from "../ipfs-operations/addFilesToIpfs";
+import { addFilesToIpfs } from "../../ipfs-operations/addFilesToIpfs";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { runServer } from "../http-server/runServer";
-import { addFilesAsDirToIpfs } from "../ipfs-operations/addFilesAsDirToIpfs";
-import { MainDependencyContainer } from "../modules/daemon/daemon.deps";
-import { MulterFile } from "../MulterFile";
-import { asyncIterableToArray } from "../utils/asyncIterableToArray";
-import { formatFileSize } from "../utils/formatFileSize";
-import { getIpfsFileContents } from "../getIpfsFileContents";
-import { handleError } from "../http-server/handleError";
-import { VERSION } from "../constants/version";
-import { IpfsAddResult } from "../types/IpfsAddResult";
-import { isValidWrapperManifestName } from "../isValidWrapperManifestName";
-import { IpfsErrorResponse } from "../types/IpfsErrorResponse";
+import { addFilesAsDirToIpfs } from "../../ipfs-operations/addFilesAsDirToIpfs";
+import { MulterFile } from "../../MulterFile";
+import { asyncIterableToArray } from "../../utils/asyncIterableToArray";
+import { formatFileSize } from "../../utils/formatFileSize";
+import { getIpfsFileContents } from "../../getIpfsFileContents";
+import { handleError } from "../../http-server/handleError";
+import { VERSION } from "../../constants/version";
+import { IpfsAddResult } from "../../types/IpfsAddResult";
+import { isValidWrapperManifestName } from "../../isValidWrapperManifestName";
+import { IpfsErrorResponse } from "../../types/IpfsErrorResponse";
 import cors from "cors";
 import http from "http";
-import { WRAPPER_DEFAULT_NAME } from "../constants/wrappers";
+import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
 import timeout from "connect-timeout";
+import * as IPFS from 'ipfs-core';
+import { WrapperWithFileList } from "./models/WrapperWithFileList";
+import { GatewayConfig } from "../../config/GatewayConfig";
+import { PersistenceStateManager } from "../PersistenceStateManager";
+import { Logger } from "../Logger";
+
+interface IDependencies {
+  persistenceStateManager: PersistenceStateManager;
+  ipfsNode: IPFS.IPFS;
+  gatewayConfig: GatewayConfig;
+  logger: Logger;
+}
 
 export class GatewayServer {
-  deps: MainDependencyContainer;
+  deps: IDependencies;
 
-  constructor(deps: MainDependencyContainer) {
+  constructor(deps: IDependencies) {
     this.deps = deps;
   }
 
@@ -35,7 +45,7 @@ export class GatewayServer {
 
     app.engine('html', mustacheExpress());
     app.set('view engine', 'html');
-    app.set('views', path.join(__dirname, '../ui'));
+    app.set('views', path.join(__dirname, '../../ui'));
 
     const upload = multer({
       storage: memoryStorage(),
@@ -137,25 +147,9 @@ export class GatewayServer {
         controller.abort();
       });
 
-      let wrappers: ({ 
-        cid: string, 
-        name: string,
-        manifest: {
-          cid: string,
-          name: string,
-        },
-        schema: {
-          cid: string,
-          name: string,
-        },
-        size: string,
-      } | undefined)[] = [];
-
-
       const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
         .filter(x => x.isPinned)
         .reverse();
-      console.log("Found pinned files: " + infos.length);
 
       const wrapperSizes = await Promise.all(infos.map(async info => {
         const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`, {
@@ -163,80 +157,87 @@ export class GatewayServer {
           timeout: this.deps.gatewayConfig.ipfsTimeout
         });
 
-        const wrapperSize = formatFileSize(statResult.cumulativeSize);
-        return wrapperSize;
+        return formatFileSize(statResult.cumulativeSize);
       }));
-  
-      const itemLists = await Promise.all(infos.map(async info => {
-        return asyncIterableToArray(
-          ipfs.ls(info.ipfsHash, {
+
+      const pinnedWrappers = (
+        await Promise.all(infos.map(async (info, index) => {
+          const object = await ipfs.object.get(IPFS.CID.parse(info.ipfsHash), {
             signal: controller.signal,
             timeout: this.deps.gatewayConfig.ipfsTimeout
-          })
-        );
-      }));
-      console.log("Processing pinned files: " + itemLists.length);
-      console.log("Sum: " + itemLists.map(x => x.length).reduce((a, b) => a + b));
+          });
 
-      wrappers = await Promise.all(itemLists.map(async (items, index) => {
-        const info = infos[index];
-        const wrapperSize = wrapperSizes[index];
+          const wrapper = {
+            cid: info.ipfsHash,
+            files: object.Links
+              .filter(x => x.Name)
+              .map(x => {
+                return {
+                  name: x.Name as string,
+                  cid: x.Hash.toString()
+                };
+              })
+          } as WrapperWithFileList;
 
-        const manifestFile = items.find(x => isValidWrapperManifestName(x.name));
-        const schemaFile = items.find(x => x.name === "schema.graphql");
-  
-        if(!manifestFile) {
-          this.deps.logger.log(`No manifest file found for pinned wrapper ${info.ipfsHash}, this should not happen.`);
-          return undefined;
-        }
-  
-        if(!schemaFile) {
-          this.deps.logger.log(`No schema file found for pinned wrapper ${info.ipfsHash}, this should not happen.`);
-          return undefined;
-        }
-  
-        if(manifestFile?.name === "web3api.json") {
-          const fileContents = await getIpfsFileContents(ipfs, manifestFile.cid.toString(), controller.signal, this.deps.gatewayConfig.ipfsTimeout);
-          const manifest = fileContents.toString();
-          const parsed = JSON.parse(manifest);
-  
-          if(parsed.name) {
-            return {
-              cid: info.ipfsHash,
-              name: parsed.name,
-              manifest: {
-                cid: manifestFile.cid.toString(),
-                name: manifestFile.name,
-              },
-              schema: {
-                cid: schemaFile.cid.toString(),
-                name: schemaFile.name,
-              },
-              size: wrapperSize
-            };
-          } 
-        }
-  
-        return {
-          cid: infos[index].ipfsHash,
-          name: WRAPPER_DEFAULT_NAME,
-          manifest: {
-            cid: manifestFile.cid.toString(),
-            name: manifestFile.name,
-          },
-          schema: {
-            cid: schemaFile.cid.toString(),
-            name: schemaFile.name,
-          },
-          size: wrapperSize
-        };
-      }));
+          const wrapperSize = wrapperSizes[index];
 
-      wrappers = wrappers.filter(x => !!x);
+          const manifestFile = wrapper.files.find(x => isValidWrapperManifestName(x.name));
+          const schemaFile = wrapper.files.find(x => x.name === "schema.graphql");
+    
+          if(!manifestFile) {
+            return undefined;
+          }
+    
+          if(!schemaFile) {
+            return undefined;
+          }
+    
+          if(manifestFile?.name === "web3api.json") {
+            const fileContents = await getIpfsFileContents(
+              ipfs, 
+              manifestFile.cid, 
+              controller.signal, 
+              this.deps.gatewayConfig.ipfsTimeout
+            );
+            const manifest = fileContents.toString();
+            const parsed = JSON.parse(manifest);
+    
+            if(parsed.name) {
+              return {
+                cid: wrapper.cid,
+                name: parsed.name,
+                manifest: {
+                  cid: manifestFile.cid,
+                  name: manifestFile.name,
+                },
+                schema: {
+                  cid: schemaFile.cid,
+                  name: schemaFile.name,
+                },
+                size: wrapperSize,
+              };
+            } 
+          }
+    
+          return {
+            cid: infos[index].ipfsHash,
+            name: WRAPPER_DEFAULT_NAME,
+            manifest: {
+              cid: manifestFile.cid,
+              name: manifestFile.name,
+            },
+            schema: {
+              cid: schemaFile.cid,
+              name: schemaFile.name,
+            },
+            size: wrapperSize,
+          };
+        }))
+      ).filter(x => !!x);
 
       res.render('pins', {
-        wrappers: wrappers,
-        count: wrappers.length,
+        wrappers: pinnedWrappers,
+        count: pinnedWrappers.length,
       });
     }));
 
@@ -257,34 +258,29 @@ export class GatewayServer {
         const fileContent = await getIpfsFileContents(ipfs, ipfsPath, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
-        const items = await asyncIterableToArray(
-          ipfs.ls(ipfsPath, {
-            signal: controller.signal,
-            timeout: this.deps.gatewayConfig.ipfsTimeout
-          })
-        );
+        const object = await ipfs.object.get(contentDescription.cid, {
+          signal: controller.signal,
+          timeout: this.deps.gatewayConfig.ipfsTimeout
+        });
 
-        //The stat API doesn't show size for subdirectories
-        //So we need to go through the contents of the directory to find subdirectories
-        //and get their size
-        for (const item of items) {
-          if (item.type === "dir") {
-            const stat = await ipfs.files.stat(`/ipfs/${item.path}`, {
-              size: true, 
-              signal: controller.signal,
-              timeout: this.deps.gatewayConfig.ipfsTimeout
-            });
-            item.size = stat.cumulativeSize;
-          }
-        }
+        const stats = await Promise.all(
+          object.Links.map(
+            x => ipfs.files.stat(`/ipfs/${x.Hash.toString()}`)
+          )
+        );
+        
+        const items = object.Links.map((x, index) => ({
+          name: x.Name,
+          cid: x.Hash.toString(),
+          sizeInKb: stats[index].type === "file"
+            ? formatFileSize(stats[index].size)
+            : formatFileSize(stats[index].cumulativeSize)
+        }));
 
         return res.render("ipfs-directory-contents", {
-          items: items,
+          items,
           path: ipfsPath,
-          totalSizeInKb: formatFileSize(contentDescription.cumulativeSize),
-          sizeInKb: function () {
-            return formatFileSize((this as any).size)
-          },
+          totalSizeInKb: formatFileSize(contentDescription.cumulativeSize)
         });
       } else {
         res.status(500).json(this.buildIpfsError("Unsupported file type"));

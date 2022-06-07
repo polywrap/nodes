@@ -6,10 +6,11 @@ import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
 import { addSeconds } from "../utils/addSeconds";
 import { PersistenceStateManager } from "./PersistenceStateManager";
 import { sleep } from "../sleep";
-import { UnresponsiveIpfsHashInfo } from "../types/UnresponsiveIpfsHashInfo";
 import { IndexRetriever } from "./IndexRetriever";
 import { IPFSIndex } from "../types/IPFSIndex";
 import { PersistenceConfig } from "../config/PersistenceConfig";
+
+type ActionPromise = () => Promise<void>;
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
@@ -29,22 +30,74 @@ export class PersistenceService {
 
   async run(): Promise<void> {
     while(true) {
+      let timestamp = process.hrtime();
+
       const indexes = await this.deps.indexRetriever.getCIDs(); 
       const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashInfos();
   
       const { toTrack, toUntrack } = await this.getDifference(indexes, tracked);
   
-      const trackTasks = toTrack.map(this.tryTrackIpfsHash.bind(this));
-      const untrackTasks = toUntrack.map(this.tryUntrackIpfsHash.bind(this));
+      const trackTasks: ActionPromise[] = toTrack.map(x => () => this.tryTrackIpfsHash.bind(this)(x));
+      const untrackTasks: ActionPromise[] = toUntrack.map(x => () => this.tryUntrackIpfsHash.bind(this)(x));
   
       this.deps.logger.log(`${toTrack.length} CIDs to track, ${toUntrack.length} to untrack`);
 
-      await Promise.all([
-        Promise.all(trackTasks), 
-        Promise.all(untrackTasks)
-      ]);
-      await sleep(15000);
+      await this.processTasksInBatches([...trackTasks, ...untrackTasks], timestamp);
+      await this.sleepUntilNextPersistenceRun(timestamp);
     }
+  }
+
+  private async processTasksInBatches(tasks: ActionPromise[], lastTimestamp: [number, number]): Promise<void> {
+    //Process tasks in batches of `persistenceMaxParallelTaskCount`
+    let tasksToProcess = this.takeTasks(tasks, this.deps.persistenceConfig.persistenceMaxParallelTaskCount);
+    while(tasksToProcess.length) {
+      if(!this.hasLeftoverTimeInCurrentRun(lastTimestamp)) {
+        return;
+      }
+   
+      await Promise.all(tasksToProcess.map(x => x()));
+      tasksToProcess = this.takeTasks(tasks, this.deps.persistenceConfig.persistenceMaxParallelTaskCount);
+    }
+  }
+
+  private hasLeftoverTimeInCurrentRun(lastTimestamp: [number, number]): boolean {
+    //If less than `persistenceConfig.persistenceInterval` seconds have passed then there is leftover time
+    if(this.getMilisecondsFromLastRun(lastTimestamp) < this.deps.persistenceConfig.persistenceIntervalSeconds * 1000) {
+      return true;
+    }
+    
+    return false;
+  }
+
+  private getMilisecondsFromLastRun(lastTimestamp: [number, number]): number {
+    const newTimestamp = process.hrtime(lastTimestamp);
+    return newTimestamp[0] * 1000 + newTimestamp[1] / 1000000;
+  }
+
+  private async sleepUntilNextPersistenceRun(lastTimestamp: [number, number]): Promise<void> {
+    const milisecondsFromLastRun = this.getMilisecondsFromLastRun(lastTimestamp);
+
+    //If less than `persistenceConfig.persistenceInterval` seconds have passed then there is leftover time
+    if(milisecondsFromLastRun < this.deps.persistenceConfig.persistenceIntervalSeconds * 1000) {
+      //Get the difference to wait for
+      const difference = this.deps.persistenceConfig.persistenceIntervalSeconds * 1000 - milisecondsFromLastRun;
+
+      //Wait for the difference (in miliseconds)
+      await sleep(difference);
+    }
+  }
+
+  //Takes the first `count` tasks from `tasks` and returns them
+  //Additionally, it removes the taken tasks from `tasks`
+  private takeTasks(tasks: ActionPromise[], count: number): ActionPromise[] {
+    const result: ActionPromise[] = [];
+    for(let i = 0; i < count; i++) {
+      if(tasks.length > 0) {
+        result.push(tasks.shift()!);
+      }
+    }
+
+    return result;
   }
 
   private async getDifference(
@@ -84,10 +137,13 @@ export class PersistenceService {
       }
     }
 
+    const unresponsiveHashesToTrackMap: Record<string, boolean> = {};
+
     //Go through all tracked CIDs and add to "toUntrack" if they're not in the indexes,
     //provided the index was able to be retrieved
     //If they are in an index and they're logged as unresponsive, check if their scheduledRetryDate is past
-    //if true, add to "toTrack"
+    //if true, add to "unresponsiveHashesToTrackMap" to add them to the "toTrack" list at the end
+    //This puts the unresponsive hashes at the end of the processing queue
     for(const info of trackedInfos) {
       //If the IPFS hash is not in any index
       if(!indexedIpfsMap[info.ipfsHash]) {
@@ -98,7 +154,7 @@ export class PersistenceService {
       } else {
         if(info?.unresponsiveInfo) {
           if(new Date(info.unresponsiveInfo.scheduledRetryDate) < new Date()) {
-            toTrackMap[info.ipfsHash] = true;
+            unresponsiveHashesToTrackMap[info.ipfsHash] = true;
           }
         }
 
@@ -126,6 +182,17 @@ export class PersistenceService {
     }[] = [];
 
     for(const ipfsHash of ipfsHashesToTrack) {
+      toTrack.push({
+        ipfsHash,
+        indexes: [...indexedIpfsMap[ipfsHash]]
+      });
+    }
+
+    for(const ipfsHash of Object.keys(unresponsiveHashesToTrackMap)) {
+      if(toTrackMap[ipfsHash]) {
+        continue;
+      }
+
       toTrack.push({
         ipfsHash,
         indexes: [...indexedIpfsMap[ipfsHash]]
