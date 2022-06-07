@@ -8,6 +8,7 @@ import { EnsNetworkConfig } from "../config/EnsNetworkConfig";
 import { IPFS } from "ipfs-core";
 import { getIpfsFileContents } from "../getIpfsFileContents";
 import { NodeStateManager } from "./NodeStateManager";
+import { ApiServer } from "./ApiServer";
 
 type EnsNodeChangeEvent = {
   ensNode: string;
@@ -20,6 +21,7 @@ interface IDependencies {
   nodeStateManager: NodeStateManager;
   ensStateManager: EnsStateManager;
   ethereumNetwork: EthereumNetwork;
+  apiServer: ApiServer;
   logger: Logger;
   ipfsNode: IPFS;
 }
@@ -141,6 +143,16 @@ export class IndexerService {
         }
 
         await this.indexBlockRange(nextBlockToIndex, latestBlock);
+        const indexedBlocksCnt = latestBlock - nextBlockToIndex + 1;
+
+        if(indexedBlocksCnt < this.deps.ensIndexerConfig.maxBlockRangePerRequest) {
+          //If we have synced to the latest block then we start the API server if it's not already running
+          await this.deps.apiServer.tryStart();
+        } else {
+          //If we are still syncing we stop the server if it's running
+          //This prevents consumers of the API to get out of date information
+          await this.deps.apiServer.tryStop();
+        }
 
         this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
         await this.deps.ensStateManager.save(); 

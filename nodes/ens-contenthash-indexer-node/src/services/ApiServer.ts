@@ -1,9 +1,10 @@
-import express, { NextFunction, Request, Response } from "express";
+import express, { NextFunction, Request, Response, Express } from "express";
 import { EnsIndexerConfig } from "../config/EnsIndexerConfig";
 import { EnsStateManager } from "./EnsStateManager";
 import { Logger } from "./Logger";
 import { runServer } from "../http-server/runServer";
 import { IPFS } from "ipfs-core";
+import http from "http";
 
 interface IDependencies {
   apiPort: number;
@@ -14,10 +15,31 @@ interface IDependencies {
 }
 
 export class ApiServer {
+  isRunning: boolean = false;
+  expressServer?: http.Server;
+  
   constructor(private readonly deps: IDependencies) {
   }
 
-  async run() {
+  async tryStart(): Promise<void> {
+    if(this.isRunning) {
+      return;
+    }
+
+    await this.start();
+  }
+
+  async tryStop(): Promise<void> {
+    if(!this.isRunning) {
+      return;
+    }
+
+    await this.stop();
+  }
+
+  async start(): Promise<void> {
+    this.deps.logger.log(`Starting API server...`);
+   
     const app = express();
 
     app.all('*', handleError(async (req, res, next) => {
@@ -65,12 +87,31 @@ export class ApiServer {
       });
     }));
 
-    runServer(
+    this.expressServer = runServer(
       app,
       this.deps.apiPort, 
       this.deps.logger,
-      () => console.log(`API listening on http://localhost:${this.deps.apiPort}`)
+      () => this.deps.logger.log(`API listening on http://localhost:${this.deps.apiPort}`)
     );
+    this.isRunning = true;
+  }
+
+  stop() {
+    this.deps.logger.log(`Stopping API server...`);
+  
+    if(!this.isRunning) {
+      this.deps.logger.log(`Could not stop API server, it is not running`);
+      return;
+    }
+
+    if(!this.expressServer) {
+      this.deps.logger.log(`Could not stop API server, express server is not initialized`);
+      return;
+    }
+    this.expressServer.close();
+    this.isRunning = false;
+    this.expressServer = undefined;
+    this.deps.logger.log(`API server no longer listening on http://localhost:${this.deps.apiPort}`);
   }
 }
 
