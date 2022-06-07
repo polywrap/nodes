@@ -3,7 +3,7 @@ import { Request, Response, NextFunction } from "express";
 import { Logger } from "../services/Logger";
 import { handleError } from "./handleError";
 
-export const runServer = (app: any, port: number, logger: Logger, onStart: () => void) => {
+export const runServer = (app: any, port: number, logger: Logger, onStart: () => void): http.Server => {
   app.all('*', handleError(async (req: Request, res: Response, next: NextFunction) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
@@ -37,5 +37,5 @@ export const runServer = (app: any, port: number, logger: Logger, onStart: () =>
   });
   const server = http.createServer({}, app);
   
-  server.listen(port, onStart);
+  return server.listen(port, onStart);
 };
