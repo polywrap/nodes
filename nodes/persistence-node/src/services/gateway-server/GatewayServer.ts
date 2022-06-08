@@ -22,6 +22,7 @@ import { WrapperWithFileList } from "./models/WrapperWithFileList";
 import { GatewayConfig } from "../../config/GatewayConfig";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { Logger } from "../Logger";
+import { Status } from "../../types/TrackedIpfsHashInfo";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
@@ -127,7 +128,7 @@ export class GatewayServer {
       let pinnedIpfsHashes: string[] = [];
 
       for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
-        if (!info.isPinned) {
+        if (info.status !== Status.Pinned) {
           continue;
         }
 
@@ -148,7 +149,7 @@ export class GatewayServer {
       });
 
       const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
-        .filter(x => x.isPinned)
+        .filter(x => x.status === Status.Pinned)
         .reverse();
 
       const wrapperSizes = await Promise.all(infos.map(async info => {
