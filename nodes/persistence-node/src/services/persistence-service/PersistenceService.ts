@@ -118,6 +118,8 @@ export class PersistenceService {
 
       if(info.status === Status.Pinning) {
         await this.pinWrapper(ipfsHash, retryCount, indexes);  
+      } else if (info.status === Status.CheckingIfWrapper) {
+        await this.pinIfWrapper(ipfsHash, retryCount, indexes);
       } else {
         this.deps.logger.log(`Unsupported status to track: ${info.status}`)
       }
