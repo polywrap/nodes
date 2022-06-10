@@ -1,5 +1,5 @@
 import { IPFSIndex } from "../../../types/IPFSIndex";
-import { TrackedIpfsHashInfo } from "../../../types/TrackedIpfsHashInfo";
+import { Status, TrackedIpfsHashInfo } from "../../../types/TrackedIpfsHashInfo";
 import { PersistenceStateManager } from "../../PersistenceStateManager";
 
 export const calculateCIDsToTrackAndUntrack = (
@@ -92,7 +92,8 @@ const calculateCIDsToUntrack = (
     //If the IPFS hash is not in any index
     if(!cidIndexesMap[info.ipfsHash]) {
       //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved
-      if(!info.indexes.some(x => unresponsiveIndexMap[x])) {
+      // and if it's not considered lost
+      if(!info.indexes.some(x => unresponsiveIndexMap[x]) && info.status !== Status.Lost) {
         cidsToUntrack.push(persistenceStateManager.getTrackedIpfsHashInfo(info.ipfsHash));
       }
     } else {

@@ -119,7 +119,7 @@ export class PersistenceService {
       if(info.status === Status.Pinning) {
         await this.pinWrapper(ipfsHash, retryCount, indexes);  
       } else {
-        await this.pinIfWrapper(ipfsHash, retryCount, indexes);
+        this.deps.logger.log(`Unsupported status to track: ${info.status}`)
       }
     } else {
       await this.pinIfWrapper(ipfsHash, retryCount, indexes);
@@ -145,7 +145,7 @@ export class PersistenceService {
         indexes,
       });
     } else if (result === "timeout") {
-      await this.scheduleRetry(ipfsHash, Status.CheckingIfWrapper, retryCount, indexes);
+      await this.scheduleRetry(ipfsHash, retryCount, Status.CheckingIfWrapper, indexes);
     }
   }
   
@@ -192,8 +192,8 @@ export class PersistenceService {
     }
   }
 
-  private async scheduleRetry(ipfsHash: string, status: Status, retryCount: number, indexes: string[]): Promise<void> {
-    this.deps.logger.log(`Scheduling retry for ${ipfsHash}`);
+  private async scheduleRetry(ipfsHash: string, retryCount: number, status: Status, indexes: string[]): Promise<void> {
+    this.deps.logger.log(`Scheduling retry for ${ipfsHash} (${status})`);
    
     if(retryCount >= this.deps.persistenceConfig.wrapperResolution.retries.max) {
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {

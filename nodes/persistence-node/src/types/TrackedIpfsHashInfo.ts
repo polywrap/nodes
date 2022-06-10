@@ -9,10 +9,10 @@ export type TrackedIpfsHashInfo = {
 };
 
 export enum Status {
-  CheckingIfWrapper,
-  Pinning,
-  Pinned,
-  Unpinning,
-  NotAWrapper,
-  Lost,
+  CheckingIfWrapper = "CheckingIfWrapper", 
+  Pinning = "Pinning", 
+  Pinned = "Pinned", 
+  Unpinning = "Unpinning", 
+  NotAWrapper = "NotAWrapper", 
+  Lost = "Lost"
 }
