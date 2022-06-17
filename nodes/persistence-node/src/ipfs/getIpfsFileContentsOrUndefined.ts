@@ -4,11 +4,11 @@ import { getIpfsFileContents } from './getIpfsFileContents';
 export const getIpfsFileContentsOrUndefined = async (
   ipfs: IPFS.IPFS, 
   hash: string, 
-  signal: AbortSignal, 
-  timeout: number
+  timeout: number,
+  signal: AbortSignal | undefined = undefined, 
 ): Promise<Buffer | undefined> => {
   try {
-    const buffer = await getIpfsFileContents(ipfs, hash, signal, timeout);
+    const buffer = await getIpfsFileContents(ipfs, hash, timeout, signal);
     return buffer;
   }
   catch {
