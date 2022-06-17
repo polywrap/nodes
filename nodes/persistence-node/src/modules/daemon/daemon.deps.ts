@@ -1,6 +1,6 @@
 import * as awilix from "awilix";
 import { NameAndRegistrationPair } from "awilix";
-import { createIpfsNode } from "../../createIpfsNode";
+import { createIpfsNode } from "../../ipfs/createIpfsNode";
 import { Logger } from "../../services/Logger";
 import { IPFS } from "ipfs-core";
 import { IpfsConfig } from "../../config/IpfsConfig";
