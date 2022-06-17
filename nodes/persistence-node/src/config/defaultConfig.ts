@@ -9,6 +9,20 @@ export const defaultConfig: Config = {
     "requestTimeout": 5000,
     "ipfsTimeout": 10
   },
+  "wrapper": {
+    "constraints": {
+      "maxSize": 10_000_000,
+      "maxFileSize": 5_000_000,
+      "maxModuleSize": 5_000_000,
+      "maxNumberOfFiles": 1000,
+    },
+    "resolution": {
+      "retries": {
+        "max": 10,
+        "startingDelayInSec": 300
+      }
+    }
+  },
   "ipfs": {
     "provider": "http://localhost:5001",
     "gateway": "https://ipfs.io/ipfs",
@@ -33,11 +47,5 @@ export const defaultConfig: Config = {
           "name": "ens-mainnet",
           "provider": "http://localhost:8084/api/ipfs/ls"
       }
-  ],
-  "wrapperResolution": {
-    "retries": {
-        "max": 10,
-        "startingDelayInSec": 300
-    }
-  }
+  ]
 };

@@ -1,14 +1,15 @@
 import { IpfsConfig } from "../../config/IpfsConfig";
 import * as IPFS from 'ipfs-core';
 import { Logger } from "../Logger";
-import { isWrapper } from "../../isWrapper";
-import { TrackedIpfsHashInfo } from "../../types/TrackedIpfsHashInfo";
+import { isValidWrapper } from "../../utils/isValidWrapper";
+import { TrackedIpfsHashInfo, IpfsPackageReader } from "../../types";
 import { addSeconds } from "../../utils/addSeconds";
 import { PersistenceStateManager } from "../PersistenceStateManager";
-import { sleep } from "../../sleep";
+import { sleep } from "../../utils/sleep";
 import { IndexRetriever } from "../IndexRetriever";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
+import { WrapperValidator } from "@web3api/core-validation";
 
 type ActionPromise = () => Promise<void>;
 
@@ -29,6 +30,21 @@ export class PersistenceService {
   }
 
   async run(): Promise<void> {
+    const cid = "QmacqHBGtV4bvrFgsPirqifxcRejSvvDeBHgXARTPPVRCU";
+
+    const wrapperPath = `/ipfs/${cid}`;
+
+    const validator = new WrapperValidator({
+      maxSize: 5_000_000,
+      maxFileSize: 1_000_000,
+      maxModuleSize: 1_000_000,
+      maxNumberOfFiles: 2,
+    });
+    const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapperPath);
+
+    const result = await validator.validate(reader);
+    console.log("result", result);
+
     while(true) {
       let timestamp = process.hrtime();
 
@@ -130,7 +146,7 @@ export class PersistenceService {
 
   private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
 
-    const result = await isWrapper(this.deps.ipfsNode, this.deps.ipfsConfig, this.deps.logger, ipfsHash);
+    const result = await isValidWrapper(this.deps.ipfsNode, this.deps.persistenceConfig.wrapper.constraints, this.deps.logger, ipfsHash);
 
     if(result === "yes") {
       await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
@@ -195,7 +211,7 @@ export class PersistenceService {
   private async scheduleRetry(ipfsHash: string, retryCount: number, indexes: string[], isWrapper?: boolean): Promise<void> {
     this.deps.logger.log(`Scheduling retry for ${ipfsHash}`);
    
-    if(retryCount >= this.deps.persistenceConfig.wrapperResolution.retries.max) {
+    if(retryCount >= this.deps.persistenceConfig.wrapper.resolution.retries.max) {
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         isWrapper,
@@ -206,7 +222,7 @@ export class PersistenceService {
 
       this.deps.logger.log(`Wrapper ${ipfsHash} is now considered lost`);
     } else {
-      const startingDelayInSec = this.deps.persistenceConfig.wrapperResolution.retries.startingDelayInSec;
+      const startingDelayInSec = this.deps.persistenceConfig.wrapper.resolution.retries.startingDelayInSec;
 
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,

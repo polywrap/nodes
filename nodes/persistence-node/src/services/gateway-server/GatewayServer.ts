@@ -1,18 +1,13 @@
 import express, { NextFunction, Request, Response } from "express";
 import multer, { memoryStorage } from "multer";
-import { addFilesToIpfs } from "../../ipfs-operations/addFilesToIpfs";
+import { addFilesToIpfs } from "../../ipfs/addFilesToIpfs";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { addFilesAsDirToIpfs } from "../../ipfs-operations/addFilesAsDirToIpfs";
-import { MulterFile } from "../../MulterFile";
-import { asyncIterableToArray } from "../../utils/asyncIterableToArray";
+import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
+import { MulterFile, IpfsAddResult, IpfsErrorResponse, InMemoryFile, InMemoryPackageReader, IpfsPackageReader } from "../../types";
 import { formatFileSize } from "../../utils/formatFileSize";
-import { getIpfsFileContents } from "../../getIpfsFileContents";
 import { handleError } from "../../http-server/handleError";
 import { VERSION } from "../../constants/version";
-import { IpfsAddResult } from "../../types/IpfsAddResult";
-import { isValidWrapperManifestName } from "../../isValidWrapperManifestName";
-import { IpfsErrorResponse } from "../../types/IpfsErrorResponse";
 import cors from "cors";
 import http from "http";
 import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
@@ -22,11 +17,16 @@ import { WrapperWithFileList } from "./models/WrapperWithFileList";
 import { GatewayConfig } from "../../config/GatewayConfig";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { Logger } from "../Logger";
+import { getIpfsFileContents } from "../../ipfs";
+import { PersistenceConfig } from "../../config/PersistenceConfig";
+import { VALID_WRAP_MANIFEST_NAMES, WrapperValidator } from "@web3api/core-validation";
+import { deserializePolywrapManifest } from "@web3api/core-js";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   gatewayConfig: GatewayConfig;
+  persistenceConfig: PersistenceConfig;
   logger: Logger;
 }
 
@@ -99,7 +99,7 @@ export class GatewayServer {
         return;
       }
 
-      const fileContents = await getIpfsFileContents(ipfs, hash, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
+      const fileContents = await getIpfsFileContents(ipfs, hash, this.deps.gatewayConfig.ipfsTimeout, controller.signal);
 
       res.send(fileContents);
     }));
@@ -181,44 +181,37 @@ export class GatewayServer {
 
           const wrapperSize = wrapperSizes[index];
 
-          const manifestFile = wrapper.files.find(x => isValidWrapperManifestName(x.name));
-          const schemaFile = wrapper.files.find(x => x.name === "schema.graphql");
-    
+          const manifestFile = wrapper.files.find(x => VALID_WRAP_MANIFEST_NAMES.includes(x.name));
+
           if(!manifestFile) {
             return undefined;
           }
     
+          const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapper.cid);
+          const manifestContent = await reader.readFileAsString(manifestFile?.name);
+          const manifest = deserializePolywrapManifest(manifestContent);
+          const schemaFile = wrapper.files.find(x => x.name === manifest.schema);
+    
           if(!schemaFile) {
             return undefined;
           }
-    
-          if(manifestFile?.name === "web3api.json") {
-            const fileContents = await getIpfsFileContents(
-              ipfs, 
-              manifestFile.cid, 
-              controller.signal, 
-              this.deps.gatewayConfig.ipfsTimeout
-            );
-            const manifest = fileContents.toString();
-            const parsed = JSON.parse(manifest);
-    
-            if(parsed.name) {
-              return {
-                cid: wrapper.cid,
-                name: parsed.name,
-                manifest: {
-                  cid: manifestFile.cid,
-                  name: manifestFile.name,
-                },
-                schema: {
-                  cid: schemaFile.cid,
-                  name: schemaFile.name,
-                },
-                size: wrapperSize,
-              };
-            } 
-          }
-    
+  
+          if(manifest.name) {
+            return {
+              cid: wrapper.cid,
+              name: manifest.name,
+              manifest: {
+                cid: manifestFile.cid,
+                name: manifestFile.name,
+              },
+              schema: {
+                cid: schemaFile.cid,
+                name: schemaFile.name,
+              },
+              size: wrapperSize,
+            };
+          } 
+
           return {
             cid: infos[index].ipfsHash,
             name: WRAPPER_DEFAULT_NAME,
@@ -255,7 +248,7 @@ export class GatewayServer {
       });
 
       if (contentDescription.type === "file") {
-        const fileContent = await getIpfsFileContents(ipfs, ipfsPath, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
+        const fileContent = await getIpfsFileContents(ipfs, ipfsPath, this.deps.gatewayConfig.ipfsTimeout, controller.signal);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
         const object = await ipfs.object.get(contentDescription.cid, {
@@ -325,14 +318,8 @@ export class GatewayServer {
 
       const files: MulterFile[] = req.files as MulterFile[];
 
-      let hasWrapManifest = false;
-
-      const filesToAdd = files.map(x => {
+      const filesToAdd: InMemoryFile[] = files.map(x => {
         const pathToFile = decodeURIComponent(x.originalname);
-
-        if(isValidWrapperManifestName(path.basename(pathToFile))) {
-          hasWrapManifest = true;
-        }
 
         //If the file is a directory, we don't add the buffer, otherwise we get a different CID than expected
         if(x.mimetype === "application/x-directory") {
@@ -347,8 +334,13 @@ export class GatewayServer {
         }
       });
 
-      if(!hasWrapManifest) {
-        res.status(500).json(this.buildIpfsError("No valid wrapper manifest found in upload"));
+      const validator = new WrapperValidator(this.deps.persistenceConfig.wrapper.constraints);
+      const reader = new InMemoryPackageReader(filesToAdd);
+
+      const result = await validator.validate(reader);
+      
+      if(!result.valid) {
+        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
         return;
       }
 
