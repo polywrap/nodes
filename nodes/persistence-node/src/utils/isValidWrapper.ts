@@ -1,16 +1,15 @@
 import * as IPFS from 'ipfs-core';
 import { Logger } from '../services/Logger';
 import { IpfsPackageReader } from '../types';
-import { WrapperConstraints, WrapperValidator } from '@web3api/core-validation';
+import { WrapperValidator } from '@polywrap/core-validation';
 
 export const isValidWrapper = async (
   ipfsNode: IPFS.IPFS, 
-  wrapperConstraints: WrapperConstraints, 
+  validator: WrapperValidator, 
   logger: Logger, 
   cid: string
 ): Promise<"yes" | "no" | "timeout"> => {
   try {
-    const validator = new WrapperValidator(wrapperConstraints);
     const reader = new IpfsPackageReader(ipfsNode, `/ipfs/${cid}`);
 
     const result = await validator.validate(reader);

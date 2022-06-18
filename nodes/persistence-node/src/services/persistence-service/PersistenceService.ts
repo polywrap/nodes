@@ -9,17 +9,18 @@ import { sleep } from "../../utils/sleep";
 import { IndexRetriever } from "../IndexRetriever";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
-import { WrapperValidator } from "@web3api/core-validation";
+import { WrapperValidator } from "@polywrap/core-validation";
 
 type ActionPromise = () => Promise<void>;
 
 interface IDependencies {
+  logger: Logger;
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
   persistenceConfig: PersistenceConfig;
   indexRetriever: IndexRetriever;
-  logger: Logger;
+  wrapperValidator: WrapperValidator;
 }
 
 export class PersistenceService {
@@ -30,21 +31,6 @@ export class PersistenceService {
   }
 
   async run(): Promise<void> {
-    const cid = "QmacqHBGtV4bvrFgsPirqifxcRejSvvDeBHgXARTPPVRCU";
-
-    const wrapperPath = `/ipfs/${cid}`;
-
-    const validator = new WrapperValidator({
-      maxSize: 5_000_000,
-      maxFileSize: 1_000_000,
-      maxModuleSize: 1_000_000,
-      maxNumberOfFiles: 2,
-    });
-    const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapperPath);
-
-    const result = await validator.validate(reader);
-    console.log("result", result);
-
     while(true) {
       let timestamp = process.hrtime();
 
@@ -146,7 +132,7 @@ export class PersistenceService {
 
   private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
 
-    const result = await isValidWrapper(this.deps.ipfsNode, this.deps.persistenceConfig.wrapper.constraints, this.deps.logger, ipfsHash);
+    const result = await isValidWrapper(this.deps.ipfsNode, this.deps.wrapperValidator, this.deps.logger, ipfsHash);
 
     if(result === "yes") {
       await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
@@ -237,7 +223,7 @@ export class PersistenceService {
     }
   }
   
-  private async unpinCID(cid: string): Promise<boolean> {
+  async unpinCID(cid: string): Promise<boolean> {
     try {
       await this.deps.ipfsNode.pin.rm(cid, {
         recursive: true,

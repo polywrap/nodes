@@ -1,12 +1,20 @@
 import * as IPFS from 'ipfs-core';
-import { ipfsPathExists, getIpfsFileContents } from "../ipfs";
+import { ipfsPathExists, getIpfsFileContents, isCID } from "../ipfs";
 import path from "path";
-import { PackageReader, PathStats } from '@web3api/core-validation';
+import { PackageReader, PathStats } from '@polywrap/core-validation';
 
 export class IpfsPackageReader implements PackageReader {
   ipfsTimeout: number = 1000;
+  wrapperIpfsPath: string;
  
-  constructor(private readonly ipfsNode: IPFS.IPFS, public readonly wrapperIpfsPath: string) {
+  constructor(private readonly ipfsNode: IPFS.IPFS, public readonly ipfsPathOrCID: string) {
+    if(ipfsPathOrCID.startsWith("/ipfs/")) {
+      this.wrapperIpfsPath = ipfsPathOrCID;
+    } else if(isCID(ipfsPathOrCID)) {
+      this.wrapperIpfsPath = `/ipfs/${ipfsPathOrCID}`;
+    } else {
+      throw new Error(`Invalid IPFS path or CID: ${ipfsPathOrCID}`);
+    }
   }
 
   async readFileAsString(filePath: string): Promise<string> {

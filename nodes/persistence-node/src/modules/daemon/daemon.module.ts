@@ -25,7 +25,11 @@ export class DaemonModule {
         return new DaemonModule(container.cradle, shouldLog);
     }
 
-    async run() {
+    async run(shouldPurgeInvalidWrappers: boolean) {
+        if(shouldPurgeInvalidWrappers) {
+            await this.deps.validationService.purgeInvalidWrappers();
+        }
+
         Promise.all([
             this.deps.apiServer.run(),
             this.deps.gatewayServer.run(),

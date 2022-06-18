@@ -1,7 +1,8 @@
 import * as IPFS from 'ipfs-core';
+import { InMemoryFile } from '../types';
 
 export const addFilesAsDirToIpfs = async (
-  files: { path: string, content: Buffer }[], 
+  files: InMemoryFile[], 
   options: { onlyHash: boolean }, 
   ipfs: IPFS.IPFS
 ) => {

@@ -1,6 +1,6 @@
 import express, { NextFunction, Request, Response } from "express";
 import multer, { memoryStorage } from "multer";
-import { addFilesToIpfs } from "../../ipfs/addFilesToIpfs";
+import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
 import mustacheExpress from "mustache-express";
 import path from "path";
 import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
@@ -17,10 +17,9 @@ import { WrapperWithFileList } from "./models/WrapperWithFileList";
 import { GatewayConfig } from "../../config/GatewayConfig";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { Logger } from "../Logger";
-import { getIpfsFileContents } from "../../ipfs";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
-import { VALID_WRAP_MANIFEST_NAMES, WrapperValidator } from "@web3api/core-validation";
-import { deserializePolywrapManifest } from "@web3api/core-js";
+import { VALID_WRAP_MANIFEST_NAMES, WrapperValidator } from "@polywrap/core-validation";
+import { deserializePolywrapManifest } from "@polywrap/core-js";
 
 interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
@@ -29,6 +28,28 @@ interface IDependencies {
   persistenceConfig: PersistenceConfig;
   logger: Logger;
 }
+
+export const stripBasePath = (files: InMemoryFile[]) => {
+  let fileWithShortestPath: InMemoryFile | undefined;
+
+  for(const file of files) {
+    if(!fileWithShortestPath) {
+      fileWithShortestPath = file;
+      continue;
+    }
+
+    if(file.path.length < fileWithShortestPath.path.length) {
+      fileWithShortestPath = file;
+    }
+
+    console.log(fileWithShortestPath?.path as string, file.path);
+  }
+
+  return files.map(file => ({
+    path: path.relative(fileWithShortestPath?.path as string, file.path) ?? '.',
+    content: file.content
+  })).filter(file => !!file.path);
+};
 
 export class GatewayServer {
   deps: IDependencies;
@@ -292,13 +313,24 @@ export class GatewayServer {
           onlyHash: false,
         };
 
-      const files: { files: MulterFile[] } = req.files as { files: MulterFile[] };
+      const uploadRequest: { files: MulterFile[] } = req.files as { files: MulterFile[] };
+      const filesToAdd = uploadRequest.files.map(x => ({
+        path: x.originalname,
+        content: x.buffer
+      }));
+
+      const validator = new WrapperValidator(this.deps.persistenceConfig.wrapper.constraints);
+      const reader = new InMemoryPackageReader(filesToAdd);
+
+      const result = await validator.validate(reader);
+      
+      if(!result.valid) {
+        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
+        return;
+      }
 
       const cid = await addFilesAsDirToIpfs(
-        files.files.map(x => ({
-          path: x.originalname,
-          content: x.buffer
-        })),
+        filesToAdd,
         { onlyHash: options.onlyHash },
         ipfs
       );
@@ -335,10 +367,10 @@ export class GatewayServer {
       });
 
       const validator = new WrapperValidator(this.deps.persistenceConfig.wrapper.constraints);
-      const reader = new InMemoryPackageReader(filesToAdd);
+      const reader = new InMemoryPackageReader(stripBasePath(filesToAdd));
 
       const result = await validator.validate(reader);
-      
+     
       if(!result.valid) {
         res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
         return;
@@ -353,6 +385,15 @@ export class GatewayServer {
       const rootCID = addedFiles.filter((x: IpfsAddResult) => x.path.indexOf("/") === -1)[0].cid;
 
       this.deps.logger.log(`Gateway add: ${rootCID}`);
+
+      const ipfsReader = new IpfsPackageReader(this.deps.ipfsNode, rootCID.toString());
+
+      const ipfsResult = await validator.validate(ipfsReader);
+
+      if(!ipfsResult.valid) {
+        res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`));
+        return;
+      }
 
       res.writeHead(200, {
         'Content-Type': 'application/json',
