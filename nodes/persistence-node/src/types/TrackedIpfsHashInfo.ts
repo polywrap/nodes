@@ -1,18 +1,10 @@
 import { UnresponsiveIpfsHashInfo } from "./UnresponsiveIpfsHashInfo";
+import { TrackedIpfsHashStatus } from "./TrackedIpfsHashStatus";
 
 export type TrackedIpfsHashInfo = {
   ipfsHash: string;
-  status: Status;
-  previousStatus?: Status;
+  status: TrackedIpfsHashStatus;
+  previousStatus?: TrackedIpfsHashStatus;
   unresponsiveInfo?: UnresponsiveIpfsHashInfo;
   indexes: string[];
 };
-
-export enum Status {
-  CheckingIfWrapper = "CheckingIfWrapper", 
-  Pinning = "Pinning", 
-  Pinned = "Pinned", 
-  Unpinning = "Unpinning", 
-  NotAWrapper = "NotAWrapper", 
-  Lost = "Lost"
-}

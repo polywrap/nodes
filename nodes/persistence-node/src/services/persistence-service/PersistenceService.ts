@@ -2,7 +2,8 @@ import { IpfsConfig } from "../../config/IpfsConfig";
 import * as IPFS from 'ipfs-core';
 import { Logger } from "../Logger";
 import { isWrapper } from "../../isWrapper";
-import { Status, TrackedIpfsHashInfo } from "../../types/TrackedIpfsHashInfo";
+import { TrackedIpfsHashInfo } from "../../types/TrackedIpfsHashInfo";
+import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { addSeconds } from "../../utils/addSeconds";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { sleep } from "../../sleep";
@@ -112,16 +113,20 @@ export class PersistenceService {
       : 0;
 
     if(info) {
-      if(info.status === Status.Pinned || info.status === Status.Lost || info.status === Status.NotAWrapper) {
-        return;
-      }
-
-      if(info.status === Status.Pinning) {
-        await this.pinWrapper(ipfsHash, retryCount, indexes);  
-      } else if (info.status === Status.CheckingIfWrapper) {
-        await this.pinIfWrapper(ipfsHash, retryCount, indexes);
-      } else {
-        this.deps.logger.log(`Unsupported status to track: ${info.status}`)
+      switch (info.status) {
+        case TrackedIpfsHashStatus.Pinned:
+        case TrackedIpfsHashStatus.Lost:
+        case TrackedIpfsHashStatus.NotAWrapper:
+          return;
+        case TrackedIpfsHashStatus.Pinning:
+          await this.pinWrapper(ipfsHash, retryCount, indexes);  
+          break;
+        case TrackedIpfsHashStatus.ValidWrapperCheck:
+          await this.pinIfWrapper(ipfsHash, retryCount, indexes);
+          break;
+        default:
+          this.deps.logger.log(`Unsupported status to track: ${info.status}`)
+          break;
       }
     } else {
       await this.pinIfWrapper(ipfsHash, retryCount, indexes);
@@ -135,7 +140,7 @@ export class PersistenceService {
     if(result === "yes") {
       await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
-        status: Status.Pinning,
+        status: TrackedIpfsHashStatus.Pinning,
         indexes,
       });
 
@@ -143,16 +148,16 @@ export class PersistenceService {
     } else if (result === "no") {
       await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
-        status: Status.NotAWrapper,
+        status: TrackedIpfsHashStatus.NotAWrapper,
         indexes,
       });
     } else if (result === "timeout") {
-      await this.scheduleRetry(ipfsHash, retryCount, Status.CheckingIfWrapper, indexes);
+      await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.ValidWrapperCheck, indexes);
     }
   }
   
   private async tryUntrackIpfsHash(info: TrackedIpfsHashInfo): Promise<void> {
-    if(info.status === Status.NotAWrapper) {
+    if(info.status !== TrackedIpfsHashStatus.Pinned && info.status !== TrackedIpfsHashStatus.Unpinning) {
       this.deps.logger.log(`Stopping tracking of ${info.ipfsHash} (not a wrapper or undefined)`);
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
       return;
@@ -166,7 +171,7 @@ export class PersistenceService {
     if(success) {
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
     } else {
-      this.scheduleRetry(info.ipfsHash, retryCount, Status.Unpinning, info.indexes)
+      this.scheduleRetry(info.ipfsHash, retryCount, TrackedIpfsHashStatus.Unpinning, info.indexes)
     }
   }
 
@@ -181,7 +186,7 @@ export class PersistenceService {
 
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
-        status: Status.Pinned,
+        status: TrackedIpfsHashStatus.Pinned,
         indexes
       });
   
@@ -190,17 +195,17 @@ export class PersistenceService {
     } catch (err) {
       this.deps.logger.log(JSON.stringify(err));
      
-      await this.scheduleRetry(ipfsHash, retryCount, Status.Pinning, indexes);
+      await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.Pinning, indexes);
     }
   }
 
-  private async scheduleRetry(ipfsHash: string, retryCount: number, status: Status, indexes: string[]): Promise<void> {
+  private async scheduleRetry(ipfsHash: string, retryCount: number, status: TrackedIpfsHashStatus, indexes: string[]): Promise<void> {
     this.deps.logger.log(`Scheduling retry for ${ipfsHash} (${status})`);
    
     if(retryCount >= this.deps.persistenceConfig.wrapperResolution.retries.max) {
       this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
-        status: Status.Lost,
+        status: TrackedIpfsHashStatus.Lost,
         previousStatus: status,
         indexes,
       });
