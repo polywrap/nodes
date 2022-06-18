@@ -1,4 +1,4 @@
-import { WrapperConstraints } from '@web3api/core-validation';
+import { WrapperConstraints } from '@polywrap/core-validation';
 
 export type WrapperConfig = {
   constraints: WrapperConstraints;

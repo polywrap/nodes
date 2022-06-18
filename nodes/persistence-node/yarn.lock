@@ -1221,6 +1221,45 @@
     "@opentelemetry/semantic-conventions" "0.20.0"
     "@opentelemetry/tracing" "0.20.0"
 
+"@polywrap/core-js@^0.0.1-prealpha.85":
+  version "0.0.1-prealpha.86"
+  resolved "https://registry.yarnpkg.com/@polywrap/core-js/-/core-js-0.0.1-prealpha.86.tgz#e27bc3f0f3221866ce3fc8b2c46a92af07601906"
+  integrity sha512-VYqEcmaQum0NHz8KSlqj8PMEd37np7WKFltsOIKD0sWX5lv6CB2o/B6YrPnbXfni8Qo+l/uNbxQ87+FhihIzAg==
+  dependencies:
+    "@msgpack/msgpack" "2.7.2"
+    "@polywrap/manifest-schemas" "0.0.1-prealpha.86"
+    "@polywrap/tracing-js" "0.0.1-prealpha.86"
+    graphql "15.5.0"
+    graphql-tag "2.10.4"
+    js-yaml "3.14.0"
+    jsonschema "1.4.0"
+    semver "7.3.5"
+
+"@polywrap/core-validation@file:../../../../monorepo/packages/js/validation/build":
+  version "0.0.0"
+
+"@polywrap/manifest-schemas@0.0.1-prealpha.86":
+  version "0.0.1-prealpha.86"
+  resolved "https://registry.yarnpkg.com/@polywrap/manifest-schemas/-/manifest-schemas-0.0.1-prealpha.86.tgz#f09571bbea3a68c0faffed9a0af716008a7efd72"
+  integrity sha512-+LSPqCOTpVUukfuu0rHh/zgAuKSWouVI5h3jLn1ULTgogBEtVZNd4uPUzyt9Ij8fWGGwlxqS7yHmS6Gtx5AUGQ==
+
+"@polywrap/tracing-js@0.0.1-prealpha.86":
+  version "0.0.1-prealpha.86"
+  resolved "https://registry.yarnpkg.com/@polywrap/tracing-js/-/tracing-js-0.0.1-prealpha.86.tgz#2daeb225b44da09ee664ed3b71daa95e0d9a7bc6"
+  integrity sha512-th9e9/jY6J/fLeeFtbsMGezSrYJFVseIcJCi8CCilTYMnZcIDX8htJlPdpofzZlzxqppwVa+ozAKLbu9aLPQyg==
+  dependencies:
+    "@opentelemetry/api" "0.20.0"
+    "@opentelemetry/context-zone" "0.20.0"
+    "@opentelemetry/core" "0.20.0"
+    "@opentelemetry/exporter-collector" "0.20.0"
+    "@opentelemetry/exporter-jaeger" "0.20.0"
+    "@opentelemetry/exporter-zipkin" "0.20.0"
+    "@opentelemetry/node" "0.20.0"
+    "@opentelemetry/propagator-b3" "0.20.0"
+    "@opentelemetry/tracing" "0.20.0"
+    "@opentelemetry/web" "0.20.0"
+    browser-util-inspect "0.2.0"
+
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
   resolved "https://registry.npmjs.org/@protobufjs/aspromise/-/aspromise-1.1.2.tgz"
@@ -1753,23 +1792,6 @@
     jsonschema "1.4.0"
     semver "7.3.5"
 
-"@web3api/core-js@^0.0.1-prealpha.85":
-  version "0.0.1-prealpha.85"
-  resolved "https://registry.yarnpkg.com/@web3api/core-js/-/core-js-0.0.1-prealpha.85.tgz#650bace897382ba7cbcb8686ee2349583a47d0dc"
-  integrity sha512-S52Iw8h3dBjJbG+3VnnfY7efMBcYrRXSVYkLtCm8KhNHWI6MNT5pO0FT35OUHNpuX2iKFBGvqbTYucnVh0LYhg==
-  dependencies:
-    "@msgpack/msgpack" "2.7.2"
-    "@web3api/manifest-schemas" "0.0.1-prealpha.85"
-    "@web3api/tracing-js" "0.0.1-prealpha.85"
-    graphql "15.5.0"
-    graphql-tag "2.10.4"
-    js-yaml "3.14.0"
-    jsonschema "1.4.0"
-    semver "7.3.5"
-
-"@web3api/core-validation@file:../../../../monorepo/packages/js/validation/build":
-  version "0.0.0"
-
 "@web3api/ens-plugin-js@0.0.1-prealpha.64":
   version "0.0.1-prealpha.64"
   resolved "https://registry.npmjs.org/@web3api/ens-plugin-js/-/ens-plugin-js-0.0.1-prealpha.64.tgz"
@@ -1839,11 +1861,6 @@
   resolved "https://registry.npmjs.org/@web3api/manifest-schemas/-/manifest-schemas-0.0.1-prealpha.64.tgz"
   integrity sha512-VyftBmBhPD5SNSQyl4AdBvbNgai/Ryr6yqk4wO/W+YcCsvQSNP94LiYH+t/A/8QQ98Ir0V71WIhpQBH+sz85Cg==
 
-"@web3api/manifest-schemas@0.0.1-prealpha.85":
-  version "0.0.1-prealpha.85"
-  resolved "https://registry.yarnpkg.com/@web3api/manifest-schemas/-/manifest-schemas-0.0.1-prealpha.85.tgz#1ee347297a16c80f724d232b672bdb62f62e24c8"
-  integrity sha512-lSl9mGJScTF57uPp2ng8+5F/H5m0hS+YU5sCqUHJtTsaINR2Rf+NvZq1CLj1n+2X7IbWaKvtMC9J38cmU4g9Lg==
-
 "@web3api/os-js@0.0.1-prealpha.64":
   version "0.0.1-prealpha.64"
   resolved "https://registry.npmjs.org/@web3api/os-js/-/os-js-0.0.1-prealpha.64.tgz"
@@ -1888,23 +1905,6 @@
   version "0.0.1-prealpha.64"
   resolved "https://registry.npmjs.org/@web3api/tracing-js/-/tracing-js-0.0.1-prealpha.64.tgz"
   integrity sha512-TUbBAq0As58sS7+eKCdUYqJXFjRjtkpaR6uIrqmlRBVlX+fLW6jYzSaY6WRkm2MlFSkPzlsOayql1nZbDuTwMA==
-  dependencies:
-    "@opentelemetry/api" "0.20.0"
-    "@opentelemetry/context-zone" "0.20.0"
-    "@opentelemetry/core" "0.20.0"
-    "@opentelemetry/exporter-collector" "0.20.0"
-    "@opentelemetry/exporter-jaeger" "0.20.0"
-    "@opentelemetry/exporter-zipkin" "0.20.0"
-    "@opentelemetry/node" "0.20.0"
-    "@opentelemetry/propagator-b3" "0.20.0"
-    "@opentelemetry/tracing" "0.20.0"
-    "@opentelemetry/web" "0.20.0"
-    browser-util-inspect "0.2.0"
-
-"@web3api/tracing-js@0.0.1-prealpha.85":
-  version "0.0.1-prealpha.85"
-  resolved "https://registry.yarnpkg.com/@web3api/tracing-js/-/tracing-js-0.0.1-prealpha.85.tgz#a1181b0c878ba78cd17ec1298dec1d714f17d202"
-  integrity sha512-atmoKDlEqG2YSCdWipOwM1EUtkfOFGQsM/N71r/YrR2e19FJ9VFSTRcRKjjpml3kOmwnocPbUoxTymffplT0rg==
   dependencies:
     "@opentelemetry/api" "0.20.0"
     "@opentelemetry/context-zone" "0.20.0"
