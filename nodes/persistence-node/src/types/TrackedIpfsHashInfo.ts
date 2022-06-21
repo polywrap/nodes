@@ -1,10 +1,10 @@
 import { UnresponsiveIpfsHashInfo } from "./UnresponsiveIpfsHashInfo";
+import { TrackedIpfsHashStatus } from "./TrackedIpfsHashStatus";
 
 export type TrackedIpfsHashInfo = {
   ipfsHash: string;
-  isWrapper?: boolean;
-  isPinned: boolean;
+  status: TrackedIpfsHashStatus;
+  previousStatus?: TrackedIpfsHashStatus;
   unresponsiveInfo?: UnresponsiveIpfsHashInfo;
   indexes: string[];
-  isLost?: boolean;
 };
