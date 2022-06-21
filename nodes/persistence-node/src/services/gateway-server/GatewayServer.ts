@@ -18,6 +18,7 @@ import { GatewayConfig } from "../../config/GatewayConfig";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { Logger } from "../Logger";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
+import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { VALID_WRAP_MANIFEST_NAMES, WrapperValidator } from "@polywrap/core-validation";
 import { deserializePolywrapManifest } from "@polywrap/core-js";
 
@@ -148,7 +149,7 @@ export class GatewayServer {
       let pinnedIpfsHashes: string[] = [];
 
       for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
-        if (!info.isPinned) {
+        if (info.status !== TrackedIpfsHashStatus.Pinned) {
           continue;
         }
 
@@ -169,7 +170,7 @@ export class GatewayServer {
       });
 
       const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
-        .filter(x => x.isPinned)
+        .filter(x => x.status === TrackedIpfsHashStatus.Pinned)
         .reverse();
 
       const wrapperSizes = await Promise.all(infos.map(async info => {
