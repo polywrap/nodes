@@ -50,6 +50,48 @@ export class PersistenceService {
     }
   }
 
+  async scheduleRetry(ipfsHash: string, retryCount: number, status: TrackedIpfsHashStatus, indexes: string[]): Promise<void> {
+    this.deps.logger.log(`Scheduling retry for ${ipfsHash} (${status})`);
+   
+    if(retryCount >= this.deps.persistenceConfig.wrapper.resolution.retries.max) {
+      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+        ipfsHash,
+        status: TrackedIpfsHashStatus.Lost,
+        previousStatus: status,
+        indexes,
+      });
+
+      this.deps.logger.log(`Wrapper ${ipfsHash} is now considered lost`);
+    } else {
+      const startingDelayInSec = this.deps.persistenceConfig.wrapper.resolution.retries.startingDelayInSec;
+
+      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+        ipfsHash,
+        status,
+        indexes,
+        unresponsiveInfo: {
+          scheduledRetryDate: addSeconds(new Date(), startingDelayInSec * Math.pow(2, retryCount)),
+          retryCount: retryCount,
+        }
+      });
+    }
+  }
+  
+  async unpinWrapper(ipfsHash: string): Promise<boolean> {
+    try {
+      await this.deps.ipfsNode.pin.rm(ipfsHash, {
+        recursive: true,
+        timeout: this.deps.ipfsConfig.unpinTimeout,
+      });
+  
+      this.deps.logger.log(`Unpinned ${ipfsHash}`);
+      return true;
+    } catch (err) {
+      this.deps.logger.log(`Failed to unpin ${ipfsHash}, error: ${JSON.stringify(err)}`);
+      return false;
+    }
+  }
+
   private async processTasksInBatches(tasks: ActionPromise[], lastTimestamp: [number, number]): Promise<void> {
     //Process tasks in batches of `persistenceMaxParallelTaskCount`
     let tasksToProcess = this.takeTasks(tasks, this.deps.persistenceConfig.persistenceMaxParallelTaskCount);
@@ -198,48 +240,6 @@ export class PersistenceService {
       this.deps.logger.log(JSON.stringify(err));
      
       await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.Pinning, indexes);
-    }
-  }
-
-  private async scheduleRetry(ipfsHash: string, retryCount: number, status: TrackedIpfsHashStatus, indexes: string[]): Promise<void> {
-    this.deps.logger.log(`Scheduling retry for ${ipfsHash} (${status})`);
-   
-    if(retryCount >= this.deps.persistenceConfig.wrapper.resolution.retries.max) {
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        status: TrackedIpfsHashStatus.Lost,
-        previousStatus: status,
-        indexes,
-      });
-
-      this.deps.logger.log(`Wrapper ${ipfsHash} is now considered lost`);
-    } else {
-      const startingDelayInSec = this.deps.persistenceConfig.wrapper.resolution.retries.startingDelayInSec;
-
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        status,
-        indexes,
-        unresponsiveInfo: {
-          scheduledRetryDate: addSeconds(new Date(), startingDelayInSec * Math.pow(2, retryCount)),
-          retryCount: retryCount,
-        }
-      });
-    }
-  }
-  
-  private async unpinWrapper(ipfsHash: string): Promise<boolean> {
-    try {
-      await this.deps.ipfsNode.pin.rm(ipfsHash, {
-        recursive: true,
-        timeout: this.deps.ipfsConfig.unpinTimeout,
-      });
-  
-      this.deps.logger.log(`Unpinned ${ipfsHash}`);
-      return true;
-    } catch (err) {
-      this.deps.logger.log(`Failed to unpin ${ipfsHash}, error: ${JSON.stringify(err)}`);
-      return false;
     }
   }
 }

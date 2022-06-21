@@ -2,15 +2,18 @@ import { IpfsConfig } from "../config/IpfsConfig";
 import * as IPFS from 'ipfs-core';
 import { Logger } from "./Logger";
 import { PersistenceStateManager } from "./PersistenceStateManager";
-import { WrapperValidator } from "@polywrap/core-validation";
-import { IpfsPackageReader, TrackedIpfsHashInfo } from "../types";
+import { ValidationResult, WrapperValidator } from "@polywrap/core-validation";
+import { InMemoryFile, InMemoryPackageReader, IpfsPackageReader, TrackedIpfsHashInfo } from "../types";
+import { TrackedIpfsHashStatus } from "../types/TrackedIpfsHashStatus";
+import { PersistenceService } from "./persistence-service/PersistenceService";
 
 interface IDependencies {
+  logger: Logger;
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
   wrapperValidator: WrapperValidator;
-  logger: Logger;
+  persistenceService: PersistenceService;
 }
 
 export class ValidationService {
@@ -20,17 +23,30 @@ export class ValidationService {
     this.deps = deps;
   }
 
+  async validateIpfsWrapper(ipfsPathOrCID: string): Promise<ValidationResult> {
+    const reader = new IpfsPackageReader(this.deps.ipfsNode, ipfsPathOrCID);
+
+    return await this.deps.wrapperValidator.validate(reader);
+  }
+
+  async validateInMemoryWrapper(files: InMemoryFile[]): Promise<ValidationResult> {
+    const reader = new InMemoryPackageReader(files);
+
+    return await this.deps.wrapperValidator.validate(reader);
+  }
+
   async purgeInvalidWrappers(): Promise<void> {
     const wrappers = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
-      .filter(x => x.isWrapper);
+      .filter(
+        x => x.status === TrackedIpfsHashStatus.Pinned ||
+        x.status === TrackedIpfsHashStatus.Pinning
+      );
 
     const invalidWrappers: TrackedIpfsHashInfo[] = [];
     let validCnt = 0;
 
     for(const wrapper of wrappers) {
-      const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapper.ipfsHash);
-    
-      const result = await this.deps.wrapperValidator.validate(reader);
+      const result = await this.validateIpfsWrapper(wrapper.ipfsHash);
 
       if (!result.valid) {
         invalidWrappers.push(wrapper);
@@ -39,24 +55,31 @@ export class ValidationService {
       }
     }
 
-    console.log(`Found ${invalidWrappers.length} invalid wrappers`);
-    console.log(`Found ${validCnt} valid wrappers`);
+    this.deps.logger.log(`Found ${invalidWrappers.length} invalid wrappers`);
+    this.deps.logger.log(`Found ${validCnt} valid wrappers`);
 
     for(const invalidWrapper of invalidWrappers) {
-      if(invalidWrapper.isPinned) {
+      if(invalidWrapper.status === TrackedIpfsHashStatus.Pinning) {
         await this.deps.persistenceStateManager.setIpfsHashInfo(invalidWrapper.ipfsHash, {
           ipfsHash: invalidWrapper.ipfsHash,
-          isWrapper: false,
-          isPinned: false,
+          status: TrackedIpfsHashStatus.NotAWrapper,
           indexes: invalidWrapper.indexes,
         });
       } else {
-        await this.deps.persistenceStateManager.setIpfsHashInfo(invalidWrapper.ipfsHash, {
-          ipfsHash: invalidWrapper.ipfsHash,
-          isWrapper: false,
-          isPinned: false,
-          indexes: invalidWrapper.indexes,
-        });
+        const retryCount = invalidWrapper?.unresponsiveInfo?.retryCount || invalidWrapper?.unresponsiveInfo?.retryCount === 0
+        ? invalidWrapper?.unresponsiveInfo?.retryCount + 1
+        : 0;
+  
+        const success = await this.deps.persistenceService.unpinWrapper(invalidWrapper.ipfsHash);
+        if(success) {
+          await this.deps.persistenceStateManager.setIpfsHashInfo(invalidWrapper.ipfsHash, {
+            ipfsHash: invalidWrapper.ipfsHash,
+            status: TrackedIpfsHashStatus.NotAWrapper,
+            indexes: invalidWrapper.indexes,
+          });
+        } else {
+          this.deps.persistenceService.scheduleRetry(invalidWrapper.ipfsHash, retryCount, TrackedIpfsHashStatus.Unpinning, invalidWrapper.indexes)
+        }
       }
     }
   }

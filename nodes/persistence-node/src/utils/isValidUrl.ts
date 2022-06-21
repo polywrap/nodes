@@ -1,3 +1,5 @@
+import { URL } from "url";
+
 export const isValidUrl = (url: string | undefined): boolean => {
 
   if (url == undefined || url.length == 0) {

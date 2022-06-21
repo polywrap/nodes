@@ -21,13 +21,15 @@ import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { VALID_WRAP_MANIFEST_NAMES, WrapperValidator } from "@polywrap/core-validation";
 import { deserializePolywrapManifest } from "@polywrap/core-js";
+import { ValidationService } from "../ValidationService";
 
 interface IDependencies {
+  logger: Logger;
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   gatewayConfig: GatewayConfig;
   persistenceConfig: PersistenceConfig;
-  logger: Logger;
+  validationService: ValidationService;
 }
 
 export const stripBasePath = (files: InMemoryFile[]) => {
@@ -320,10 +322,7 @@ export class GatewayServer {
         content: x.buffer
       }));
 
-      const validator = new WrapperValidator(this.deps.persistenceConfig.wrapper.constraints);
-      const reader = new InMemoryPackageReader(filesToAdd);
-
-      const result = await validator.validate(reader);
+      const result = await this.deps.validationService.validateInMemoryWrapper(filesToAdd);
       
       if(!result.valid) {
         res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
@@ -368,9 +367,8 @@ export class GatewayServer {
       });
 
       const validator = new WrapperValidator(this.deps.persistenceConfig.wrapper.constraints);
-      const reader = new InMemoryPackageReader(stripBasePath(filesToAdd));
 
-      const result = await validator.validate(reader);
+      const result = await this.deps.validationService.validateInMemoryWrapper(stripBasePath(filesToAdd));
      
       if(!result.valid) {
         res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
