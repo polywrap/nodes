@@ -1,9 +1,9 @@
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 import { EnsState } from "../types/EnsState";
 import { SavedEnsState } from "../types/SavedEnsState";
-import { getIpfsHashFromContenthash } from '../utils/getIpfsHashFromContenthash';
-import { EthereumNetwork } from './EthereumNetwork';
+import { getIpfsHashFromContenthash } from "../utils/getIpfsHashFromContenthash";
+import { EthereumNetwork } from "./EthereumNetwork";
 
 
 interface IDependencies {

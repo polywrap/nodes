@@ -1,4 +1,3 @@
-import { WrapperConstraints } from "@polywrap/core-validation";
 import { Config } from "./Config";
 import { WrapperConfig } from "./WrapperConfig";
 

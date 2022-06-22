@@ -1,5 +1,5 @@
-import * as IPFS from 'ipfs-core';
-import { getIpfsFileContents } from './getIpfsFileContents';
+import * as IPFS from "ipfs-core";
+import { getIpfsFileContents } from "./getIpfsFileContents";
 
 export const getIpfsFileContentsOrUndefined = async (
   ipfs: IPFS.IPFS, 

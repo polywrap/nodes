@@ -1,5 +1,5 @@
-import * as IPFS from 'ipfs-core';
-import { InMemoryFile } from '../types';
+import * as IPFS from "ipfs-core";
+import { InMemoryFile } from "../types";
 
 export const addFilesAsDirToIpfs = async (
   files: InMemoryFile[], 

@@ -1,5 +1,5 @@
-import * as IPFS from 'ipfs-core';
-import { IpfsAddResult } from '../types/IpfsAddResult';
+import * as IPFS from "ipfs-core";
+import { IpfsAddResult } from "../types/IpfsAddResult";
 
 export const addFilesToIpfs = async (
   files: { path: string, content?: Buffer }[], 

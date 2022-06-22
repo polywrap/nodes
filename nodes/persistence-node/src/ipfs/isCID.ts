@@ -1,4 +1,4 @@
-import * as IPFS from 'ipfs-core';
+import * as IPFS from "ipfs-core";
 
 export const isCID = (cid: string): boolean => {
   try {

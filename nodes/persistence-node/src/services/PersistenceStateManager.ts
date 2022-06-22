@@ -1,9 +1,9 @@
-import fs from 'fs';
-import { PersistenceState } from '../types/PersistenceState';
-import { TrackedIpfsHashInfo } from '../types/TrackedIpfsHashInfo';
+import fs from "fs";
+import { PersistenceState } from "../types/PersistenceState";
+import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
 import path from "path";
 
-const persistenceStateFilePath = './persistence-state.json';
+const persistenceStateFilePath = "./persistence-state.json";
 
 
 interface IDependencies {

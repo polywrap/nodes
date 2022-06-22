@@ -1,6 +1,6 @@
-import { create as createInternalpfsNode, IPFS } from 'ipfs-core';
-import { create as createIpfsHttpClient } from 'ipfs-http-client'
-import { IpfsConfig } from '../config/IpfsConfig';
+import { create as createInternalpfsNode, IPFS } from "ipfs-core";
+import { create as createIpfsHttpClient } from "ipfs-http-client"
+import { IpfsConfig } from "../config/IpfsConfig";
 
 interface IDeps {
   ipfsConfig: IpfsConfig
