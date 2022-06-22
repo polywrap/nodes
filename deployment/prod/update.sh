@@ -27,6 +27,7 @@ pm2 delete ens-indexer-node-mainnet
 
 set -e
 
+rm $data/persistence-node/config.json
 # rm $data/persistence-node -rf
 # rm $data/ens-indexer-node/ropsten -rf
 # rm $data/ens-indexer-node/rinkeby -rf
@@ -42,7 +43,7 @@ cd $hosting/$ensIndexerNode
 cp -r $staging/$ensIndexerNode/bin ./
 cp -r $staging/$ensIndexerNode/node_modules ./
 
-# node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
+node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/ropsten --network ropsten --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/rinkeby --network rinkeby --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/mainnet --network mainnet --log
