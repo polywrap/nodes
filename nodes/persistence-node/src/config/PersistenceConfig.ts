@@ -1,18 +1,13 @@
-import { isValidUrl } from "../utils/isValidUrl";
 import { Config } from "./Config";
+import { WrapperConfig } from "./WrapperConfig";
 
 export class PersistenceConfig {
-  wrapperResolution: {
-    retries: {
-        max: number,
-        startingDelayInSec: number
-    }
-  };
+  wrapper: WrapperConfig;
   persistenceMaxParallelTaskCount: number;
   persistenceIntervalSeconds: number;
 
   constructor({ config }: { config: Config }) {
-    this.wrapperResolution = config.wrapperResolution;
+    this.wrapper = config.wrapper;
     this.persistenceMaxParallelTaskCount = config.persistenceMaxParallelTaskCount;
     this.persistenceIntervalSeconds = config.persistenceIntervalSeconds;
   }

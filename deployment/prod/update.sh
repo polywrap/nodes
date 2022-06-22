@@ -27,7 +27,7 @@ pm2 delete ens-indexer-node-mainnet
 
 set -e
 
-rm $data/persistence-node -rf
+# rm $data/persistence-node -rf
 # rm $data/ens-indexer-node/ropsten -rf
 # rm $data/ens-indexer-node/rinkeby -rf
 # rm $data/ens-indexer-node/mainnet -rf
@@ -42,12 +42,12 @@ cd $hosting/$ensIndexerNode
 cp -r $staging/$ensIndexerNode/bin ./
 cp -r $staging/$ensIndexerNode/node_modules ./
 
-node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
+# node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/ropsten --network ropsten --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/rinkeby --network rinkeby --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/mainnet --network mainnet --log
 
-pm2 start $hosting/$persistenceNode/bin/main.js --name persistence-node -- daemon --data $data/persistence-node --gateway-port $persistenceNodePort --log
+pm2 start $hosting/$persistenceNode/bin/main.js --name persistence-node -- daemon --data $data/persistence-node --gateway-port $persistenceNodePort --log --purge-invalid-wrappers
 pm2 start $hosting/$ensIndexerNode/bin/main.js --name ens-indexer-node-ropsten -- daemon --data $data/ens-indexer-node/ropsten --port $ensIndexerNodeRopstenPort -b $startingBlockRopsten --log
 pm2 start $hosting/$ensIndexerNode/bin/main.js --name ens-indexer-node-rinkeby -- daemon --data $data/ens-indexer-node/rinkeby --port $ensIndexerNodeRinkebyPort -b $startingBlockRinkeby --log
 pm2 start $hosting/$ensIndexerNode/bin/main.js --name ens-indexer-node-mainnet -- daemon --data $data/ens-indexer-node/mainnet --port $ensIndexerNodeMainnetPort -b $startingBlockMainnet --log

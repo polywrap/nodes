@@ -1,4 +1,5 @@
-import { IPFSIndexConfig } from "../types/IPFSIndexConfig";
+import { IPFSIndexConfig } from "../types";
+import { WrapperConfig } from "./WrapperConfig";
 
 export type Config = {
     apiPort: number,
@@ -9,6 +10,7 @@ export type Config = {
         requestTimeout: number,
         ipfsTimeout: number
     },
+    wrapper: WrapperConfig,
     ipfs: {
         provider: string,
         gateway: string,
@@ -21,10 +23,4 @@ export type Config = {
     },
     loggerEnabled: boolean,
     indexes: IPFSIndexConfig[],
-    wrapperResolution: {
-        retries: {
-            max: number,
-            startingDelayInSec: number
-        }
-    }
 };
