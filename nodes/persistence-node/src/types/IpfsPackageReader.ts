@@ -1,7 +1,7 @@
-import * as IPFS from 'ipfs-core';
+import * as IPFS from "ipfs-core";
 import { ipfsPathExists, getIpfsFileContents, isCID } from "../ipfs";
 import path from "path";
-import { PackageReader, PathStats } from '@polywrap/core-validation';
+import { PackageReader, PathStats } from "@polywrap/package-validation";
 
 export class IpfsPackageReader implements PackageReader {
   ipfsTimeout: number = 1000;

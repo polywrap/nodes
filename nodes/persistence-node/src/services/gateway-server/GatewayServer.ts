@@ -12,14 +12,14 @@ import cors from "cors";
 import http from "http";
 import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
 import timeout from "connect-timeout";
-import * as IPFS from 'ipfs-core';
+import * as IPFS from "ipfs-core";
 import { WrapperWithFileList } from "./models/WrapperWithFileList";
 import { GatewayConfig } from "../../config/GatewayConfig";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { Logger } from "../Logger";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
-import { VALID_WRAP_MANIFEST_NAMES, WrapperValidator } from "@polywrap/core-validation";
+import { VALID_WRAP_MANIFEST_NAMES, WasmPackageValidator } from "@polywrap/package-validation";
 import { deserializePolywrapManifest } from "@polywrap/core-js";
 import { ValidationService } from "../ValidationService";
 
@@ -366,7 +366,7 @@ export class GatewayServer {
         }
       });
 
-      const validator = new WrapperValidator(this.deps.persistenceConfig.wrapper.constraints);
+      const validator = new WasmPackageValidator(this.deps.persistenceConfig.wrapper.constraints);
 
       const result = await this.deps.validationService.validateInMemoryWrapper(stripBasePath(filesToAdd));
      

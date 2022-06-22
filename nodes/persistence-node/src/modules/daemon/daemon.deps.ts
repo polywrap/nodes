@@ -14,7 +14,7 @@ import { GatewayServer } from "../../services/gateway-server/GatewayServer";
 import { ApiServer } from "../../services/ApiServer";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { GatewayConfig } from "../../config/GatewayConfig";
-import { WrapperValidator } from "@polywrap/core-validation";
+import { WasmPackageValidator } from "@polywrap/package-validation";
 import { ValidationService } from "../../services/ValidationService";
 
 export interface MainDependencyContainer {
@@ -35,7 +35,7 @@ export interface MainDependencyContainer {
   persistenceService: PersistenceService;
   persistenceStateManager: PersistenceStateManager;
   indexRetriever: IndexRetriever;
-  wrapperValidator: WrapperValidator;
+  wasmPackageValidator: WasmPackageValidator;
   validationService: ValidationService;
 }
 
@@ -78,9 +78,9 @@ export const buildMainDependencyContainer = async (
     apiServer: awilix.asClass(ApiServer).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),
     indexRetriever: awilix.asClass(IndexRetriever).singleton(),
-    wrapperValidator: awilix
+    wasmPackageValidator: awilix
       .asFunction(({ persistenceConfig }) => {
-        return new WrapperValidator(persistenceConfig.wrapper.constraints);
+        return new WasmPackageValidator(persistenceConfig.wrapper.constraints);
       })
       .singleton(),
     validationService: awilix.asClass(ValidationService).singleton(),

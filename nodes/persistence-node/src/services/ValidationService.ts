@@ -1,8 +1,8 @@
 import { IpfsConfig } from "../config/IpfsConfig";
-import * as IPFS from 'ipfs-core';
+import * as IPFS from "ipfs-core";
 import { Logger } from "./Logger";
 import { PersistenceStateManager } from "./PersistenceStateManager";
-import { ValidationResult, WrapperValidator } from "@polywrap/core-validation";
+import { ValidationResult, WasmPackageValidator } from "@polywrap/package-validation";
 import { InMemoryFile, InMemoryPackageReader, IpfsPackageReader, TrackedIpfsHashInfo } from "../types";
 import { TrackedIpfsHashStatus } from "../types/TrackedIpfsHashStatus";
 import { PersistenceService } from "./persistence-service/PersistenceService";
@@ -12,7 +12,7 @@ interface IDependencies {
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
-  wrapperValidator: WrapperValidator;
+  wasmPackageValidator: WasmPackageValidator;
   persistenceService: PersistenceService;
 }
 
@@ -26,13 +26,13 @@ export class ValidationService {
   async validateIpfsWrapper(ipfsPathOrCID: string): Promise<ValidationResult> {
     const reader = new IpfsPackageReader(this.deps.ipfsNode, ipfsPathOrCID);
 
-    return await this.deps.wrapperValidator.validate(reader);
+    return await this.deps.wasmPackageValidator.validate(reader);
   }
 
   async validateInMemoryWrapper(files: InMemoryFile[]): Promise<ValidationResult> {
     const reader = new InMemoryPackageReader(files);
 
-    return await this.deps.wrapperValidator.validate(reader);
+    return await this.deps.wasmPackageValidator.validate(reader);
   }
 
   async purgeInvalidWrappers(): Promise<void> {

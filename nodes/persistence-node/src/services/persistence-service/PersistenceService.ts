@@ -1,7 +1,6 @@
 import { IpfsConfig } from "../../config/IpfsConfig";
-import * as IPFS from 'ipfs-core';
+import * as IPFS from "ipfs-core";
 import { Logger } from "../Logger";
-import { isValidWrapper } from "../../utils/isValidWrapper";
 import { TrackedIpfsHashInfo, IpfsPackageReader } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { addSeconds } from "../../utils/addSeconds";
@@ -10,7 +9,7 @@ import { sleep } from "../../utils/sleep";
 import { IndexRetriever } from "../IndexRetriever";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
-import { WrapperValidator } from "@polywrap/core-validation";
+import { WasmPackageValidator } from "@polywrap/package-validation";
 
 type ActionPromise = () => Promise<void>;
 
@@ -21,7 +20,7 @@ interface IDependencies {
   ipfsConfig: IpfsConfig;
   persistenceConfig: PersistenceConfig;
   indexRetriever: IndexRetriever;
-  wrapperValidator: WrapperValidator;
+  wasmPackageValidator: WasmPackageValidator;
 }
 
 export class PersistenceService {
@@ -178,24 +177,29 @@ export class PersistenceService {
   }
 
   private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
-
-    const result = await isValidWrapper(this.deps.ipfsNode, this.deps.wrapperValidator, this.deps.logger, ipfsHash);
-
-    if(result === "yes") {
-      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        status: TrackedIpfsHashStatus.Pinning,
-        indexes,
-      });
-
-      await this.pinWrapper(ipfsHash, retryCount, indexes);  
-    } else if (result === "no") {
-      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        status: TrackedIpfsHashStatus.NotAWrapper,
-        indexes,
-      });
-    } else if (result === "timeout") {
+    try {
+      const reader = new IpfsPackageReader(this.deps.ipfsNode, ipfsHash);
+  
+      const result = await this.deps.wasmPackageValidator.validate(reader);
+  
+      if(result.valid) {
+        await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+          ipfsHash,
+          status: TrackedIpfsHashStatus.Pinning,
+          indexes,
+        });
+  
+        await this.pinWrapper(ipfsHash, retryCount, indexes);  
+      } else {
+        this.deps.logger.log(`IPFS hash ${ipfsHash} is not a valid wrapper. Reason: ${result.failReason}`);
+       
+        await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+          ipfsHash,
+          status: TrackedIpfsHashStatus.NotAWrapper,
+          indexes,
+        });
+      }
+    } catch {
       await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.ValidWrapperCheck, indexes);
     }
   }

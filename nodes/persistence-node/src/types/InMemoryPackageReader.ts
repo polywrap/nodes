@@ -1,5 +1,5 @@
 import { InMemoryFile } from "../types";
-import { PackageReader, PathStats } from '@polywrap/core-validation';
+import { PackageReader, PathStats } from "@polywrap/package-validation";
 
 const trimLocalPath = (path: string): string => {
   let trimmedPath = "";

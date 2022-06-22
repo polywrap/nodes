@@ -1,11 +1,11 @@
-import * as IPFS from 'ipfs-core';
-import { Logger } from '../services/Logger';
-import { IpfsPackageReader } from '../types';
-import { WrapperValidator } from '@polywrap/core-validation';
+import * as IPFS from "ipfs-core";
+import { Logger } from "../services/Logger";
+import { IpfsPackageReader } from "../types";
+import { WasmPackageValidator } from "@polywrap/package-validation";
 
 export const isValidWrapper = async (
   ipfsNode: IPFS.IPFS, 
-  validator: WrapperValidator, 
+  validator: WasmPackageValidator, 
   logger: Logger, 
   cid: string
 ): Promise<"yes" | "no" | "timeout"> => {

@@ -1,7 +1,7 @@
-import { WrapperConstraints } from '@polywrap/core-validation';
+import { WasmPackageConstraints } from "@polywrap/package-validation";
 
 export type WrapperConfig = {
-  constraints: WrapperConstraints;
+  constraints: WasmPackageConstraints;
   resolution: {
     retries: {
         max: number,
