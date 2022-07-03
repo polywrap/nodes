@@ -70,7 +70,13 @@ export class ApiServer {
     }));
 
     app.get('/api/ipfs/ls', handleError(async (req, res) => {
-      res.json(this.deps.ensStateManager.getIpfsCIDs());
+      if (this.deps.ensStateManager.getState().isFullySynced) {
+        res.json(this.deps.ensStateManager.getIpfsCIDs());  
+      } else {
+        res.status(400).send({
+          error: 'ENS indexer is not fully synced'
+        });
+      }
     }));
 
     app.post('/api/fast-sync/upload', handleError(async (req, res) => {

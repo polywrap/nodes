@@ -1,6 +1,6 @@
 import { Logger } from "./Logger";
 import { IndexerConfig } from "../config/IndexerConfig";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 import { URL } from 'url';
 
 interface IDependencies {
@@ -45,8 +45,12 @@ export class IndexRetriever {
           this.deps.logger.log(`Failed to get CIDs from ${index.name}, status code: ${response.status}`);
         }
       }
-      catch(ex) {
-        this.deps.logger.log(`Failed to get CIDs from ${index.name}, error: ${JSON.stringify(ex)}`);
+      catch(err) {
+        const error = (err as AxiosError).response?.data.error
+          ? (err as AxiosError).response?.data.error
+          : JSON.stringify(err);
+
+        this.deps.logger.log(`Failed to get CIDs from ${index.name}, error: ${error}`);
       }
 
       indexes.push({
