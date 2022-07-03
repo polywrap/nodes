@@ -5,13 +5,17 @@ import { Logger } from "./Logger";
 import { runServer } from "../http-server/runServer";
 import { IPFS } from "ipfs-core";
 import http from "http";
+import { EthereumNetwork } from "./EthereumNetwork";
+import { NodeStateManager } from "./NodeStateManager";
 
 interface IDependencies {
   apiPort: number;
   ensIndexerConfig: EnsIndexerConfig,
   ensStateManager: EnsStateManager,
+  nodeStateManager: NodeStateManager,
   logger: Logger;
   ipfsNode: IPFS;
+  ethereumNetwork: EthereumNetwork;
 }
 
 export class ApiServer {
@@ -82,8 +86,16 @@ export class ApiServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
+      const syncState = this.deps.ensStateManager.getState();
+
       res.json({
-        status: "running"
+        status: "running",
+        name: this.deps.ethereumNetwork.name,
+        lastSyncedBlockNumber: syncState.lastBlockNumber,
+        lastBlockNumber: this.deps.ethereumNetwork.ethersProvider.blockNumber,
+        lastFastSyncHash: this.deps.nodeStateManager.state.fastSync.lastIpfsHash,
+        totalNumberOfIpfsHashes: syncState.ensContenthash.length,
+        totalNumberOfContentHashes: syncState.contenthashEns.length,
       });
     }));
 

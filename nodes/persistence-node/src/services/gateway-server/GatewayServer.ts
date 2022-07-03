@@ -1,27 +1,30 @@
+import { deserializePolywrapManifest } from "@polywrap/core-js";
+import { VALID_WRAP_MANIFEST_NAMES, WasmPackageValidator } from "@polywrap/package-validation";
+import axios from "axios";
+import timeout from "connect-timeout";
+import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
+import http from "http";
+import * as IPFS from "ipfs-core";
 import multer, { memoryStorage } from "multer";
-import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
-import { MulterFile, IpfsAddResult, IpfsErrorResponse, InMemoryFile, InMemoryPackageReader, IpfsPackageReader } from "../../types";
-import { formatFileSize } from "../../utils/formatFileSize";
-import { handleError } from "../../http-server/handleError";
-import { VERSION } from "../../constants/version";
-import cors from "cors";
-import http from "http";
-import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
-import timeout from "connect-timeout";
-import * as IPFS from "ipfs-core";
-import { WrapperWithFileList } from "./models/WrapperWithFileList";
+import { URL } from "url";
 import { GatewayConfig } from "../../config/GatewayConfig";
-import { PersistenceStateManager } from "../PersistenceStateManager";
-import { Logger } from "../Logger";
+import { IndexerConfig } from "../../config/IndexerConfig";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
+import { VERSION } from "../../constants/version";
+import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
+import { handleError } from "../../http-server/handleError";
+import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
+import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
+import { InMemoryFile, IpfsAddResult, IpfsErrorResponse, IpfsPackageReader, MulterFile } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
-import { VALID_WRAP_MANIFEST_NAMES, WasmPackageValidator } from "@polywrap/package-validation";
-import { deserializePolywrapManifest } from "@polywrap/core-js";
+import { formatFileSize } from "../../utils/formatFileSize";
+import { Logger } from "../Logger";
+import { PersistenceStateManager } from "../PersistenceStateManager";
 import { ValidationService } from "../ValidationService";
+import { WrapperWithFileList } from "./models/WrapperWithFileList";
 
 interface IDependencies {
   logger: Logger;
@@ -30,6 +33,7 @@ interface IDependencies {
   gatewayConfig: GatewayConfig;
   persistenceConfig: PersistenceConfig;
   validationService: ValidationService;
+  indexerConfig: IndexerConfig;
 }
 
 export const stripBasePath = (files: InMemoryFile[]) => {
@@ -414,8 +418,21 @@ export class GatewayServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
+      const indexerResults = this.deps.indexerConfig.indexes.map(indexer => {
+        return axios({
+          method: 'GET',
+          url: new URL('status', indexer.provider).href,
+        }).then(response => response.data);
+      });
+
+      const indexers = await Promise.all([
+        ...indexerResults
+      ]);
+
       res.json({
-        status: "running"
+        online: true,
+        version: VERSION,
+        indexers: indexers,
       });
     }));
     
