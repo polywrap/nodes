@@ -89,10 +89,12 @@ export class ApiServer {
       const syncState = this.deps.ensStateManager.getState();
 
       res.json({
-        status: "running",
         name: this.deps.ethereumNetwork.name,
-        lastSyncedBlockNumber: syncState.lastBlockNumber,
-        lastBlockNumber: this.deps.ethereumNetwork.ethersProvider.blockNumber,
+        online: true,
+        lastProcessedBlockNumber: syncState.lastBlockNumber,
+        lastSyncedAt: syncState.lastSyncedAt,
+        latestBlockNumber: this.deps.ethereumNetwork.ethersProvider.blockNumber,
+        isFullySynced: syncState.isFullySynced,
         lastFastSyncHash: this.deps.nodeStateManager.state.fastSync.lastIpfsHash,
         totalNumberOfIpfsHashes: syncState.ensContenthash.length,
         totalNumberOfContentHashes: syncState.contenthashEns.length,

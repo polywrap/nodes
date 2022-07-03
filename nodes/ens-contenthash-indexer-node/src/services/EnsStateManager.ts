@@ -16,6 +16,8 @@ export class EnsStateManager {
     ensContenthash: {},
     contenthashEns: {},
     lastBlockNumber: 0,
+    isFullySynced: false,
+    lastSyncedAt: null,
   };
 
   constructor(private readonly deps: IDependencies) {
@@ -51,6 +53,9 @@ export class EnsStateManager {
     return {
       ensContenthash: this.state.ensContenthash,
       lastBlockNumber: this.state.lastBlockNumber,
+      contenthashEns: this.state.contenthashEns,
+      isFullySynced: this.state.isFullySynced,
+      lastSyncedAt: this.state.lastSyncedAt,
     };
   }
 
@@ -58,7 +63,9 @@ export class EnsStateManager {
     const newState: EnsState = {
       ensContenthash: state.ensContenthash,
       contenthashEns: {},
-      lastBlockNumber: state.lastBlockNumber
+      lastBlockNumber: state.lastBlockNumber,
+      isFullySynced: state.isFullySynced,
+      lastSyncedAt: state.lastSyncedAt,
     };
 
     for (const [ensNode, contenthash] of Object.entries(state.ensContenthash)) {
@@ -112,6 +119,8 @@ export class EnsStateManager {
       }
     }
   
+    this.state.lastSyncedAt = new Date();
+
     this.save();
   }
 

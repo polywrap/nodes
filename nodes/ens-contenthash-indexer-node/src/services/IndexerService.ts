@@ -9,6 +9,7 @@ import { IPFS } from "ipfs-core";
 import { getIpfsFileContents } from "../getIpfsFileContents";
 import { NodeStateManager } from "./NodeStateManager";
 import { ApiServer } from "./ApiServer";
+import { EnsState } from "../types/EnsState";
 
 type EnsNodeChangeEvent = {
   ensNode: string;
@@ -94,12 +95,14 @@ export class IndexerService {
       this.deps.nodeStateManager.updateLastIpfsHashForFastSync(ipfsHash);
     }
 
-    const ensState = JSON.parse(ensStateJson.toString());
+    const ensState: EnsState = JSON.parse(ensStateJson.toString());
 
     if(ensState.lastBlockNumber < this.deps.ensStateManager.lastBlockNumber) {
       this.deps.logger.log(`Fast sync state is older than current state, skipping fast sync`);
       return;
     }
+
+    ensState.lastSyncedAt = new Date();
 
     this.deps.ensStateManager.updateState(ensState);
     this.deps.ensStateManager.lastBlockNumber = ensState.lastBlockNumber;
@@ -148,6 +151,10 @@ export class IndexerService {
         if(indexedBlocksCnt < this.deps.ensIndexerConfig.maxBlockRangePerRequest) {
           //If we have synced to the latest block then we start the API server if it's not already running
           await this.deps.apiServer.tryStart();
+          this.deps.ensStateManager.updateState({
+            ...this.deps.ensStateManager.getState(),
+            isFullySynced: true
+          });
         } else {
           //If we are still syncing we stop the server if it's running
           //This prevents consumers of the API to get out of date information
