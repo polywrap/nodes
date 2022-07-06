@@ -215,20 +215,16 @@ export class GatewayServer {
     
           if(manifest.name) {
             return {
-              cid: wrapper.cid,
               name: manifest.name,
               size: wrapperSize,
+              cid: wrapper.cid,
             };
           } 
 
           return {
-            cid: infos[index].ipfsHash,
             name: WRAPPER_DEFAULT_NAME,
-            manifest: {
-              cid: manifestFile.cid,
-              name: "Manifest",
-            },
             size: wrapperSize,
+            cid: infos[index].ipfsHash,
           };
         }))
       ).filter(x => !!x);
