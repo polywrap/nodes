@@ -39,7 +39,6 @@ export class InMemoryPackageReader implements PackageReader {
 
   readFileAsString(filePath: string): Promise<string> {
     const contents = (this.findFile(filePath) as InMemoryFile).content as Buffer;
-    console.log("x", filePath);
     return Promise.resolve(contents.toString());
   }
 
@@ -48,15 +47,12 @@ export class InMemoryPackageReader implements PackageReader {
   }
 
   exists(itemPath: string): Promise<boolean> {
-    console.log("exists", itemPath);
     return Promise.resolve(!!this.findPath(itemPath));
   }
 
   async getStats(itemPath: string): Promise<PathStats> {
-    console.log("getStats", itemPath);
     const file = this.findFile(itemPath);
     const isFile = !!(file && file.content);
-    console.log("isFile", isFile);
 
     return {
       isFile: isFile,
@@ -68,10 +64,7 @@ export class InMemoryPackageReader implements PackageReader {
   }
 
   readDir(dirPath: string): Promise<string[]> {
-    console.log("readDir1", dirPath);
     const dir = this.findPath(dirPath);
-    console.log("readDir2", dir);
-    console.log("readDir2", Object.keys(dir as any));
 
     return Promise.resolve(Object.keys(dir as any));
   }
