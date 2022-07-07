@@ -3,7 +3,7 @@ export const defaultConfigs = {
     requestInterval: 15000,
     maxBlockRangePerRequest: 4999,
     loggerEnabled: true,
-    apiPort: 8082,
+    apiPort: 8083,
     ipfs: {
       provider: "http://localhost:5001",
     }

@@ -1,6 +1,6 @@
 import axios from "axios";
-import { IpfsConfig } from "./config/IpfsConfig";
-import { Logger } from "./services/Logger";
+import { IpfsConfig } from "../config/IpfsConfig";
+import { Logger } from "../services/Logger";
 
 export const nudgeIpfsHash = async (ipfsConfig: IpfsConfig, cid: string, logger: Logger): Promise<boolean> => {
   logger.log(`Nudging IPFS hash ${cid} with gateway...`);

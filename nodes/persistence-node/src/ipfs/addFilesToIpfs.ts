@@ -1,8 +1,9 @@
-import * as IPFS from 'ipfs-core';
-import { IpfsAddResult } from '../types/IpfsAddResult';
+import * as IPFS from "ipfs-core";
+import { InMemoryFile } from "../types";
+import { IpfsAddResult } from "../types/IpfsAddResult";
 
 export const addFilesToIpfs = async (
-  files: { path: string, content?: Buffer }[], 
+  files: InMemoryFile[], 
   options: { onlyHash: boolean }, 
   ipfs: IPFS.IPFS
 ): Promise<IpfsAddResult[]> => {
@@ -11,7 +12,7 @@ export const addFilesToIpfs = async (
   for await (const file of ipfs.addAll(
     files,
     {
-      wrapWithDirectory: false,
+      wrapWithDirectory: true,
       pin: false,
       onlyHash: options.onlyHash
     }

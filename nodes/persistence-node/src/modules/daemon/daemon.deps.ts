@@ -1,6 +1,6 @@
 import * as awilix from "awilix";
 import { NameAndRegistrationPair } from "awilix";
-import { createIpfsNode } from "../../createIpfsNode";
+import { createIpfsNode } from "../../ipfs/createIpfsNode";
 import { Logger } from "../../services/Logger";
 import { IPFS } from "ipfs-core";
 import { IpfsConfig } from "../../config/IpfsConfig";
@@ -10,10 +10,12 @@ import { IndexerConfig } from "../../config/IndexerConfig";
 import { IndexRetriever } from "../../services/IndexRetriever";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { Config } from "../../config/Config";
-import { GatewayServer } from "../../services/gateway-server/GatewayServer";
 import { ApiServer } from "../../services/ApiServer";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { GatewayConfig } from "../../config/GatewayConfig";
+import { ValidationService } from "../../services/ValidationService";
+import { GatewayServer } from "../../services/gateway-server/GatewayServer";
+import { WasmPackageValidator } from "@polywrap/package-validation";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
@@ -33,6 +35,8 @@ export interface MainDependencyContainer {
   persistenceService: PersistenceService;
   persistenceStateManager: PersistenceStateManager;
   indexRetriever: IndexRetriever;
+  wasmPackageValidator: WasmPackageValidator;
+  validationService: ValidationService;
 }
 
 export const buildMainDependencyContainer = async (
@@ -74,6 +78,12 @@ export const buildMainDependencyContainer = async (
     apiServer: awilix.asClass(ApiServer).singleton(),
     persistenceService: awilix.asClass(PersistenceService).singleton(),
     indexRetriever: awilix.asClass(IndexRetriever).singleton(),
+    wasmPackageValidator: awilix
+      .asFunction(({ persistenceConfig }) => {
+        return new WasmPackageValidator(persistenceConfig.wrapper.constraints);
+      })
+      .singleton(),
+    validationService: awilix.asClass(ValidationService).singleton(),
     ...extensionsAndOverrides,
   });
 

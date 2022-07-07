@@ -1,6 +1,6 @@
-import * as IPFS from 'ipfs-core';
+import * as IPFS from "ipfs-core";
 
-export const getIpfsFileContents = async (ipfs: IPFS.IPFS, ipfsPath: string, signal: AbortSignal, timeout: number): Promise<Buffer> => {
+export const getIpfsFileContents = async (ipfs: IPFS.IPFS, ipfsPath: string,  timeout: number, signal: AbortSignal | undefined = undefined): Promise<Buffer> => {
   const stream = ipfs.cat(ipfsPath, {
     signal: signal,
     timeout: timeout 

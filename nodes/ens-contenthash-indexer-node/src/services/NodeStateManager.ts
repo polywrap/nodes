@@ -1,6 +1,6 @@
-import fs from 'fs';
-import path from 'path';
-import { EthereumNetwork } from './EthereumNetwork';
+import fs from "fs";
+import path from "path";
+import { EthereumNetwork } from "./EthereumNetwork";
 
 interface IDependencies {
   ethereumNetwork: EthereumNetwork;

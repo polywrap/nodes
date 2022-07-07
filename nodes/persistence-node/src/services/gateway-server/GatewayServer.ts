@@ -1,35 +1,63 @@
+import { WRAP_INFO, WasmPackageValidator } from "@polywrap/package-validation";
+import axios from "axios";
+import timeout from "connect-timeout";
+import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
+import http from "http";
+import * as IPFS from "ipfs-core";
 import multer, { memoryStorage } from "multer";
-import { addFilesToIpfs } from "../../ipfs-operations/addFilesToIpfs";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { addFilesAsDirToIpfs } from "../../ipfs-operations/addFilesAsDirToIpfs";
-import { MulterFile } from "../../MulterFile";
-import { asyncIterableToArray } from "../../utils/asyncIterableToArray";
-import { formatFileSize } from "../../utils/formatFileSize";
-import { getIpfsFileContents } from "../../getIpfsFileContents";
-import { handleError } from "../../http-server/handleError";
-import { VERSION } from "../../constants/version";
-import { IpfsAddResult } from "../../types/IpfsAddResult";
-import { isValidWrapperManifestName } from "../../isValidWrapperManifestName";
-import { IpfsErrorResponse } from "../../types/IpfsErrorResponse";
-import cors from "cors";
-import http from "http";
-import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
-import timeout from "connect-timeout";
-import * as IPFS from 'ipfs-core';
-import { WrapperWithFileList } from "./models/WrapperWithFileList";
+import { URL } from "url";
 import { GatewayConfig } from "../../config/GatewayConfig";
-import { PersistenceStateManager } from "../PersistenceStateManager";
-import { Logger } from "../Logger";
+import { IndexerConfig } from "../../config/IndexerConfig";
+import { PersistenceConfig } from "../../config/PersistenceConfig";
+import { VERSION } from "../../constants/version";
+import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
+import { handleError } from "../../http-server/handleError";
+import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
+import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
+import { InMemoryFile, IpfsAddResult, IpfsErrorResponse, IpfsPackageReader, MulterFile } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
+import { formatFileSize } from "../../utils/formatFileSize";
+import { IndexRetriever } from "../IndexRetriever";
+import { Logger } from "../Logger";
+import { PersistenceStateManager } from "../PersistenceStateManager";
+import { ValidationService } from "../ValidationService";
+import { WrapperWithFileList } from "./models/WrapperWithFileList";
+import { deserializeWrapManifest } from "@polywrap/wrap-manifest-types-js";
 
 interface IDependencies {
+  logger: Logger;
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   gatewayConfig: GatewayConfig;
-  logger: Logger;
+  persistenceConfig: PersistenceConfig;
+  validationService: ValidationService;
+  indexerConfig: IndexerConfig;
+  indexRetriever: IndexRetriever;
 }
+
+function prefix(words: string[]){
+  // check border cases size 1 array and empty first word)
+  if (!words[0] || words.length ==  1) return words[0] || "";
+  let i = 0;
+  // while all words have the same character at position i, increment i
+  while(words[0][i] && words.every(w => w[i] === words[0][i]))
+    i++;
+  
+  // prefix is the substring from the beginning to the last successfully checked i
+  return words[0].substr(0, i);
+}
+
+export const stripBasePath = (files: InMemoryFile[]) => {
+  const basePath = prefix(files.map(f => f.path));
+
+  return files.map(file => ({
+    path: path.relative(basePath, file.path) ?? '.',
+    content: file.content
+  })).filter(file => !!file.path);
+};
 
 export class GatewayServer {
   deps: IDependencies;
@@ -59,14 +87,14 @@ export class GatewayServer {
     app.all('*', handleError(async (req: Request, res: Response, next: NextFunction) => {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  
+
       //Trim and redirect multiple slashes in URL
       if (req.url.match(/[/]{2,}/g)) {
         req.url = req.url.replace(/[/]+/g, '/');
         res.redirect(req.url);
         return;
       }
-  
+
       if (req.method === 'OPTIONS') {
         res.send(200);
       } else {
@@ -100,7 +128,7 @@ export class GatewayServer {
         return;
       }
 
-      const fileContents = await getIpfsFileContents(ipfs, hash, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
+      const fileContents = await getIpfsFileContents(ipfs, hash, this.deps.gatewayConfig.ipfsTimeout, controller.signal);
 
       res.send(fileContents);
     }));
@@ -111,7 +139,7 @@ export class GatewayServer {
       req.on('close', () => {
         controller.abort();
       });
-      
+
       const hash = req.query.arg as string;
 
       const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`, {
@@ -151,7 +179,7 @@ export class GatewayServer {
       const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
         .filter(x => x.status === TrackedIpfsHashStatus.Pinned)
         .reverse();
-
+      
       const wrapperSizes = await Promise.all(infos.map(async info => {
         const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`, {
           signal: controller.signal,
@@ -181,61 +209,36 @@ export class GatewayServer {
           } as WrapperWithFileList;
 
           const wrapperSize = wrapperSizes[index];
+          const manifestFile = wrapper.files.find(x => WRAP_INFO === x.name);
 
-          const manifestFile = wrapper.files.find(x => isValidWrapperManifestName(x.name));
-          const schemaFile = wrapper.files.find(x => x.name === "schema.graphql");
-    
-          if(!manifestFile) {
+          if (!manifestFile) {
             return undefined;
           }
+
+          const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapper.cid);
+          const manifestContent = await reader.readFile(manifestFile?.name);
+          const manifest = deserializeWrapManifest(manifestContent);
     
-          if(!schemaFile) {
-            return undefined;
+          if(manifest.name) {
+            return {
+              name: manifest.name,
+              size: wrapperSize,
+              cid: wrapper.cid,
+            };
           }
-    
-          if(manifestFile?.name === "web3api.json") {
-            const fileContents = await getIpfsFileContents(
-              ipfs, 
-              manifestFile.cid, 
-              controller.signal, 
-              this.deps.gatewayConfig.ipfsTimeout
-            );
-            const manifest = fileContents.toString();
-            const parsed = JSON.parse(manifest);
-    
-            if(parsed.name) {
-              return {
-                cid: wrapper.cid,
-                name: parsed.name,
-                manifest: {
-                  cid: manifestFile.cid,
-                  name: manifestFile.name,
-                },
-                schema: {
-                  cid: schemaFile.cid,
-                  name: schemaFile.name,
-                },
-                size: wrapperSize,
-              };
-            } 
-          }
-    
+
           return {
-            cid: infos[index].ipfsHash,
             name: WRAPPER_DEFAULT_NAME,
-            manifest: {
-              cid: manifestFile.cid,
-              name: manifestFile.name,
-            },
-            schema: {
-              cid: schemaFile.cid,
-              name: schemaFile.name,
-            },
             size: wrapperSize,
+            cid: infos[index].ipfsHash,
           };
         }))
       ).filter(x => !!x);
 
+      if (req.query.json) {
+        res.json(pinnedWrappers);
+        return;
+      }
       res.render('pins', {
         wrappers: pinnedWrappers,
         count: pinnedWrappers.length,
@@ -256,7 +259,7 @@ export class GatewayServer {
       });
 
       if (contentDescription.type === "file") {
-        const fileContent = await getIpfsFileContents(ipfs, ipfsPath, controller.signal, this.deps.gatewayConfig.ipfsTimeout);
+        const fileContent = await getIpfsFileContents(ipfs, ipfsPath, this.deps.gatewayConfig.ipfsTimeout, controller.signal);
         res.end(fileContent);
       } else if (contentDescription.type === "directory") {
         const object = await ipfs.object.get(contentDescription.cid, {
@@ -269,7 +272,7 @@ export class GatewayServer {
             x => ipfs.files.stat(`/ipfs/${x.Hash.toString()}`)
           )
         );
-        
+
         const items = object.Links.map((x, index) => ({
           name: x.Name,
           cid: x.Hash.toString(),
@@ -300,13 +303,21 @@ export class GatewayServer {
           onlyHash: false,
         };
 
-      const files: { files: MulterFile[] } = req.files as { files: MulterFile[] };
+      const uploadRequest: { files: MulterFile[] } = req.files as { files: MulterFile[] };
+      const filesToAdd = uploadRequest.files.map(x => ({
+        path: x.originalname,
+        content: x.buffer
+      }));
+
+      const result = await this.deps.validationService.validateInMemoryWrapper(filesToAdd);
+
+      if (!result.valid) {
+        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
+        return;
+      }
 
       const cid = await addFilesAsDirToIpfs(
-        files.files.map(x => ({
-          path: x.originalname,
-          content: x.buffer
-        })),
+        filesToAdd,
         { onlyHash: options.onlyHash },
         ipfs
       );
@@ -326,17 +337,11 @@ export class GatewayServer {
 
       const files: MulterFile[] = req.files as MulterFile[];
 
-      let hasWrapManifest = false;
-
-      const filesToAdd = files.map(x => {
+      const filesToAdd: InMemoryFile[] = files.map(x => {
         const pathToFile = decodeURIComponent(x.originalname);
 
-        if(isValidWrapperManifestName(path.basename(pathToFile))) {
-          hasWrapManifest = true;
-        }
-
         //If the file is a directory, we don't add the buffer, otherwise we get a different CID than expected
-        if(x.mimetype === "application/x-directory") {
+        if (x.mimetype === "application/x-directory") {
           return {
             path: pathToFile,
           };
@@ -348,26 +353,40 @@ export class GatewayServer {
         }
       });
 
-      if(!hasWrapManifest) {
-        res.status(500).json(this.buildIpfsError("No valid wrapper manifest found in upload"));
+      const validator = new WasmPackageValidator(this.deps.persistenceConfig.wrapper.constraints);
+
+      const sanitizedFiles = stripBasePath(filesToAdd);
+      const result = await this.deps.validationService.validateInMemoryWrapper(sanitizedFiles);
+     
+      if(!result.valid) {
+        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
         return;
       }
 
       const addedFiles = await addFilesToIpfs(
-        filesToAdd,
+        sanitizedFiles,
         { onlyHash: !!req.query["only-hash"] },
         ipfs
       );
 
-      const rootCID = addedFiles.filter((x: IpfsAddResult) => x.path.indexOf("/") === -1)[0].cid;
+      const rootCID = addedFiles.filter((x: IpfsAddResult) => x.path === "")[0].cid;
 
       this.deps.logger.log(`Gateway add: ${rootCID}`);
+
+      const ipfsReader = new IpfsPackageReader(this.deps.ipfsNode, rootCID.toString());
+
+      const ipfsResult = await validator.validate(ipfsReader);
+
+      if (!ipfsResult.valid) {
+        res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`));
+        return;
+      }
 
       res.writeHead(200, {
         'Content-Type': 'application/json',
       });
-   
-      for(const file of addedFiles) {
+
+      for (const file of addedFiles) {
         res.write(JSON.stringify({
           Name: file.path,
           Hash: file.cid.toString(),
@@ -383,27 +402,69 @@ export class GatewayServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
-      res.json({
-        status: "running"
-      });
+      res.send(`<pre>${
+        JSON.stringify(
+        {
+          online: true,
+          version: VERSION,
+          trackedIpfsHashesStatusCounts: this.getTrackedIpfsHashesStatusCounts(),
+          indexers: await this.getIndexersInfo(),
+        }
+        , null, 2)
+      }</pre>`);
     }));
-    
+
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
       res.status(500).json(this.buildIpfsError(err.message));
       this.deps.logger.log(err.message);
     });
 
     const server = http.createServer({}, app);
-  
+
     server.listen(this.deps.gatewayConfig.port, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayConfig.port}`));
   }
 
   buildIpfsError(message: string): IpfsErrorResponse {
     this.deps.logger.log("Gateway error: " + message);
-  
+
     return {
       Message: message,
       Type: "error"
     };
+  }
+
+  getTrackedIpfsHashesStatusCounts() {
+    return this.deps.persistenceStateManager.getTrackedIpfsHashInfos().reduce((acc, info) => {
+      if (!acc[info.status]) {
+        acc[info.status] = 0;
+      }
+
+      acc[info.status] = acc[info.status] + 1;
+
+      return acc;
+    }, {} as any);
+  }
+
+  async getIndexersInfo() {
+    const indexerResults = this.deps.indexerConfig.indexes.map(indexer => {
+      return axios({
+        method: 'GET',
+        url: new URL('status', indexer.provider).href,
+      }).then(response => {
+        return {
+          ...response.data,
+          lastSync: this.deps.indexRetriever.lastIndexSync[indexer.name] ?? "Unknown"
+        };
+      })
+        .catch(error => {
+          const message = `Error getting status for indexer ${indexer.provider}: ${error.message}`;
+          this.deps.logger.log(message);
+          return { error: message }
+        });
+    });
+
+    return await Promise.all([
+      ...indexerResults
+    ]);
   }
 }

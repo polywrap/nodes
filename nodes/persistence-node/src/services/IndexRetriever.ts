@@ -1,6 +1,7 @@
 import { Logger } from "./Logger";
 import { IndexerConfig } from "../config/IndexerConfig";
-import axios from "axios";
+import axios, { AxiosError } from "axios";
+import { URL } from 'url';
 
 interface IDependencies {
   indexerConfig: IndexerConfig;
@@ -9,6 +10,8 @@ interface IDependencies {
 
 export class IndexRetriever {
   deps: IDependencies;
+
+  lastIndexSync: Record<string, Date> = {};
 
   constructor(deps: IDependencies) {
     this.deps = deps;
@@ -29,7 +32,7 @@ export class IndexRetriever {
       try {
         const response = await axios({
           method: 'GET',
-          url: index.provider,
+          url: new URL('api/ipfs/ls', index.provider).href,
         });
         
         if(response.status === 200) {
@@ -39,13 +42,18 @@ export class IndexRetriever {
             cids: response.data,
             error: false
           });
+          this.lastIndexSync[index.name] = new Date();
           continue;
         } else {
           this.deps.logger.log(`Failed to get CIDs from ${index.name}, status code: ${response.status}`);
         }
       }
-      catch(ex) {
-        this.deps.logger.log(`Failed to get CIDs from ${index.name}, error: ${JSON.stringify(ex)}`);
+      catch(err) {
+        const error = (err as AxiosError).response?.data.error
+          ? (err as AxiosError).response?.data.error
+          : JSON.stringify(err);
+
+        this.deps.logger.log(`Failed to get CIDs from ${index.name}, error: ${error}`);
       }
 
       indexes.push({
