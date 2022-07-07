@@ -74,7 +74,7 @@ export class ApiServer {
       if (this.deps.ensStateManager.getState().isFullySynced) {
         res.json(this.deps.ensStateManager.getIpfsCIDs());  
       } else {
-        res.status(400).send({
+        res.status(503).send({
           error: 'ENS indexer is not fully synced'
         });
       }
