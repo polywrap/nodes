@@ -5,13 +5,18 @@ import { Logger } from "./Logger";
 import { runServer } from "../http-server/runServer";
 import { IPFS } from "ipfs-core";
 import http from "http";
+import { EthereumNetwork } from "./EthereumNetwork";
+import { NodeStateManager } from "./NodeStateManager";
+import { toPrettyNumber } from "../utils/toPrettyNumber";
 
 interface IDependencies {
   apiPort: number;
   ensIndexerConfig: EnsIndexerConfig,
   ensStateManager: EnsStateManager,
+  nodeStateManager: NodeStateManager,
   logger: Logger;
   ipfsNode: IPFS;
+  ethereumNetwork: EthereumNetwork;
 }
 
 export class ApiServer {
@@ -66,7 +71,13 @@ export class ApiServer {
     }));
 
     app.get('/api/ipfs/ls', handleError(async (req, res) => {
-      res.json(this.deps.ensStateManager.getIpfsCIDs());
+      if (this.deps.ensStateManager.getState().isFullySynced) {
+        res.json(this.deps.ensStateManager.getIpfsCIDs());  
+      } else {
+        res.status(503).send({
+          error: 'ENS indexer is not fully synced'
+        });
+      }
     }));
 
     app.post('/api/fast-sync/upload', handleError(async (req, res) => {
@@ -82,9 +93,22 @@ export class ApiServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
+      const syncState = this.deps.ensStateManager.state;
+
       res.json({
-        status: "running"
-      });
+        name: this.deps.ethereumNetwork.name,
+        online: true,
+        latestBlock: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber),
+        lastBlockProcessed: toPrettyNumber(syncState.lastBlockNumberProcessed),
+        lastBlockIndexed: toPrettyNumber(syncState.lastBlockNumber - 1),
+        blocksToProcess: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber - syncState.lastBlockNumberProcessed),
+        blocksToIndex: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber - syncState.lastBlockNumber + 1),
+        domainsIndexed: toPrettyNumber(Object.keys(syncState.ensContenthash).length),
+        contenthashesIndexed: toPrettyNumber(Object.keys(syncState.contenthashEns).length),
+        ipfsHashesIndexed: toPrettyNumber(this.deps.ensStateManager.getIpfsCIDs().length),
+        lastFastSyncHash: this.deps.nodeStateManager.state.fastSync.lastIpfsHash,
+        isFullySynced: syncState.isFullySynced,
+        });
     }));
 
     this.expressServer = runServer(

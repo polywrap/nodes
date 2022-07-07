@@ -33,7 +33,6 @@ export class PersistenceService {
   async run(): Promise<void> {
     while(true) {
       let timestamp = process.hrtime();
-      console.log("PERSISTENCE CONFIG", this.deps.persistenceConfig);
 
       const indexes = await this.deps.indexRetriever.getCIDs(); 
       const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashInfos();
