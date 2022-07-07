@@ -1,6 +1,6 @@
 {
   "name": "@polywrap/persistence-node",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
   "author": "nerfZael",
@@ -36,6 +36,11 @@
     "test:jest": "jest test --passWithNoTests"
   },
   "dependencies": {
+    "it-all": "1.0.6",
+    "it-map": "1.0.6",
+    "it-pipe": "1.1.0",
+    "it-tar": "4.0.0",
+    "it-to-buffer": "2.0.2",
     "@polywrap/core-js": "0.1.0",
     "@polywrap/package-validation": "0.1.0",
     "@polywrap/wrap-manifest-types-js": "0.1.0",

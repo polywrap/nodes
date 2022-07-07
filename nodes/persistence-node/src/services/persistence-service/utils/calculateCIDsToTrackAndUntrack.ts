@@ -94,11 +94,17 @@ const calculateCIDsToUntrack = (
       //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved
       // and if it's not considered lost
       if(!info.indexes.some(x => unresponsiveIndexMap[x])) {
+        if(info.unresponsiveInfo) {
+          if(new Date(info.unresponsiveInfo.scheduledRetryDate) > new Date()) {
+            continue;
+          }
+        }
+
         cidsToUntrack.push(persistenceStateManager.getTrackedIpfsHashInfo(info.ipfsHash));
       }
     } else {
       if(info?.unresponsiveInfo) {
-        if(new Date(info.unresponsiveInfo.scheduledRetryDate) < new Date()) {
+        if(new Date(info.unresponsiveInfo.scheduledRetryDate) <= new Date()) {
           unresponsiveHashesToTrackMap[info.ipfsHash] = true;
         }
       }
