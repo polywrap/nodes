@@ -93,21 +93,21 @@ export class ApiServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
-      const syncState = this.deps.ensStateManager.getState();
+      const syncState = this.deps.ensStateManager.state;
 
       res.json({
         name: this.deps.ethereumNetwork.name,
         online: true,
         latestBlock: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber),
-        lastBlockProcessed: toPrettyNumber(this.deps.ensStateManager.state.lastBlockNumberProcessed),
+        lastBlockProcessed: toPrettyNumber(syncState.lastBlockNumberProcessed),
         lastBlockIndexed: toPrettyNumber(syncState.lastBlockNumber - 1),
-        blocksToProcess: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber - this.deps.ensStateManager.state.lastBlockNumberProcessed),
+        blocksToProcess: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber - syncState.lastBlockNumberProcessed),
         blocksToIndex: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber - syncState.lastBlockNumber + 1),
-        domainsIndexed: toPrettyNumber(Object.keys(this.deps.ensStateManager.state.ensContenthash).length),
-        contenthashesIndexed: toPrettyNumber(Object.keys(this.deps.ensStateManager.state.contenthashEns).length),
+        domainsIndexed: toPrettyNumber(Object.keys(syncState.ensContenthash).length),
+        contenthashesIndexed: toPrettyNumber(Object.keys(syncState.contenthashEns).length),
         ipfsHashesIndexed: toPrettyNumber(this.deps.ensStateManager.getIpfsCIDs().length),
         lastFastSyncHash: this.deps.nodeStateManager.state.fastSync.lastIpfsHash,
-        isFullySynced: this.deps.ensStateManager.state.isFullySynced,
+        isFullySynced: syncState.isFullySynced,
         });
     }));
 
