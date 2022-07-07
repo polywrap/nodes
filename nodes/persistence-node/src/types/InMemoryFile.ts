@@ -1,4 +1,4 @@
 export type InMemoryFile = {
   path: string;
-  content?: Buffer;
+  content?: Uint8Array;
 }

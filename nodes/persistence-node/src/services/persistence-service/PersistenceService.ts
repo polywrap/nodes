@@ -9,7 +9,7 @@ import { sleep } from "../../utils/sleep";
 import { IndexRetriever } from "../IndexRetriever";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
-import { WasmPackageValidator } from "@polywrap/package-validation";
+import { ValidationService } from "../ValidationService";
 
 type ActionPromise = () => Promise<void>;
 
@@ -20,7 +20,7 @@ interface IDependencies {
   ipfsConfig: IpfsConfig;
   persistenceConfig: PersistenceConfig;
   indexRetriever: IndexRetriever;
-  wasmPackageValidator: WasmPackageValidator;
+  validationService: ValidationService;
 }
 
 export class PersistenceService {
@@ -85,9 +85,17 @@ export class PersistenceService {
   
       this.deps.logger.log(`Unpinned ${ipfsHash}`);
       return true;
-    } catch (err) {
-      this.deps.logger.log(`Failed to unpin ${ipfsHash}, error: ${JSON.stringify(err)}`);
-      return false;
+    } catch (err: any) {
+      const message = err.message 
+        ? err.message
+        : "";
+      if(message === "not pinned or pinned indirectly") {
+        this.deps.logger.log(`IPFS hash is already unpinned, removing: ${ipfsHash}...`);
+        return true;
+      } else {
+        this.deps.logger.log(`Failed to unpin ${ipfsHash}, message: ${message}, error: ${JSON.stringify(err)}`);
+        return false;
+      }
     }
   }
 
@@ -177,30 +185,33 @@ export class PersistenceService {
   }
 
   private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
-    try {
-      const reader = new IpfsPackageReader(this.deps.ipfsNode, ipfsHash);
-  
-      const result = await this.deps.wasmPackageValidator.validate(reader);
-  
-      if(result.valid) {
-        await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-          ipfsHash,
-          status: TrackedIpfsHashStatus.Pinning,
-          indexes,
-        });
-  
-        await this.pinWrapper(ipfsHash, retryCount, indexes);  
-      } else {
-        this.deps.logger.log(`IPFS hash ${ipfsHash} is not a valid wrapper. Reason: ${result.failReason}`);
-       
-        await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-          ipfsHash,
-          status: TrackedIpfsHashStatus.NotAWrapper,
-          indexes,
-        });
-      }
-    } catch {
+    const reader = new IpfsPackageReader(this.deps.ipfsNode, ipfsHash);
+
+    this.deps.logger.log(`Checking if valid wrapper: ${ipfsHash}...`);
+    const [error, result] = await this.deps.validationService.validateIpfsWrapper(ipfsHash);
+
+    if (error || !result) {
+      this.deps.logger.log(`Could not fetch wrapper or error occurred, scheduling retry: ${ipfsHash}...`);
       await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.ValidWrapperCheck, indexes);
+      return;
+    }
+
+    if(result.valid) {
+      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+        ipfsHash,
+        status: TrackedIpfsHashStatus.Pinning,
+        indexes,
+      });
+
+      await this.pinWrapper(ipfsHash, retryCount, indexes);  
+    } else {
+      this.deps.logger.log(`IPFS hash ${ipfsHash} is not a valid wrapper. Reason: ${result.failReason as number}`);
+      
+      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+        ipfsHash,
+        status: TrackedIpfsHashStatus.NotAWrapper,
+        indexes,
+      });
     }
   }
   

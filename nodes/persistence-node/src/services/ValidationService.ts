@@ -6,6 +6,7 @@ import { ValidationResult, WasmPackageValidator } from "@polywrap/package-valida
 import { InMemoryFile, InMemoryPackageReader, IpfsPackageReader, TrackedIpfsHashInfo } from "../types";
 import { TrackedIpfsHashStatus } from "../types/TrackedIpfsHashStatus";
 import { PersistenceService } from "./persistence-service/PersistenceService";
+import { loadFilesFromIpfs } from "../ipfs/loadFilesFromIpfs";
 
 interface IDependencies {
   logger: Logger;
@@ -23,10 +24,16 @@ export class ValidationService {
     this.deps = deps;
   }
 
-  async validateIpfsWrapper(ipfsPathOrCID: string): Promise<ValidationResult> {
-    const reader = new IpfsPackageReader(this.deps.ipfsNode, ipfsPathOrCID);
+  async validateIpfsWrapper(ipfsPathOrCID: string): Promise<[string | undefined, ValidationResult | undefined]> {
+    const files = await loadFilesFromIpfs(ipfsPathOrCID, this.deps.ipfsNode, this.deps.ipfsConfig.objectGetTimeout);
 
-    return await this.deps.wasmPackageValidator.validate(reader);
+    if (!files) {
+      return [`Could not load files from IPFS hash ${ipfsPathOrCID}`, undefined];
+    }
+
+    const reader = new InMemoryPackageReader(files);
+
+    return [undefined, await this.deps.wasmPackageValidator.validate(reader)];
   }
 
   async validateInMemoryWrapper(files: InMemoryFile[]): Promise<ValidationResult> {
@@ -44,19 +51,30 @@ export class ValidationService {
 
     const invalidWrappers: TrackedIpfsHashInfo[] = [];
     let validCnt = 0;
+    let unresponsiveCnt = 0;
 
     for(const wrapper of wrappers) {
-      const result = await this.validateIpfsWrapper(wrapper.ipfsHash);
+      const [error, result] = await this.validateIpfsWrapper(wrapper.ipfsHash);
 
-      if (!result.valid) {
-        invalidWrappers.push(wrapper);
+      if (error || !result) {
+        const retryCount = wrapper?.unresponsiveInfo?.retryCount || wrapper?.unresponsiveInfo?.retryCount === 0
+        ? wrapper?.unresponsiveInfo?.retryCount + 1
+        : 0;
+
+        this.deps.persistenceService.scheduleRetry(wrapper.ipfsHash, retryCount, TrackedIpfsHashStatus.ValidWrapperCheck, wrapper.indexes)
+        unresponsiveCnt++;
       } else {
-        validCnt++;
+        if (!result.valid) {
+          invalidWrappers.push(wrapper);
+        } else {
+          validCnt++;
+        }
       }
     }
 
     this.deps.logger.log(`Found ${invalidWrappers.length} invalid wrappers`);
     this.deps.logger.log(`Found ${validCnt} valid wrappers`);
+    this.deps.logger.log(`Found ${unresponsiveCnt} unresponsive wrappers`);
 
     for(const invalidWrapper of invalidWrappers) {
       if(invalidWrapper.status === TrackedIpfsHashStatus.Pinning) {
