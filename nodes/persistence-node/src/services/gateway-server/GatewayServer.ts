@@ -1,5 +1,4 @@
-import { deserializePolywrapManifest } from "@polywrap/core-js";
-import { VALID_WRAP_MANIFEST_NAMES, WasmPackageValidator } from "@polywrap/package-validation";
+import { WRAP_INFO, WasmPackageValidator } from "@polywrap/package-validation";
 import axios from "axios";
 import timeout from "connect-timeout";
 import cors from "cors";
@@ -26,6 +25,7 @@ import { Logger } from "../Logger";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { ValidationService } from "../ValidationService";
 import { WrapperWithFileList } from "./models/WrapperWithFileList";
+import { deserializeWrapManifest } from "@polywrap/wrap-manifest-types-js";
 
 interface IDependencies {
   logger: Logger;
@@ -38,24 +38,23 @@ interface IDependencies {
   indexRetriever: IndexRetriever;
 }
 
+function prefix(words: string[]){
+  // check border cases size 1 array and empty first word)
+  if (!words[0] || words.length ==  1) return words[0] || "";
+  let i = 0;
+  // while all words have the same character at position i, increment i
+  while(words[0][i] && words.every(w => w[i] === words[0][i]))
+    i++;
+  
+  // prefix is the substring from the beginning to the last successfully checked i
+  return words[0].substr(0, i);
+}
+
 export const stripBasePath = (files: InMemoryFile[]) => {
-  let fileWithShortestPath: InMemoryFile | undefined;
-
-  for (const file of files) {
-    if (!fileWithShortestPath) {
-      fileWithShortestPath = file;
-      continue;
-    }
-
-    if (file.path.length < fileWithShortestPath.path.length) {
-      fileWithShortestPath = file;
-    }
-
-    console.log(fileWithShortestPath?.path as string, file.path);
-  }
+  const basePath = prefix(files.map(f => f.path));
 
   return files.map(file => ({
-    path: path.relative(fileWithShortestPath?.path as string, file.path) ?? '.',
+    path: path.relative(basePath, file.path) ?? '.',
     content: file.content
   })).filter(file => !!file.path);
 };
@@ -180,7 +179,7 @@ export class GatewayServer {
       const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
         .filter(x => x.status === TrackedIpfsHashStatus.Pinned)
         .reverse();
-
+      
       const wrapperSizes = await Promise.all(infos.map(async info => {
         const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`, {
           signal: controller.signal,
@@ -210,54 +209,36 @@ export class GatewayServer {
           } as WrapperWithFileList;
 
           const wrapperSize = wrapperSizes[index];
-
-          const manifestFile = wrapper.files.find(x => VALID_WRAP_MANIFEST_NAMES.includes(x.name));
+          const manifestFile = wrapper.files.find(x => WRAP_INFO === x.name);
 
           if (!manifestFile) {
             return undefined;
           }
 
           const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapper.cid);
-          const manifestContent = await reader.readFileAsString(manifestFile?.name);
-          const manifest = deserializePolywrapManifest(manifestContent);
-          const schemaFile = wrapper.files.find(x => x.name === manifest.schema);
-
-          if (!schemaFile) {
-            return undefined;
-          }
-
-          if (manifest.name) {
+          const manifestContent = await reader.readFile(manifestFile?.name);
+          const manifest = deserializeWrapManifest(manifestContent);
+    
+          if(manifest.name) {
             return {
-              cid: wrapper.cid,
               name: manifest.name,
-              manifest: {
-                cid: manifestFile.cid,
-                name: manifestFile.name,
-              },
-              schema: {
-                cid: schemaFile.cid,
-                name: schemaFile.name,
-              },
               size: wrapperSize,
+              cid: wrapper.cid,
             };
           }
 
           return {
-            cid: infos[index].ipfsHash,
             name: WRAPPER_DEFAULT_NAME,
-            manifest: {
-              cid: manifestFile.cid,
-              name: manifestFile.name,
-            },
-            schema: {
-              cid: schemaFile.cid,
-              name: schemaFile.name,
-            },
             size: wrapperSize,
+            cid: infos[index].ipfsHash,
           };
         }))
       ).filter(x => !!x);
 
+      if (req.query.json) {
+        res.json(pinnedWrappers);
+        return;
+      }
       res.render('pins', {
         wrappers: pinnedWrappers,
         count: pinnedWrappers.length,
@@ -374,20 +355,21 @@ export class GatewayServer {
 
       const validator = new WasmPackageValidator(this.deps.persistenceConfig.wrapper.constraints);
 
-      const result = await this.deps.validationService.validateInMemoryWrapper(stripBasePath(filesToAdd));
-
-      if (!result.valid) {
+      const sanitizedFiles = stripBasePath(filesToAdd);
+      const result = await this.deps.validationService.validateInMemoryWrapper(sanitizedFiles);
+     
+      if(!result.valid) {
         res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
         return;
       }
 
       const addedFiles = await addFilesToIpfs(
-        filesToAdd,
+        sanitizedFiles,
         { onlyHash: !!req.query["only-hash"] },
         ipfs
       );
 
-      const rootCID = addedFiles.filter((x: IpfsAddResult) => x.path.indexOf("/") === -1)[0].cid;
+      const rootCID = addedFiles.filter((x: IpfsAddResult) => x.path === "")[0].cid;
 
       this.deps.logger.log(`Gateway add: ${rootCID}`);
 

@@ -11,7 +11,7 @@ export const addFilesToIpfs = async (
   for await (const file of ipfs.addAll(
     files,
     {
-      wrapWithDirectory: false,
+      wrapWithDirectory: true,
       pin: false,
       onlyHash: options.onlyHash
     }
