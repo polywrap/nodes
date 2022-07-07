@@ -7,6 +7,7 @@ import { IPFS } from "ipfs-core";
 import http from "http";
 import { EthereumNetwork } from "./EthereumNetwork";
 import { NodeStateManager } from "./NodeStateManager";
+import { toPrettyNumber } from "../utils/toPrettyNumber";
 
 interface IDependencies {
   apiPort: number;
@@ -97,14 +98,17 @@ export class ApiServer {
       res.json({
         name: this.deps.ethereumNetwork.name,
         online: true,
-        lastProcessedBlockNumber: syncState.lastBlockNumber,
-        lastSyncedAt: syncState.lastSyncedAt,
-        latestBlockNumber: this.deps.ethereumNetwork.ethersProvider.blockNumber,
-        isFullySynced: syncState.isFullySynced,
+        latestBlock: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber),
+        lastBlockProcessed: toPrettyNumber(this.deps.ensStateManager.state.lastBlockNumberProcessed),
+        lastBlockIndexed: toPrettyNumber(syncState.lastBlockNumber - 1),
+        blocksToProcess: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber - this.deps.ensStateManager.state.lastBlockNumberProcessed),
+        blocksToIndex: toPrettyNumber(this.deps.ethereumNetwork.ethersProvider.blockNumber - syncState.lastBlockNumber + 1),
+        domainsIndexed: toPrettyNumber(Object.keys(this.deps.ensStateManager.state.ensContenthash).length),
+        contenthashesIndexed: toPrettyNumber(Object.keys(this.deps.ensStateManager.state.contenthashEns).length),
+        ipfsHashesIndexed: toPrettyNumber(this.deps.ensStateManager.getIpfsCIDs().length),
         lastFastSyncHash: this.deps.nodeStateManager.state.fastSync.lastIpfsHash,
-        totalNumberOfIpfsHashes: syncState.ensContenthash.length,
-        totalNumberOfContentHashes: syncState.contenthashEns.length,
-      });
+        isFullySynced: this.deps.ensStateManager.state.isFullySynced,
+        });
     }));
 
     this.expressServer = runServer(

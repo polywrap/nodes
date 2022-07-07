@@ -22,6 +22,7 @@ export class DaemonModule {
 
     async run(fromBlockNumber: number): Promise<void> {
         await Promise.all([
+            this.deps.apiServer.tryStart(),
             this.deps.indexerService.startIndexing(fromBlockNumber),
         ]);
     }

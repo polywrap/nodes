@@ -102,8 +102,6 @@ export class IndexerService {
       return;
     }
 
-    ensState.lastSyncedAt = new Date();
-
     this.deps.ensStateManager.updateState(ensState);
     this.deps.ensStateManager.lastBlockNumber = ensState.lastBlockNumber;
 
@@ -127,6 +125,9 @@ export class IndexerService {
   }
 
   private async index() {
+    this.deps.ensStateManager.state.lastBlockNumberProcessed = this.deps.ensStateManager.lastBlockNumber;
+    this.deps.ensStateManager.state.isFullySynced = false;
+    this.deps.ensStateManager.save();
     while(true) {
       const nextBlockToIndex = this.deps.ensStateManager.lastBlockNumber;
       let latestBlock: number | undefined;
@@ -149,16 +150,9 @@ export class IndexerService {
         const indexedBlocksCnt = latestBlock - nextBlockToIndex + 1;
 
         if(indexedBlocksCnt < this.deps.ensIndexerConfig.maxBlockRangePerRequest) {
-          //If we have synced to the latest block then we start the API server if it's not already running
-          await this.deps.apiServer.tryStart();
-          this.deps.ensStateManager.updateState({
-            ...this.deps.ensStateManager.getState(),
-            isFullySynced: true
-          });
+          this.deps.ensStateManager.state.isFullySynced = true;
         } else {
-          //If we are still syncing we stop the server if it's running
-          //This prevents consumers of the API to get out of date information
-          await this.deps.apiServer.tryStop();
+          this.deps.ensStateManager.state.isFullySynced = false;
         }
 
         this.deps.ensStateManager.lastBlockNumber = latestBlock + 1;
@@ -194,6 +188,7 @@ export class IndexerService {
           queryStart, 
           queryEnd
         );
+        this.deps.ensStateManager.state.lastBlockNumberProcessed = queryEnd;
         await sleep(1000);
       } catch {
         this.deps.logger.log(`Error querying logs for block range ${queryStart}-${queryEnd}`);

@@ -11,6 +11,8 @@ interface IDependencies {
 export class IndexRetriever {
   deps: IDependencies;
 
+  lastIndexSync: Record<string, Date> = {};
+
   constructor(deps: IDependencies) {
     this.deps = deps;
   }
@@ -40,6 +42,7 @@ export class IndexRetriever {
             cids: response.data,
             error: false
           });
+          this.lastIndexSync[index.name] = new Date();
           continue;
         } else {
           this.deps.logger.log(`Failed to get CIDs from ${index.name}, status code: ${response.status}`);

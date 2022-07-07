@@ -21,6 +21,7 @@ import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
 import { InMemoryFile, IpfsAddResult, IpfsErrorResponse, IpfsPackageReader, MulterFile } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { formatFileSize } from "../../utils/formatFileSize";
+import { IndexRetriever } from "../IndexRetriever";
 import { Logger } from "../Logger";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { ValidationService } from "../ValidationService";
@@ -34,6 +35,7 @@ interface IDependencies {
   persistenceConfig: PersistenceConfig;
   validationService: ValidationService;
   indexerConfig: IndexerConfig;
+  indexRetriever: IndexRetriever;
 }
 
 export const stripBasePath = (files: InMemoryFile[]) => {
@@ -418,12 +420,16 @@ export class GatewayServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
-      res.json({
-        online: true,
-        version: VERSION,
-        trackedIpfsHashesStatusCounts: this.getTrackedIpfsHashesStatusCounts(),
-        indexers: await this.getIndexersInfo(),
-      });
+      res.send(`<pre>${
+        JSON.stringify(
+        {
+          online: true,
+          version: VERSION,
+          trackedIpfsHashesStatusCounts: this.getTrackedIpfsHashesStatusCounts(),
+          indexers: await this.getIndexersInfo(),
+        }
+        , null, 2)
+      }</pre>`);
     }));
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
@@ -462,7 +468,12 @@ export class GatewayServer {
       return axios({
         method: 'GET',
         url: new URL('status', indexer.provider).href,
-      }).then(response => response.data)
+      }).then(response => {
+        return {
+          ...response.data,
+          lastSync: this.deps.indexRetriever.lastIndexSync[indexer.name] ?? "Unknown"
+        };
+      })
         .catch(error => {
           const message = `Error getting status for indexer ${indexer.provider}: ${error.message}`;
           this.deps.logger.log(message);

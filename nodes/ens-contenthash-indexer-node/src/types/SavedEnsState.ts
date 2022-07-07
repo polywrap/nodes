@@ -3,5 +3,4 @@ export type SavedEnsState = {
   ensContenthash: Record<string, string>;
   contenthashEns: Record<string, Record<string, boolean>>;
   isFullySynced: boolean;
-  lastSyncedAt: Date | null;
 };
