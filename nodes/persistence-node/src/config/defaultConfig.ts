@@ -12,8 +12,8 @@ export const defaultConfig: Config = {
   "wrapper": {
     "constraints": {
       "maxSize": 10_000_000,
-      "maxFileSize": 5_000_000,
-      "maxModuleSize": 5_000_000,
+      "maxFileSize": 10_000_000,
+      "maxModuleSize": 10_000_000,
       "maxNumberOfFiles": 1000,
     },
     "resolution": {
