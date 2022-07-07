@@ -1,27 +1,31 @@
+import { WRAP_INFO, WasmPackageValidator } from "@polywrap/package-validation";
+import axios from "axios";
+import timeout from "connect-timeout";
+import cors from "cors";
 import express, { NextFunction, Request, Response } from "express";
+import http from "http";
+import * as IPFS from "ipfs-core";
 import multer, { memoryStorage } from "multer";
-import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
 import mustacheExpress from "mustache-express";
 import path from "path";
-import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
-import { MulterFile, IpfsAddResult, IpfsErrorResponse, InMemoryFile, InMemoryPackageReader, IpfsPackageReader } from "../../types";
-import { formatFileSize } from "../../utils/formatFileSize";
-import { handleError } from "../../http-server/handleError";
-import { VERSION } from "../../constants/version";
-import cors from "cors";
-import http from "http";
-import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
-import timeout from "connect-timeout";
-import * as IPFS from "ipfs-core";
-import { WrapperWithFileList } from "./models/WrapperWithFileList";
+import { URL } from "url";
 import { GatewayConfig } from "../../config/GatewayConfig";
-import { PersistenceStateManager } from "../PersistenceStateManager";
-import { Logger } from "../Logger";
+import { IndexerConfig } from "../../config/IndexerConfig";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
+import { VERSION } from "../../constants/version";
+import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
+import { handleError } from "../../http-server/handleError";
+import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
+import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
+import { InMemoryFile, IpfsAddResult, IpfsErrorResponse, IpfsPackageReader, MulterFile } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
-import { WRAP_INFO, WasmPackageValidator } from "@polywrap/package-validation";
-import { deserializeWrapManifest } from "@polywrap/wrap-manifest-types-js";
+import { formatFileSize } from "../../utils/formatFileSize";
+import { IndexRetriever } from "../IndexRetriever";
+import { Logger } from "../Logger";
+import { PersistenceStateManager } from "../PersistenceStateManager";
 import { ValidationService } from "../ValidationService";
+import { WrapperWithFileList } from "./models/WrapperWithFileList";
+import { deserializeWrapManifest } from "@polywrap/wrap-manifest-types-js";
 
 interface IDependencies {
   logger: Logger;
@@ -30,6 +34,8 @@ interface IDependencies {
   gatewayConfig: GatewayConfig;
   persistenceConfig: PersistenceConfig;
   validationService: ValidationService;
+  indexerConfig: IndexerConfig;
+  indexRetriever: IndexRetriever;
 }
 
 function prefix(words: string[]){
@@ -81,14 +87,14 @@ export class GatewayServer {
     app.all('*', handleError(async (req: Request, res: Response, next: NextFunction) => {
       res.header('Access-Control-Allow-Origin', '*');
       res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, PATCH, DELETE');
-  
+
       //Trim and redirect multiple slashes in URL
       if (req.url.match(/[/]{2,}/g)) {
         req.url = req.url.replace(/[/]+/g, '/');
         res.redirect(req.url);
         return;
       }
-  
+
       if (req.method === 'OPTIONS') {
         res.send(200);
       } else {
@@ -133,7 +139,7 @@ export class GatewayServer {
       req.on('close', () => {
         controller.abort();
       });
-      
+
       const hash = req.query.arg as string;
 
       const resolvedPath = await ipfs.resolve(`/ipfs/${hash}`, {
@@ -205,10 +211,10 @@ export class GatewayServer {
           const wrapperSize = wrapperSizes[index];
           const manifestFile = wrapper.files.find(x => WRAP_INFO === x.name);
 
-          if(!manifestFile) {
+          if (!manifestFile) {
             return undefined;
           }
-    
+
           const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapper.cid);
           const manifestContent = await reader.readFile(manifestFile?.name);
           const manifest = deserializeWrapManifest(manifestContent);
@@ -219,7 +225,7 @@ export class GatewayServer {
               size: wrapperSize,
               cid: wrapper.cid,
             };
-          } 
+          }
 
           return {
             name: WRAPPER_DEFAULT_NAME,
@@ -266,7 +272,7 @@ export class GatewayServer {
             x => ipfs.files.stat(`/ipfs/${x.Hash.toString()}`)
           )
         );
-        
+
         const items = object.Links.map((x, index) => ({
           name: x.Name,
           cid: x.Hash.toString(),
@@ -304,8 +310,8 @@ export class GatewayServer {
       }));
 
       const result = await this.deps.validationService.validateInMemoryWrapper(filesToAdd);
-      
-      if(!result.valid) {
+
+      if (!result.valid) {
         res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
         return;
       }
@@ -335,7 +341,7 @@ export class GatewayServer {
         const pathToFile = decodeURIComponent(x.originalname);
 
         //If the file is a directory, we don't add the buffer, otherwise we get a different CID than expected
-        if(x.mimetype === "application/x-directory") {
+        if (x.mimetype === "application/x-directory") {
           return {
             path: pathToFile,
           };
@@ -371,7 +377,7 @@ export class GatewayServer {
 
       const ipfsResult = await validator.validate(ipfsReader);
 
-      if(!ipfsResult.valid) {
+      if (!ipfsResult.valid) {
         res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`));
         return;
       }
@@ -379,8 +385,8 @@ export class GatewayServer {
       res.writeHead(200, {
         'Content-Type': 'application/json',
       });
-   
-      for(const file of addedFiles) {
+
+      for (const file of addedFiles) {
         res.write(JSON.stringify({
           Name: file.path,
           Hash: file.cid.toString(),
@@ -396,27 +402,69 @@ export class GatewayServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
-      res.json({
-        status: "running"
-      });
+      res.send(`<pre>${
+        JSON.stringify(
+        {
+          online: true,
+          version: VERSION,
+          trackedIpfsHashesStatusCounts: this.getTrackedIpfsHashesStatusCounts(),
+          indexers: await this.getIndexersInfo(),
+        }
+        , null, 2)
+      }</pre>`);
     }));
-    
+
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
       res.status(500).json(this.buildIpfsError(err.message));
       this.deps.logger.log(err.message);
     });
 
     const server = http.createServer({}, app);
-  
+
     server.listen(this.deps.gatewayConfig.port, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayConfig.port}`));
   }
 
   buildIpfsError(message: string): IpfsErrorResponse {
     this.deps.logger.log("Gateway error: " + message);
-  
+
     return {
       Message: message,
       Type: "error"
     };
+  }
+
+  getTrackedIpfsHashesStatusCounts() {
+    return this.deps.persistenceStateManager.getTrackedIpfsHashInfos().reduce((acc, info) => {
+      if (!acc[info.status]) {
+        acc[info.status] = 0;
+      }
+
+      acc[info.status] = acc[info.status] + 1;
+
+      return acc;
+    }, {} as any);
+  }
+
+  async getIndexersInfo() {
+    const indexerResults = this.deps.indexerConfig.indexes.map(indexer => {
+      return axios({
+        method: 'GET',
+        url: new URL('status', indexer.provider).href,
+      }).then(response => {
+        return {
+          ...response.data,
+          lastSync: this.deps.indexRetriever.lastIndexSync[indexer.name] ?? "Unknown"
+        };
+      })
+        .catch(error => {
+          const message = `Error getting status for indexer ${indexer.provider}: ${error.message}`;
+          this.deps.logger.log(message);
+          return { error: message }
+        });
+    });
+
+    return await Promise.all([
+      ...indexerResults
+    ]);
   }
 }

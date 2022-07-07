@@ -10,12 +10,12 @@ import { IndexerConfig } from "../../config/IndexerConfig";
 import { IndexRetriever } from "../../services/IndexRetriever";
 import { LoggerConfig } from "../../config/LoggerConfig";
 import { Config } from "../../config/Config";
-import { GatewayServer } from "../../services/gateway-server/GatewayServer";
 import { ApiServer } from "../../services/ApiServer";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { GatewayConfig } from "../../config/GatewayConfig";
-import { WasmPackageValidator } from "@polywrap/package-validation";
 import { ValidationService } from "../../services/ValidationService";
+import { GatewayServer } from "../../services/gateway-server/GatewayServer";
+import { WasmPackageValidator } from "@polywrap/package-validation";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
