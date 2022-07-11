@@ -114,6 +114,35 @@ export class GatewayServer {
       origin: "*",
     }));
 
+    app.post('/api/v0/get', handleError(async (req, res) => {
+      const controller = new AbortController();
+
+      req.on('close', () => {
+        controller.abort();
+      });
+
+      const hash = req.query.arg as string;
+
+      if (!hash) {
+        res.status(422).send("Hash parameter missing.");
+        return;
+      }
+
+      res.writeHead(200, {
+        'Content-Type': 'application/json',
+      });
+
+      const results = this.deps.ipfsNode.get(hash, { 
+        timeout: this.deps.gatewayConfig.ipfsTimeout
+      });
+
+      for await (const result of results) {
+        res.write(result);
+      }
+
+      res.end();
+    }));
+
     app.get('/api/v0/cat', handleError(async (req, res) => {
       const controller = new AbortController();
 
