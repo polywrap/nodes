@@ -251,6 +251,8 @@ export class GatewayServer {
           if(manifest.name) {
             return {
               name: manifest.name,
+              version: manifest.version,
+              type: manifest.type,
               size: wrapperSize,
               cid: wrapper.cid,
               indexes: info.indexes,
@@ -259,6 +261,8 @@ export class GatewayServer {
 
           return {
             name: WRAPPER_DEFAULT_NAME,
+            version: manifest.version,
+            type: manifest.type,
             size: wrapperSize,
             cid: infos[index].ipfsHash,
             indexes: info.indexes,
