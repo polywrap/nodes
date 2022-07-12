@@ -253,6 +253,7 @@ export class GatewayServer {
               name: manifest.name,
               size: wrapperSize,
               cid: wrapper.cid,
+              indexes: info.indexes,
             };
           }
 
@@ -260,6 +261,7 @@ export class GatewayServer {
             name: WRAPPER_DEFAULT_NAME,
             size: wrapperSize,
             cid: infos[index].ipfsHash,
+            indexes: info.indexes,
           };
         }))
       ).filter(x => !!x);
