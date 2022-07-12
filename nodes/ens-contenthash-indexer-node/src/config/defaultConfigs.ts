@@ -3,7 +3,7 @@ export const defaultConfigs = {
     requestInterval: 15000,
     maxBlockRangePerRequest: 4999,
     loggerEnabled: true,
-    apiPort: 8083,
+    apiPort: 8085,
     ipfs: {
       provider: "http://localhost:5001",
     }
@@ -36,6 +36,16 @@ export const defaultConfigs = {
       ensResolverAddress: "0xf6305c19e814d2a75429Fd637d01F7ee0E77d615",
       fastSync: {
         domain: "rinkeby.ens-contenthash-indexer.fast-sync.eth",
+        network: "rinkeby"
+      },
+    },
+    goerli: {
+      name: "goerli",
+      provider: "goerli",
+      chainId: 5,
+      ensResolverAddress: "0x4B1488B7a6B320d2D721406204aBc3eeAa9AD329",
+      fastSync: {
+        domain: "goerli.ens-contenthash-indexer.fast-sync.eth",
         network: "rinkeby"
       },
     }

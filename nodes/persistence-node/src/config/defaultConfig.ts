@@ -35,17 +35,21 @@ export const defaultConfig: Config = {
   },
   "loggerEnabled": true,
   "indexes": [
-      {
-          "name": "ens-ropsten",
-          "provider": "http://localhost:8082"
-      },
-      {
-          "name": "ens-rinkeby",
-          "provider": "http://localhost:8083"
-      },
-      {
-          "name": "ens-mainnet",
-          "provider": "http://localhost:8084"
-      }
+    {
+      "name": "ens-mainnet",
+      "provider": "http://localhost:8082"
+    },  
+    {
+      "name": "ens-ropsten",
+      "provider": "http://localhost:8083"
+    },
+    {
+      "name": "ens-rinkeby",
+      "provider": "http://localhost:8084"
+    },
+    {
+      "name": "ens-goerli",
+      "provider": "http://localhost:8085"
+    }
   ]
 };

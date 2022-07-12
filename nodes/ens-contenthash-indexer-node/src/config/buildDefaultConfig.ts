@@ -18,6 +18,11 @@ export const buildDefaultConfig = (networkName: string = "mainnet"): Config => {
           network: defaultConfigs.network.ropsten,
           ...defaultConfigs.main
       };
+    case "goerli":
+      return {
+          network: defaultConfigs.network.goerli,
+          ...defaultConfigs.main
+      };
     default:
       return {
           network: defaultConfigs.network.mainnet,
