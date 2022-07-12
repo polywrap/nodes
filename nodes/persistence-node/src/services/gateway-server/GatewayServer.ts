@@ -402,12 +402,14 @@ export class GatewayServer {
 
       this.deps.logger.log(`Gateway add: ${rootCID}`);
 
-      const ipfsReader = new IpfsPackageReader(this.deps.ipfsNode, rootCID.toString());
+      const [validationError, ipfsResult] = await this.deps.validationService.validateIpfsWrapper(rootCID.toString());
 
-      const ipfsResult = await validator.validate(ipfsReader);
-
-      if (!ipfsResult.valid) {
-        res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`));
+      if (validationError || !ipfsResult || !ipfsResult.valid) {
+        if(ipfsResult && ipfsResult.valid) {
+          res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`));
+        } else {
+          res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper`));
+        }
         return;
       }
 

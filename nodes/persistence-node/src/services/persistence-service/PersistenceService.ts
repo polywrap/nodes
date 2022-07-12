@@ -1,7 +1,7 @@
 import { IpfsConfig } from "../../config/IpfsConfig";
 import * as IPFS from "ipfs-core";
 import { Logger } from "../Logger";
-import { TrackedIpfsHashInfo, IpfsPackageReader } from "../../types";
+import { TrackedIpfsHashInfo } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { addSeconds } from "../../utils/addSeconds";
 import { PersistenceStateManager } from "../PersistenceStateManager";
@@ -185,8 +185,6 @@ export class PersistenceService {
   }
 
   private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
-    const reader = new IpfsPackageReader(this.deps.ipfsNode, ipfsHash);
-
     this.deps.logger.log(`Checking if valid wrapper: ${ipfsHash}...`);
     const [error, result] = await this.deps.validationService.validateIpfsWrapper(ipfsHash);
 
