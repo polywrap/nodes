@@ -3,7 +3,7 @@ import * as IPFS from "ipfs-core";
 import { Logger } from "./Logger";
 import { PersistenceStateManager } from "./PersistenceStateManager";
 import { ValidationResult, WasmPackageValidator } from "@polywrap/package-validation";
-import { InMemoryFile, InMemoryPackageReader, IpfsPackageReader, TrackedIpfsHashInfo } from "../types";
+import { InMemoryFile, InMemoryPackageReader, TrackedIpfsHashInfo } from "../types";
 import { TrackedIpfsHashStatus } from "../types/TrackedIpfsHashStatus";
 import { PersistenceService } from "./persistence-service/PersistenceService";
 import { loadFilesFromIpfs } from "../ipfs/loadFilesFromIpfs";
