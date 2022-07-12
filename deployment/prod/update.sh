@@ -47,7 +47,7 @@ cd $hosting/$ensIndexerNode
 cp -r $staging/$ensIndexerNode/bin ./
 cp -r $staging/$ensIndexerNode/node_modules ./
 
-# node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
+node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/mainnet --network mainnet --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/ropsten --network ropsten --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/rinkeby --network rinkeby --log
