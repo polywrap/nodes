@@ -30,7 +30,7 @@ pm2 delete ens-indexer-node-goerli
 
 set -e
 
-rm $data/persistence-node/config.json
+# rm $data/persistence-node/config.json
 # rm $data/persistence-node -rf
 # rm $data/ens-indexer-node/mainnet -rf
 # rm $data/ens-indexer-node/ropsten -rf
@@ -45,11 +45,11 @@ cd $hosting/$ensIndexerNode
 cp -r $staging/$ensIndexerNode/bin ./
 cp -r $staging/$ensIndexerNode/node_modules ./
 
-node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
+# node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/mainnet --network mainnet --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/ropsten --network ropsten --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/rinkeby --network rinkeby --log
-node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/goerli --network goerli --log
+# node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/goerli --network goerli --log
 
 pm2 start $hosting/$persistenceNode/bin/main.js --name persistence-node -- daemon --data $data/persistence-node --gateway-port $persistenceNodePort --log --purge-invalid-wrappers
 pm2 start $hosting/$ensIndexerNode/bin/main.js --name ens-indexer-node-mainnet -- daemon --data $data/ens-indexer-node/mainnet --port $ensIndexerNodeMainnetPort -b $startingBlockMainnet --log
