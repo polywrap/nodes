@@ -1,1 +1,1 @@
-export const VERSION = "0.8.6"; // Version of the node.
+export const VERSION = "0.8.7"; // Version of the node.

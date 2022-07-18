@@ -3,8 +3,10 @@ import { PackageReader, PathStats } from "@polywrap/package-validation";
 
 const trimLocalPath = (path: string): string => {
   let trimmedPath = "";
-  if(path.startsWith("./")) {
+  if (path.startsWith("./")) {
     trimmedPath = path.substring("./".length, path.length);
+  } else if (path === ".") {
+    trimmedPath = "";
   } else {
     trimmedPath = path;
   }
@@ -15,25 +17,24 @@ const trimLocalPath = (path: string): string => {
 export class InMemoryPackageReader implements PackageReader {
   private root: any = {};
   private fileMap: Record<string, InMemoryFile> = {};
-  
+
   constructor(public readonly files: InMemoryFile[]) {
-    for(const file of files) {
-      let sanitizedPath = trimLocalPath(file.path);
+    for (const file of files) {
+      const sanitizedPath = trimLocalPath(file.path);
 
       this.fileMap[sanitizedPath] = file;
 
       const parts = sanitizedPath.split("/");
       let head = this.root;
-      for(let i = 0; i < parts.length; i++) {
+      for (let i = 0; i < parts.length; i++) {
         const part = parts[i];
 
-        if(!head[part]) {
+        if (!head[part]) {
           head[part] = {};
         }
 
         head = head[part];
       }
-
     }
   }
 
@@ -43,7 +44,9 @@ export class InMemoryPackageReader implements PackageReader {
   }
 
   readFile(filePath: string): Promise<Buffer> {
-    return Promise.resolve((this.findFile(filePath) as InMemoryFile).content as Buffer);
+    return Promise.resolve(
+      (this.findFile(filePath) as InMemoryFile).content as Buffer
+    );
   }
 
   exists(itemPath: string): Promise<boolean> {
@@ -52,14 +55,12 @@ export class InMemoryPackageReader implements PackageReader {
 
   async getStats(itemPath: string): Promise<PathStats> {
     const file = this.findFile(itemPath);
-    const isFile = !!(file && file.content);
+    const isFile = !!(file && file.content && file.content.byteLength);
 
     return {
       isFile: isFile,
       isDir: !isFile,
-      size: isFile && file.content
-        ? file.content.length
-        : 0,
+      size: isFile && file.content ? file.content.byteLength : 0,
     };
   }
 
@@ -70,7 +71,7 @@ export class InMemoryPackageReader implements PackageReader {
   }
 
   private findPath(itemPath: string): any {
-    let sanitizedPath = trimLocalPath(itemPath);
+    const sanitizedPath = trimLocalPath(itemPath);
 
     if (sanitizedPath === "") {
       return this.root;
@@ -78,8 +79,8 @@ export class InMemoryPackageReader implements PackageReader {
 
     const parts = sanitizedPath.split("/");
     let head = this.root;
-    for(const part of parts) {
-      if(!head[part]) {
+    for (const part of parts) {
+      if (!head[part]) {
         return undefined;
       }
       head = head[part];
@@ -89,7 +90,7 @@ export class InMemoryPackageReader implements PackageReader {
   }
 
   private findFile(filePath: string): InMemoryFile | undefined {
-    let sanitizedPath = trimLocalPath(filePath);
+    const sanitizedPath = trimLocalPath(filePath);
 
     return this.fileMap[sanitizedPath];
   }
