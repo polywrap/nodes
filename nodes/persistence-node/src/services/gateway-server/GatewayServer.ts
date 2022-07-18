@@ -326,6 +326,28 @@ export class GatewayServer {
       }
     }));
 
+    app.get("/status/:cid", handleError(async (req, res) => {
+      const cid = (req.params as any).cid as string;
+      const controller = new AbortController();
+
+      req.on('close', () => {
+        controller.abort();
+      });
+
+      const trackedInfo = this.deps.persistenceStateManager.getTrackedIpfsHashInfo(cid);
+
+      if (!trackedInfo) {
+        res.status(404).send();
+        return;
+      }
+
+      res.send(`<pre>${
+        JSON.stringify(
+          trackedInfo
+        , null, 2)
+      }</pre>`);
+    }));
+
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {
       if (!req.files) {
         res.status(500).json(this.buildIpfsError("No files were uploaded"));
