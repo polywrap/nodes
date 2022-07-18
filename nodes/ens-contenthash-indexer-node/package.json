@@ -1,6 +1,6 @@
 {
   "name": "@polywrap/ens-contenthash-indexer-node",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
   "author": "nerfZael",
