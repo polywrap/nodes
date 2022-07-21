@@ -13,7 +13,7 @@ export const createIpfsNode = async (deps: IDeps): Promise<IPFS> => {
 
   if (externalIpfsProvider) {
     ipfsNode = createIpfsHttpClient({
-      url: externalIpfsProvider,
+      url: externalIpfsProvider
     });
     console.log(`Using IPFS node at ${externalIpfsProvider}`);
   } else {
