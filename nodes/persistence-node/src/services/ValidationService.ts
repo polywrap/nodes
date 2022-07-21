@@ -6,7 +6,7 @@ import { ValidationResult, WasmPackageValidator } from "@polywrap/package-valida
 import { InMemoryFile, InMemoryPackageReader, TrackedIpfsHashInfo } from "../types";
 import { TrackedIpfsHashStatus } from "../types/TrackedIpfsHashStatus";
 import { PersistenceService } from "./persistence-service/PersistenceService";
-import { loadFilesFromIpfs } from "../ipfs/loadFilesFromIpfs";
+import { loadFilesFromIpfs } from "../ipfs";
 
 interface IDependencies {
   logger: Logger;
@@ -25,7 +25,7 @@ export class ValidationService {
   }
 
   async validateIpfsWrapper(ipfsPathOrCID: string): Promise<[string | undefined, ValidationResult | undefined]> {
-    const files = await loadFilesFromIpfs(ipfsPathOrCID, this.deps.ipfsNode, this.deps.ipfsConfig.objectGetTimeout);
+    const files = await loadFilesFromIpfs(ipfsPathOrCID, this.deps.ipfsNode, this.deps.ipfsConfig.gatewayTimeout);
 
     if (!files) {
       return [`Could not load files from IPFS hash ${ipfsPathOrCID}`, undefined];

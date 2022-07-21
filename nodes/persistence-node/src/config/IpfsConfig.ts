@@ -3,19 +3,17 @@ import { Config } from "./Config";
 
 export class IpfsConfig {
   externalIpfsProvider?: string;
-  gatewayURI: string;
-  objectGetTimeout: number;
+  gateways: string[];
+  gatewayTimeout: number;
   pinTimeout: number;
   unpinTimeout: number;
-  gatewayTimeout: number;
 
   constructor({ config }: { config: Config }) {
     this.externalIpfsProvider = getValidUrlOrUndefined(config.ipfs.provider);
-    this.gatewayURI = config.ipfs.gateway;
-    this.objectGetTimeout = config.ipfs.timeouts.objectGetTimeout;
+    this.gateways = config.ipfs.gateways;
+    this.gatewayTimeout = config.ipfs.timeouts.gatewayTimeout;
     this.pinTimeout = config.ipfs.timeouts.pinTimeout;
     this.unpinTimeout = config.ipfs.timeouts.unpinTimeout;
-    this.gatewayTimeout = config.ipfs.timeouts.gatewayTimeout;
   }
 }
 

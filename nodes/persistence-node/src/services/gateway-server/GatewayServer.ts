@@ -341,6 +341,11 @@ export class GatewayServer {
         return;
       }
 
+      if (req.query.json) {
+        res.json(trackedInfo);
+        return;
+      }
+
       res.send(`<pre>${
         JSON.stringify(
           trackedInfo
@@ -410,8 +415,6 @@ export class GatewayServer {
         }
       });
 
-      const validator = new WasmPackageValidator(this.deps.persistenceConfig.wrapper.constraints);
-
       const sanitizedFiles = stripBasePath(filesToAdd);
       const result = await this.deps.validationService.validateInMemoryWrapper(sanitizedFiles);
      
@@ -420,17 +423,20 @@ export class GatewayServer {
         return;
       }
 
-      const addedFiles = await addFilesToIpfs(
+      const { rootCid, addedFiles } = await addFilesToIpfs(
         sanitizedFiles,
         { onlyHash: !!req.query["only-hash"] },
         ipfs
       );
 
-      const rootCID = addedFiles.filter((x: IpfsAddResult) => x.path === "")[0].cid;
+      this.deps.logger.log(`Gateway add: ${rootCid}`);
 
-      this.deps.logger.log(`Gateway add: ${rootCID}`);
+      if(!rootCid) {
+        res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a directory`));
+        return;
+      }
 
-      const [validationError, ipfsResult] = await this.deps.validationService.validateIpfsWrapper(rootCID.toString());
+      const [validationError, ipfsResult] = await this.deps.validationService.validateIpfsWrapper(rootCid);
 
       if (validationError || !ipfsResult || !ipfsResult.valid) {
         if(ipfsResult && ipfsResult.valid) {
@@ -461,14 +467,21 @@ export class GatewayServer {
     }));
 
     app.get("/status", handleError(async (req, res) => {
+      const status = {
+        online: true,
+        version: VERSION,
+        trackedIpfsHashesStatusCounts: this.getTrackedIpfsHashesStatusCounts(),
+        indexers: await this.getIndexersInfo(),
+      };
+
+      if (req.query.json) {
+        res.json(status);
+        return;
+      }
+
       res.send(`<pre>${
         JSON.stringify(
-        {
-          online: true,
-          version: VERSION,
-          trackedIpfsHashesStatusCounts: this.getTrackedIpfsHashesStatusCounts(),
-          indexers: await this.getIndexersInfo(),
-        }
+        status
         , null, 2)
       }</pre>`);
     }));

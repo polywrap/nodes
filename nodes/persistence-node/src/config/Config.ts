@@ -13,12 +13,11 @@ export type Config = {
     wrapper: WrapperConfig,
     ipfs: {
         provider: string,
-        gateway: string,
+        gateways: string[],
         timeouts: {
-            objectGetTimeout: number,
+            gatewayTimeout: number,
             pinTimeout: number,
             unpinTimeout: number,
-            gatewayTimeout: number
         }
     },
     loggerEnabled: boolean,

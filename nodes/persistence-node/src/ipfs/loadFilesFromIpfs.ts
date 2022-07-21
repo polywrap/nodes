@@ -47,3 +47,28 @@ export const loadFilesFromIpfs = async (cid: string, ipfsNode: IPFS, timeout: nu
     return undefined;
   }
 };
+
+export const loadFilesFromIpfsOrThrow = async (cid: string, ipfsNode: IPFS, timeout: number): Promise<InMemoryFile[] | undefined> => {
+  const output = await pipe(
+    ipfsNode.get(cid, { 
+      timeout,
+    }),
+    tarballed,
+    (source) => all(source)
+  );
+
+  const files = output
+    .filter(x => x.header.name !== cid)
+    .map(x => {
+    return {
+      path: x.header.name.slice(cid.length + 1, x.header.name.length),
+      content: x.body
+    };
+  });
+
+  if(files && files.length) {
+    return files;
+  } else {
+    throw new Error("No files found");
+  }
+};
