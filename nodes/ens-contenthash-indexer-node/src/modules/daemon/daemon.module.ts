@@ -2,6 +2,7 @@ import { buildMainDependencyContainer, MainDependencyContainer } from "./daemon.
 import fs from "fs";
 import path from "path";
 import { Config } from "../../config/Config";
+import { getIpfsHashFromContenthash } from "../../utils/getIpfsHashFromContenthash";
 
 export class DaemonModule {
 

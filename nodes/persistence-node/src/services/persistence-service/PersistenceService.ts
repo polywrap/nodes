@@ -1,7 +1,7 @@
 import { IpfsConfig } from "../../config/IpfsConfig";
 import * as IPFS from "ipfs-core";
 import { Logger } from "../Logger";
-import { TrackedIpfsHashInfo } from "../../types";
+import { InMemoryFile, IpfsAddResult, TrackedIpfsHashInfo } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { addSeconds } from "../../utils/addSeconds";
 import { PersistenceStateManager } from "../PersistenceStateManager";
@@ -10,6 +10,7 @@ import { IndexRetriever } from "../IndexRetriever";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
 import { ValidationService } from "../ValidationService";
+import { addFilesToIpfs, tryIpfsRequestWithFallbacks, loadFilesFromIpfsOrThrow } from "../../ipfs";
 
 type ActionPromise = () => Promise<void>;
 
@@ -186,30 +187,92 @@ export class PersistenceService {
 
   private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
     this.deps.logger.log(`Checking if valid wrapper: ${ipfsHash}...`);
-    const [error, result] = await this.deps.validationService.validateIpfsWrapper(ipfsHash);
+   
+    const { result, files } = await this.isValidWrapper(ipfsHash);
 
-    if (error || !result) {
-      this.deps.logger.log(`Could not fetch wrapper or error occurred, scheduling retry: ${ipfsHash}...`);
-      await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.ValidWrapperCheck, indexes);
-      return;
+    switch (result) {
+      case "Valid":
+        const filesToAdd = files as InMemoryFile[];
+        const { rootCid } = await addFilesToIpfs(
+          filesToAdd,
+          { onlyHash: false },
+          this.deps.ipfsNode
+        );
+  
+        if(!rootCid) {
+          this.deps.logger.log(`Local and remote hashes do not match: ${ipfsHash}, local hash is not a directory...`);
+          await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+            ipfsHash,
+            status: TrackedIpfsHashStatus.NotAWrapper,
+            indexes,
+          });
+        } else if (rootCid === ipfsHash) {
+          await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+            ipfsHash,
+            status: TrackedIpfsHashStatus.Pinning,
+            indexes,
+          });
+      
+          await this.pinWrapper(ipfsHash, retryCount, indexes);  
+        } else {
+          this.deps.logger.log(`Local and remote hashes do not match: ${ipfsHash}, ${rootCid}...`);
+          await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+            ipfsHash,
+            status: TrackedIpfsHashStatus.NotAWrapper,
+            indexes,
+          });
+        }
+        break;
+      case "Invalid":
+        await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+          ipfsHash,
+          status: TrackedIpfsHashStatus.NotAWrapper,
+          indexes,
+        });
+        break;
+      default:
+        this.deps.logger.log(`Could not fetch wrapper or error occurred, scheduling retry: ${ipfsHash}...`);
+        await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.ValidWrapperCheck, indexes);
+        break;
+    }
+  }
+
+  private async isValidWrapper(ipfsHash: string): Promise<{
+    result: "Valid" | "Invalid" | "Error",
+    files?: InMemoryFile[]
+  }>   {
+    let files: InMemoryFile[] | undefined;
+
+    try {
+      files = await tryIpfsRequestWithFallbacks(
+        this.deps.ipfsNode, 
+        this.deps.ipfsConfig.gateways, 
+        (ipfsNode: IPFS.IPFS) => loadFilesFromIpfsOrThrow(ipfsHash, ipfsNode, this.deps.ipfsConfig.gatewayTimeout)
+      );
+    } catch {
+      return { 
+        result: "Error"
+      };
     }
 
-    if(result.valid) {
-      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        status: TrackedIpfsHashStatus.Pinning,
-        indexes,
-      });
+    if (!files) {
+      return { 
+        result: "Error"
+      };
+    }
 
-      await this.pinWrapper(ipfsHash, retryCount, indexes);  
+    const result = await this.deps.validationService.validateInMemoryWrapper(files);
+
+    if(result.valid) {
+      return { 
+        result: "Valid",
+        files
+      };
     } else {
       this.deps.logger.log(`IPFS hash ${ipfsHash} is not a valid wrapper. Reason: ${result.failReason as number}`);
-      
-      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        status: TrackedIpfsHashStatus.NotAWrapper,
-        indexes,
-      });
+      return { 
+        result: "Invalid"
+      };
     }
   }
   
@@ -234,7 +297,7 @@ export class PersistenceService {
 
   private async pinWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
     this.deps.logger.log(`Pinning ${ipfsHash}...`);
-   
+
     try {
       await this.deps.ipfsNode.pin.add(ipfsHash, {
         recursive: true,

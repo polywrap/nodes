@@ -25,12 +25,11 @@ export const defaultConfig: Config = {
   },
   "ipfs": {
     "provider": "http://localhost:5001",
-    "gateway": "https://ipfs.io/ipfs",
+    "gateways": ["https://ipfs.io"],
     "timeouts": {
-      "objectGetTimeout": 15000,
+      "gatewayTimeout": 25000,
       "pinTimeout": 30000,
-      "unpinTimeout": 30000,
-      "gatewayTimeout": 15000
+      "unpinTimeout": 30000
     }
   },
   "loggerEnabled": true,

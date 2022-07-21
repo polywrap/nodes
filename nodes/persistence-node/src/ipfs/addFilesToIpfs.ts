@@ -6,11 +6,14 @@ export const addFilesToIpfs = async (
   files: InMemoryFile[], 
   options: { onlyHash: boolean }, 
   ipfs: IPFS.IPFS
-): Promise<IpfsAddResult[]> => {
+): Promise<{
+  rootCid?: string;
+  addedFiles: IpfsAddResult[]
+}> => {
   let addedFiles: IpfsAddResult[] = [];
 
   for await (const file of ipfs.addAll(
-    files,
+    files.filter(x => x.content && x.content.length),
     {
       wrapWithDirectory: true,
       pin: false,
@@ -20,5 +23,12 @@ export const addFilesToIpfs = async (
     addedFiles.push(file);
   }
 
-  return addedFiles;
+
+  const rootDir = addedFiles.find((x: IpfsAddResult) => x.path === "");
+  const rootCid = rootDir?.cid;
+
+  return {
+    rootCid: rootCid?.toString(), 
+    addedFiles
+  };
 };
