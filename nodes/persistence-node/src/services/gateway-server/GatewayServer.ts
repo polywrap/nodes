@@ -246,7 +246,7 @@ export class GatewayServer {
 
           const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapper.cid);
           const manifestContent = await reader.readFile(manifestFile?.name);
-          const manifest = deserializeWrapManifest(manifestContent);
+          const manifest = await deserializeWrapManifest(manifestContent);
     
           if(manifest.name) {
             return {
