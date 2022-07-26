@@ -280,7 +280,7 @@ export class GatewayServer {
       });
     }));
 
-    app.get("/ipfs/:path(*)", handleError(async (req, res) => {
+    app.get("/view/ipfs/:path(*)", handleError(async (req, res) => {
       const ipfsPath = (req.params as any).path as string;
       const controller = new AbortController();
 
