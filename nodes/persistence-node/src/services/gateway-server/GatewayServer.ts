@@ -79,7 +79,7 @@ export class GatewayServer {
     const upload = multer({
       storage: memoryStorage(),
       limits: {
-        fileSize: 5 * 1024 * 1024,
+        fileSize: 15 * 1024 * 1024,
         files: 50
       }
     });
