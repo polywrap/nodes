@@ -6,7 +6,7 @@ export class EnsNetworkConfig {
   chainId: number;
   resolverAddr: string;
   resolverAbi: string[];
-  fastSync: {
+  fastSync?: {
     domain: string;
     network: string;
   };
@@ -20,6 +20,8 @@ export class EnsNetworkConfig {
       "function contenthash(bytes32 node) external view returns (bytes memory)",
       "event ContenthashChanged(bytes32 indexed node, bytes hash)"
     ];
-    this.fastSync = config.network.fastSync;
+    if (config.network.fastSync) {
+      this.fastSync = config.network.fastSync;
+    }
   }
 }
