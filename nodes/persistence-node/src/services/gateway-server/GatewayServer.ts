@@ -1,4 +1,4 @@
-import { WRAP_INFO, WasmPackageValidator } from "@polywrap/package-validation";
+import { WRAP_INFO } from "@polywrap/package-validation/v0_1";
 import axios from "axios";
 import timeout from "connect-timeout";
 import cors from "cors";
@@ -374,7 +374,7 @@ export class GatewayServer {
       const result = await this.deps.validationService.validateInMemoryWrapper(filesToAdd);
 
       if (!result.valid) {
-        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
+        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. \nReason: ${result.failReason}`));
         return;
       }
 
@@ -419,7 +419,7 @@ export class GatewayServer {
       const result = await this.deps.validationService.validateInMemoryWrapper(sanitizedFiles);
      
       if(!result.valid) {
-        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
+        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. \nReason: ${result.failReason}`));
         return;
       }
 
@@ -436,14 +436,10 @@ export class GatewayServer {
         return;
       }
 
-      const [validationError, ipfsResult] = await this.deps.validationService.validateIpfsWrapper(rootCid);
+      const ipfsResult = await this.deps.validationService.validateIpfsWrapper(rootCid);
 
-      if (validationError || !ipfsResult || !ipfsResult.valid) {
-        if(ipfsResult && ipfsResult.valid) {
-          res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`));
-        } else {
-          res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper`));
-        }
+      if (!ipfsResult.valid) {
+        res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. \nReason: ${ipfsResult.failReason}`));
         return;
       }
 

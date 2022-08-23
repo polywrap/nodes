@@ -269,7 +269,7 @@ export class PersistenceService {
         files
       };
     } else {
-      this.deps.logger.log(`IPFS hash ${ipfsHash} is not a valid wrapper. Reason: ${result.failReason as number}`);
+      this.deps.logger.log(`IPFS hash ${ipfsHash} is not a valid wrapper. \nReason: ${result.failReason}`);
       return { 
         result: "Invalid"
       };

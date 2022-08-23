@@ -2,20 +2,26 @@ import { IpfsConfig } from "../config/IpfsConfig";
 import * as IPFS from "ipfs-core";
 import { Logger } from "./Logger";
 import { PersistenceStateManager } from "./PersistenceStateManager";
-import { ValidationResult, WasmPackageValidator } from "@polywrap/package-validation";
+import { ValidationResult as ValidationResultV0_1, ValidationFailReason as ValidationFailReasonV0_1, WasmPackageValidator as WasmPackageValidatorV0_1 } from "@polywrap/package-validation/v0_1";
+import { ValidationResult as ValidationResultV0_2, ValidationFailReason as ValidationFailReasonV0_2, WasmPackageValidator as WasmPackageValidatorV0_2 } from "@polywrap/package-validation/v0_2";
+import { ValidationResult as ValidationResultV0_3, ValidationFailReason as ValidationFailReasonV0_3, WasmPackageValidator as WasmPackageValidatorV0_3 } from "@polywrap/package-validation/v0_3";
 import { InMemoryFile, InMemoryPackageReader, TrackedIpfsHashInfo } from "../types";
 import { TrackedIpfsHashStatus } from "../types/TrackedIpfsHashStatus";
 import { PersistenceService } from "./persistence-service/PersistenceService";
 import { loadFilesFromIpfs } from "../ipfs";
+import { PersistenceConfig } from "../config/PersistenceConfig";
+import { ValidatorManager } from "./validator-manager/ValidatorManager";
+import { AllValidatorResult } from "./validator-manager/utils/types/AllValidatorResult";
 
 interface IDependencies {
   logger: Logger;
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   ipfsConfig: IpfsConfig;
-  wasmPackageValidator: WasmPackageValidator;
   persistenceService: PersistenceService;
+  validatorManager: ValidatorManager;
 }
+
 
 export class ValidationService {
   deps: IDependencies;
@@ -24,22 +30,26 @@ export class ValidationService {
     this.deps = deps;
   }
 
-  async validateIpfsWrapper(ipfsPathOrCID: string): Promise<[string | undefined, ValidationResult | undefined]> {
+  async validateIpfsWrapper(
+    ipfsPathOrCID: string
+  ): Promise<AllValidatorResult & { unresponsive?: boolean }> {
     const files = await loadFilesFromIpfs(ipfsPathOrCID, this.deps.ipfsNode, this.deps.ipfsConfig.gatewayTimeout);
 
     if (!files) {
-      return [`Could not load files from IPFS hash ${ipfsPathOrCID}`, undefined];
+      return { 
+        valid: false, 
+        unresponsive: true,
+        failReason: `Could not load files from IPFS: ${ipfsPathOrCID}`,
+      };
     }
 
-    const reader = new InMemoryPackageReader(files);
-
-    return [undefined, await this.deps.wasmPackageValidator.validate(reader)];
+    return await this.deps.validatorManager.validateWithAllValidators(files);
   }
 
-  async validateInMemoryWrapper(files: InMemoryFile[]): Promise<ValidationResult> {
-    const reader = new InMemoryPackageReader(files);
-
-    return await this.deps.wasmPackageValidator.validate(reader);
+  async validateInMemoryWrapper(
+    files: InMemoryFile[]
+  ): Promise<AllValidatorResult> {
+    return await this.deps.validatorManager.validateWithAllValidators(files);
   }
 
   async purgeInvalidWrappers(): Promise<void> {
@@ -54,9 +64,9 @@ export class ValidationService {
     let unresponsiveCnt = 0;
 
     for(const wrapper of wrappers) {
-      const [error, result] = await this.validateIpfsWrapper(wrapper.ipfsHash);
+      const result = await this.validateIpfsWrapper(wrapper.ipfsHash);
 
-      if (error || !result) {
+      if (result.unresponsive) {
         const retryCount = wrapper?.unresponsiveInfo?.retryCount || wrapper?.unresponsiveInfo?.retryCount === 0
         ? wrapper?.unresponsiveInfo?.retryCount + 1
         : 0;

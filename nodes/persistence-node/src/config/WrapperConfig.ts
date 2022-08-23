@@ -1,4 +1,4 @@
-import { WasmPackageConstraints } from "@polywrap/package-validation";
+import { WasmPackageConstraints } from "@polywrap/package-validation/v0_1";
 
 export type WrapperConfig = {
   constraints: WasmPackageConstraints;
