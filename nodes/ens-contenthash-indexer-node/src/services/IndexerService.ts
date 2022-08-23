@@ -44,6 +44,10 @@ export class IndexerService {
   }
 
   private async tryFastSync() {
+    if (!this.deps.ensNetworkConfig.fastSync) {
+      return;
+    }
+
     const fastSyncProvider = ethers.providers.getDefaultProvider(
       this.deps.ensNetworkConfig.fastSync.network,
     );
