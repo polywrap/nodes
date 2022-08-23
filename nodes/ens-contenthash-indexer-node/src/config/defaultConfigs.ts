@@ -43,7 +43,11 @@ export const defaultConfigs = {
       name: "goerli",
       provider: "goerli",
       chainId: 5,
-      ensResolverAddress: "0x4B1488B7a6B320d2D721406204aBc3eeAa9AD329"
+      ensResolverAddress: "0x4B1488B7a6B320d2D721406204aBc3eeAa9AD329",
+      fastSync: {
+        domain: "goerli.ens-contenthash-indexer.fast-sync.eth",
+        network: "rinkeby"
+      },
     }
   }
 };
