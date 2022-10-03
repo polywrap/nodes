@@ -90,7 +90,12 @@ const calculateCIDsToUntrack = (
   //if true, add to "unresponsiveHashesToTrackMap" to add them to the "toTrack" list at the end
   //This puts the unresponsive hashes at the end of the processing queue
   // All pinned wrappers are ignored with this because we want to keep them pinned forever
-  for(const info of trackedInfos.filter(x => x.status !== TrackedIpfsHashStatus.Pinned)) {
+  const infosToCheck = trackedInfos.filter(
+    x => x.status !== TrackedIpfsHashStatus.Pinned &&
+    x.status !== TrackedIpfsHashStatus.Pinning &&
+    x.status !== TrackedIpfsHashStatus.Unpinning
+  );
+  for(const info of infosToCheck) {
     //If the IPFS hash is not in any index
     if(!cidIndexesMap[info.ipfsHash]) {
       //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved

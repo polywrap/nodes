@@ -301,7 +301,10 @@ export class PersistenceService {
   }
   
   private async tryUntrackIpfsHash(info: TrackedIpfsHashInfo): Promise<void> {
-    if(info.status !== TrackedIpfsHashStatus.Pinned && info.status !== TrackedIpfsHashStatus.Unpinning) {
+    if(info.status !== TrackedIpfsHashStatus.Pinned && 
+      info.status !== TrackedIpfsHashStatus.Pinning &&
+      info.status !== TrackedIpfsHashStatus.Unpinning
+    ) {
       this.deps.logger.log(`Stopping tracking of ${info.ipfsHash} (not a wrapper or undefined)`);
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
       return;
