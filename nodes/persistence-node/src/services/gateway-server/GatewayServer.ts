@@ -26,6 +26,7 @@ import { PersistenceStateManager } from "../PersistenceStateManager";
 import { ValidationService } from "../ValidationService";
 import { WrapperWithFileList } from "./models/WrapperWithFileList";
 import { deserializeWrapManifest } from "@polywrap/wrap-manifest-types-js";
+import { PersistenceService } from "../persistence-service/PersistenceService";
 
 interface IDependencies {
   logger: Logger;
@@ -36,6 +37,7 @@ interface IDependencies {
   validationService: ValidationService;
   indexerConfig: IndexerConfig;
   indexRetriever: IndexRetriever;
+  persistenceService: PersistenceService;
 }
 
 function prefix(words: string[]){
@@ -447,6 +449,14 @@ export class GatewayServer {
         return;
       }
 
+      const ipfsHash = rootCid;
+      const info = this.deps.persistenceStateManager.getTrackedIpfsHashInfo(ipfsHash);
+      const retryCount = info?.unresponsiveInfo?.retryCount || info?.unresponsiveInfo?.retryCount === 0
+        ? info?.unresponsiveInfo?.retryCount + 1
+        : 0;
+  
+      await this.deps.persistenceService.pinWrapper(ipfsHash, retryCount, info?.indexes ?? []);
+  
       res.writeHead(200, {
         'Content-Type': 'application/json',
       });

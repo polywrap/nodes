@@ -1646,20 +1646,20 @@
   dependencies:
     "@msgpack/msgpack" "2.7.2"
 
-"@polywrap/msgpack-js@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@polywrap/msgpack-js/-/msgpack-js-0.4.1.tgz#e00c3e0d3691e978aeca882b3d45a96d5a83b45f"
-  integrity sha512-fdUkgICqBftzkTyEExnoWgybDWhe6tXWVk26GB7lrCxEubdfWy6OmJLCnmnOlp4DfDtxa6g6yQdpnDoC3LjmoA==
+"@polywrap/msgpack-js@0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@polywrap/msgpack-js/-/msgpack-js-0.8.0.tgz#f11dc9473270bc01a468cfb79dcc47b75f90197d"
+  integrity sha512-/0F2NNMvZnqvx+gezSwrE5K1dl408X5jvz6v03Ik/QuroVuz4uviZ5U5nvCI8A6YBB74Dv9khr/5tGn7ZhjZLQ==
   dependencies:
     "@msgpack/msgpack" "2.7.2"
 
-"@polywrap/package-validation@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@polywrap/package-validation/-/package-validation-0.4.1.tgz#11e1d515a78397e957c9b7d14daad1e1d63cc962"
-  integrity sha512-/tRtNzRoGzlZJ4GuTJD8w85wOev8hMsOVoDL8+uo42fd3owOWNCmZJGbb2TdviiJyc7i5GKx1bUcf6zHo6XOqw==
+"@polywrap/package-validation@0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@polywrap/package-validation/-/package-validation-0.8.0.tgz#cc18822ce6ec26a4a3317639c334f081df60d776"
+  integrity sha512-kmFJJXfF15osYJdd6DcPm83jfBB4oCrzQ5izvuDTzI2z7CEFCT/RS2dWkT063nAT2L1k48k0xQ1lkef59dQG4g==
   dependencies:
-    "@polywrap/schema-compose" "0.4.1"
-    "@polywrap/wrap-manifest-types-js" "0.4.1"
+    "@polywrap/schema-compose" "0.8.0"
+    "@polywrap/wrap-manifest-types-js" "0.8.0"
 
 "@polywrap/polywrap-manifest-schemas@0.1.0":
   version "0.1.0"
@@ -1676,13 +1676,13 @@
     jsonschema "1.4.0"
     semver "7.3.5"
 
-"@polywrap/schema-compose@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@polywrap/schema-compose/-/schema-compose-0.4.1.tgz#768d1566f531ba3edd4cd1ef69cd55394a0716d0"
-  integrity sha512-k2FotKNMAj7cp2bB67lRdli6a+w4WzR1RaMy6b3CPuJjDrc/9dwY5+YixfJdaF84+epHTSXrQXayioBb3D0rDw==
+"@polywrap/schema-compose@0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@polywrap/schema-compose/-/schema-compose-0.8.0.tgz#2dc228f3728a9537d6dc6c59a0db029ab8dda46d"
+  integrity sha512-olgcBKAPx0Wyf2JRTqSPoig7k9/IHnpsRgc0X5SJo1DRKGtIWhiHQezEhjeC5D3W03nXjASqkPHueT8RetPODA==
   dependencies:
-    "@polywrap/schema-parse" "0.4.1"
-    "@polywrap/wrap-manifest-types-js" "0.4.1"
+    "@polywrap/schema-parse" "0.8.0"
+    "@polywrap/wrap-manifest-types-js" "0.8.0"
     graphql "15.5.0"
     mustache "4.0.1"
 
@@ -1694,13 +1694,13 @@
     "@dorgjelli/graphql-schema-cycles" "1.1.4"
     graphql "15.5.0"
 
-"@polywrap/schema-parse@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@polywrap/schema-parse/-/schema-parse-0.4.1.tgz#8c5cce43e43c0aac5176a378bfe35047cf94f669"
-  integrity sha512-V/83QB04Cq7TKlvtB3DhtuLvLEWO9Wfzi+5PfT/5wiuIKod+bdANMzQMoE6ejecqJNAzCGUxOHghCNqrmOZCnw==
+"@polywrap/schema-parse@0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@polywrap/schema-parse/-/schema-parse-0.8.0.tgz#d3495c1e09383009f19f9e0575d9ef0b8b348537"
+  integrity sha512-96VmGBP8oaPFpNt/xFHkOnmbZlVaf+c0iHRDx76z6aR/JVb8kI5dbqVYvdvBTOtdDjbadX+4oR6vui0p5ozO/w==
   dependencies:
     "@dorgjelli/graphql-schema-cycles" "1.1.4"
-    "@polywrap/wrap-manifest-types-js" "0.4.1"
+    "@polywrap/wrap-manifest-types-js" "0.8.0"
     graphql "15.5.0"
 
 "@polywrap/sha3-plugin-js@0.1.0":
@@ -1764,12 +1764,12 @@
     jsonschema "1.4.0"
     semver "7.3.5"
 
-"@polywrap/wrap-manifest-types-js@0.4.1":
-  version "0.4.1"
-  resolved "https://registry.yarnpkg.com/@polywrap/wrap-manifest-types-js/-/wrap-manifest-types-js-0.4.1.tgz#94fee3fd2e5c78bbe5fbdf8be55bc5817428f895"
-  integrity sha512-MKKaA4Bu91ufE6krKR9a+ZbiD2FeqwoLBfqm5geIHniGyYFtC3HDTDfUfuIBHRkwnaPg5oIVQyIyaDbvmSo/Dg==
+"@polywrap/wrap-manifest-types-js@0.8.0":
+  version "0.8.0"
+  resolved "https://registry.yarnpkg.com/@polywrap/wrap-manifest-types-js/-/wrap-manifest-types-js-0.8.0.tgz#f6473124587a4cf0b6ee7c42a5a75ca7351dd67c"
+  integrity sha512-4R1QAAVG5pOHK30s6ZRADEGMNGq8ykBd8zY/1iJcaLwf9xRLs7LPaR0R0AYbaf683kBx35q6kH0QlxFU/6wykg==
   dependencies:
-    "@polywrap/msgpack-js" "0.4.1"
+    "@polywrap/msgpack-js" "0.8.0"
     json-schema-ref-parser "9.0.9"
     jsonschema "1.4.0"
     semver "7.3.5"
