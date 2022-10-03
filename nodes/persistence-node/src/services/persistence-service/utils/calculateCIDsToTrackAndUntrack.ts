@@ -90,12 +90,28 @@ const calculateCIDsToUntrack = (
   //if true, add to "unresponsiveHashesToTrackMap" to add them to the "toTrack" list at the end
   //This puts the unresponsive hashes at the end of the processing queue
   // All pinned wrappers are ignored with this because we want to keep them pinned forever
-  const infosToCheck = trackedInfos.filter(
-    x => x.status !== TrackedIpfsHashStatus.Pinned &&
-    x.status !== TrackedIpfsHashStatus.Pinning &&
-    x.status !== TrackedIpfsHashStatus.Unpinning
-  );
-  for(const info of infosToCheck) {
+  for(const info of trackedInfos) {
+    if (info.status === TrackedIpfsHashStatus.Pinned ||
+      info.status === TrackedIpfsHashStatus.Pinning ||
+      info.status === TrackedIpfsHashStatus.Unpinning
+    ) {
+      //Add all indexes which contain this IPFS hash
+      const updatedIndexes: Set<string> = new Set(cidIndexesMap[info.ipfsHash]);
+      
+      //Also add all unresponsive indexes which were present in the info before
+      //If an index is unresponsive, it does not mean it does not have the IPFS hash
+      //and for those cases we pretend it still does
+      for(const index of info.indexes) {
+        if(unresponsiveIndexMap[index]) {
+          updatedIndexes.add(index);
+        }
+      }
+
+      //This updates the indexes of the CIDs in the tracked info, in memory
+      //Later we save it with persistenceStateManager.save()
+      info.indexes = [...updatedIndexes];
+      continue;
+    }
     //If the IPFS hash is not in any index
     if(!cidIndexesMap[info.ipfsHash]) {
       //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved
