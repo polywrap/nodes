@@ -76,6 +76,30 @@ export class PersistenceService {
       });
     }
   }
+
+  async pinWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
+    this.deps.logger.log(`Pinning ${ipfsHash}...`);
+
+    try {
+      await this.deps.ipfsNode.pin.add(ipfsHash, {
+        recursive: true,
+        timeout: this.deps.ipfsConfig.pinTimeout,
+      });
+
+      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+        ipfsHash,
+        status: TrackedIpfsHashStatus.Pinned,
+        indexes
+      });
+  
+      this.deps.logger.log(`Pinned ${ipfsHash}`);
+      
+    } catch (err) {
+      this.deps.logger.log(JSON.stringify(err));
+     
+      await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.Pinning, indexes);
+    }
+  }
   
   async unpinWrapper(ipfsHash: string): Promise<boolean> {
     try {
@@ -282,40 +306,5 @@ export class PersistenceService {
       this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
       return;
     } 
-
-    const retryCount = info?.unresponsiveInfo?.retryCount || info?.unresponsiveInfo?.retryCount === 0
-      ? info?.unresponsiveInfo?.retryCount + 1
-      : 0;
-
-    const success = await this.unpinWrapper(info.ipfsHash);
-    if(success) {
-      this.deps.persistenceStateManager.removeIpfsHash(info.ipfsHash);
-    } else {
-      this.scheduleRetry(info.ipfsHash, retryCount, TrackedIpfsHashStatus.Unpinning, info.indexes)
-    }
-  }
-
-  private async pinWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
-    this.deps.logger.log(`Pinning ${ipfsHash}...`);
-
-    try {
-      await this.deps.ipfsNode.pin.add(ipfsHash, {
-        recursive: true,
-        timeout: this.deps.ipfsConfig.pinTimeout,
-      });
-
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
-        ipfsHash,
-        status: TrackedIpfsHashStatus.Pinned,
-        indexes
-      });
-  
-      this.deps.logger.log(`Pinned ${ipfsHash}`);
-      
-    } catch (err) {
-      this.deps.logger.log(JSON.stringify(err));
-     
-      await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.Pinning, indexes);
-    }
   }
 }
