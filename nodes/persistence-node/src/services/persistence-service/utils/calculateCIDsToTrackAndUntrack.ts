@@ -1,5 +1,6 @@
 import { IPFSIndex } from "../../../types/IPFSIndex";
 import { TrackedIpfsHashInfo } from "../../../types/TrackedIpfsHashInfo";
+import { TrackedIpfsHashStatus } from "../../../types/TrackedIpfsHashStatus";
 import { PersistenceStateManager } from "../../PersistenceStateManager";
 
 export const calculateCIDsToTrackAndUntrack = (
@@ -88,7 +89,13 @@ const calculateCIDsToUntrack = (
   //If they are in an index and they're logged as unresponsive, check if their scheduledRetryDate is past
   //if true, add to "unresponsiveHashesToTrackMap" to add them to the "toTrack" list at the end
   //This puts the unresponsive hashes at the end of the processing queue
-  for(const info of trackedInfos) {
+  // All pinned wrappers are ignored with this because we want to keep them pinned forever
+  const infosToCheck = trackedInfos.filter(
+    x => x.status !== TrackedIpfsHashStatus.Pinned &&
+    x.status !== TrackedIpfsHashStatus.Pinning &&
+    x.status !== TrackedIpfsHashStatus.Unpinning
+  );
+  for(const info of infosToCheck) {
     //If the IPFS hash is not in any index
     if(!cidIndexesMap[info.ipfsHash]) {
       //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved
