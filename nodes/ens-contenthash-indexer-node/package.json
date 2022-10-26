@@ -27,9 +27,7 @@
     "build": "tsc --project tsconfig.build.json",
     "dev": "ts-node src/main.ts",
     "start": "node bin/main.js",
-    "dev-init:rinkeby": "ts-node src/main.ts init --data ./.data/rinkeby --network rinkeby --log",
     "dev-init:goerli": "ts-node src/main.ts init --data ./.data/goerli --network goerli --log",
-    "daemon:rinkeby": "ts-node src/main.ts daemon --data ./.data/rinkeby --log",
     "daemon:goerli": "ts-node src/main.ts daemon --data ./.data/goerli --log",
     "test": "yarn test:jest",
     "test:jest": "jest test --passWithNoTests"
