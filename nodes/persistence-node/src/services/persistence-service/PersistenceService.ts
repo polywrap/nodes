@@ -273,13 +273,15 @@ export class PersistenceService {
         this.deps.ipfsConfig.gateways, 
         (ipfsNode: IPFS.IPFS) => loadFilesFromIpfsOrThrow(ipfsHash, ipfsNode, this.deps.ipfsConfig.gatewayTimeout)
       );
-    } catch {
+    } catch(ex) {
+      console.log("Error trying IPFS request with fallbacks", ex);
       return { 
         result: "Error"
       };
     }
 
     if (!files) {
+      this.deps.logger.log(`Could not find any files in ${ipfsHash}`);
       return { 
         result: "Error"
       };
