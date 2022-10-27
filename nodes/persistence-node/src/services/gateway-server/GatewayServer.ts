@@ -1,4 +1,4 @@
-import { WRAP_INFO, WasmPackageValidator } from "@polywrap/package-validation";
+import { WRAP_INFO } from "@polywrap/package-validation";
 import axios from "axios";
 import timeout from "connect-timeout";
 import cors from "cors";
@@ -53,10 +53,14 @@ function prefix(words: string[]){
 }
 
 export const stripBasePath = (files: InMemoryFile[]) => {
-  const basePath = prefix(files.map(f => f.path));
+  let basePath = prefix(files.map(f => f.path));
+  const lastPathSeparator = Math.max(basePath.lastIndexOf("/"), basePath.lastIndexOf("\\"));
+  basePath = basePath.slice(0, lastPathSeparator + 1);
 
   return files.map(file => ({
-    path: path.relative(basePath, file.path) ?? '.',
+    path: basePath 
+      ? path.relative(basePath, file.path) ?? '.'
+      : file.path,
     content: file.content
   })).filter(file => !!file.path);
 };

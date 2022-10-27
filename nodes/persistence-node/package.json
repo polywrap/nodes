@@ -1,6 +1,6 @@
 {
   "name": "@polywrap/persistence-node",
-  "version": "0.12.0",
+  "version": "0.12.1",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
   "author": "nerfZael",
