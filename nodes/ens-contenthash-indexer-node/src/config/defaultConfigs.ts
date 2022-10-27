@@ -19,26 +19,6 @@ export const defaultConfigs = {
         network: "rinkeby"
       },
     },
-    ropsten: {
-      name: "ropsten",
-      provider: "ropsten",
-      chainId: 3,
-      ensResolverAddress: "0x42D63ae25990889E35F215bC95884039Ba354115",
-      fastSync: {
-        domain: "ropsten.ens-contenthash-indexer.fast-sync.eth",
-        network: "rinkeby"
-      },
-    },
-    rinkeby: {
-      name: "rinkeby",
-      provider: "rinkeby",
-      chainId: 4,
-      ensResolverAddress: "0xf6305c19e814d2a75429Fd637d01F7ee0E77d615",
-      fastSync: {
-        domain: "rinkeby.ens-contenthash-indexer.fast-sync.eth",
-        network: "rinkeby"
-      },
-    },
     goerli: {
       name: "goerli",
       provider: "goerli",
