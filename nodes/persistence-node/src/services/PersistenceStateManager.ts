@@ -38,9 +38,10 @@ export class PersistenceStateManager {
     return !!this.state.trackedIpfsHashes[ipfsHash];
   }
 
-  async setIpfsHashInfo(ipfsHash: string, info: TrackedIpfsHashInfo): Promise<void> {
+  async setIpfsHashInfo(ipfsHash: string, info: TrackedIpfsHashInfo): Promise<TrackedIpfsHashInfo> {
     this.state.trackedIpfsHashes[ipfsHash] = info;
     await this.save();
+    return info;
   }
 
   async removeIpfsHash(ipfsHash: string): Promise<void> {
