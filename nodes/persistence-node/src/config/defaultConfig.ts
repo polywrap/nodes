@@ -6,7 +6,7 @@ export const defaultConfig: Config = {
   "persistenceIntervalSeconds": 15,
   "gateway": {
     "port": 8081,
-    "requestTimeout": 7000,
+    "requestTimeout": 8000,
     "ipfsTimeout": 500
   },
   "wrapper": {
