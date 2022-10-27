@@ -11,6 +11,8 @@ import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
 import { ValidationService } from "../ValidationService";
 import { addFilesToIpfs, tryIpfsRequestWithFallbacks, loadFilesFromIpfsOrThrow } from "../../ipfs";
+import { PinnedWrapperCache } from "../PinnedWrapperCache";
+import { getWrapperPinInfo } from "../gateway-server/getWrapperPinInfo";
 
 type ActionPromise = () => Promise<void>;
 
@@ -22,6 +24,7 @@ interface IDependencies {
   persistenceConfig: PersistenceConfig;
   indexRetriever: IndexRetriever;
   validationService: ValidationService;
+  pinnedWrapperCache: PinnedWrapperCache;
 }
 
 export class PersistenceService {
@@ -86,14 +89,20 @@ export class PersistenceService {
         timeout: this.deps.ipfsConfig.pinTimeout,
       });
 
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+      const info = await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         status: TrackedIpfsHashStatus.Pinned,
         indexes
       });
-  
-      this.deps.logger.log(`Pinned ${ipfsHash}`);
-      
+
+      const pinnedWrapperInfo = await getWrapperPinInfo(info, this.deps.ipfsNode, this.deps.ipfsConfig.gatewayTimeout);
+
+      if (pinnedWrapperInfo) {
+        this.deps.pinnedWrapperCache.cache(pinnedWrapperInfo);
+        this.deps.logger.log(`Pinned ${ipfsHash}`);
+      } else {
+        throw new Error(`Failed to get pin info for ${ipfsHash}`);
+      }
     } catch (err) {
       this.deps.logger.log(JSON.stringify(err));
      
