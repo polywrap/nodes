@@ -6,8 +6,8 @@ export const defaultConfig: Config = {
   "persistenceIntervalSeconds": 15,
   "gateway": {
     "port": 8081,
-    "requestTimeout": 5000,
-    "ipfsTimeout": 10
+    "requestTimeout": 7000,
+    "ipfsTimeout": 500
   },
   "wrapper": {
     "constraints": {
@@ -18,7 +18,7 @@ export const defaultConfig: Config = {
     },
     "resolution": {
       "retries": {
-        "max": 10,
+        "max": 8,
         "startingDelayInSec": 300
       }
     }
