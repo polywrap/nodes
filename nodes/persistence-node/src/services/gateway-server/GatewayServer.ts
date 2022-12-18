@@ -15,7 +15,7 @@ import { VERSION } from "../../constants/version";
 import { handleError } from "../../http-server/handleError";
 import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
 import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
-import { InMemoryFile, IpfsErrorResponse, MulterFile } from "../../types";
+import { DetailedPinnedWrapperModel, InMemoryFile, IpfsErrorResponse, MulterFile } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { formatFileSize } from "../../utils/formatFileSize";
 import { IndexRetriever } from "../IndexRetriever";
@@ -26,6 +26,7 @@ import { PersistenceService } from "../persistence-service/PersistenceService";
 import { getWrapperPinInfo } from "./getWrapperPinInfo";
 import { PinnedWrapperModel } from "../../types/PinnedWrapperModel";
 import { PinnedWrapperCache } from "../PinnedWrapperCache";
+import { EnsDomainCache } from "../EnsDomainCache";
 
 interface IDependencies {
   logger: Logger;
@@ -38,6 +39,7 @@ interface IDependencies {
   indexRetriever: IndexRetriever;
   persistenceService: PersistenceService;
   pinnedWrapperCache: PinnedWrapperCache;
+  ensDomainCache: EnsDomainCache;
 }
 
 function prefix(words: string[]){
@@ -230,25 +232,50 @@ export class GatewayServer {
               type: cachedWrapper.type,
               size: cachedWrapper.size,
               cid: info.ipfsHash,
-              indexes: info.indexes,
+              indexes: info.indexes.map(x => ({
+                name: x.name,
+                ens: Array.from(x.ensNodes).map(x => ({
+                  node: x,
+                  domain: this.deps.ensDomainCache.get(x),
+                }))
+              })),
             };
           }
 
-          const pinInfo = await getWrapperPinInfo(info, ipfs, this.deps.gatewayConfig.ipfsTimeout, controller);
+          const pinInfo: PinnedWrapperModel | undefined = await getWrapperPinInfo(info, ipfs, this.deps.gatewayConfig.ipfsTimeout, controller);
 
           if(pinInfo) {
             this.deps.pinnedWrapperCache.cache(pinInfo);
+          } else {
+            return undefined;
           }
 
-          return pinInfo;
+          return {
+            name: pinInfo.name,
+            version: pinInfo.version,
+            type: pinInfo.type,
+            size: pinInfo.size,
+            cid: pinInfo.cid,
+            indexes: pinInfo.indexes.map(x => ({
+              name: x.name,
+              ens: Array.from(x.ensNodes).map(x => ({
+                node: x,
+                domain: this.deps.ensDomainCache.get(x),
+              }))
+            })),
+          };
         }))
-      ).filter(x => !!x);
+      ).filter(x => !!x) as DetailedPinnedWrapperModel[];
 
       console.log(`Pinned wrappers: ${pinnedWrappers.length} (cached: ${cached})`);
+     
       if (req.query.json) {
+        await this.addEnsDomainInfo(pinnedWrappers);
+      
         res.json(pinnedWrappers);
         return;
       }
+
       res.render('pins', {
         wrappers: pinnedWrappers,
         count: pinnedWrappers.length,
@@ -480,6 +507,52 @@ export class GatewayServer {
     server.listen(this.deps.gatewayConfig.port, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayConfig.port}`));
   }
 
+  async addEnsDomainInfo(pinnedWrappers: DetailedPinnedWrapperModel[]) {
+    const REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT = 100;
+    const REVERSE_NAMEHASH_ENDPOINT = "https://reverse-namehash.wrappers.dev";
+
+    const nodeDomainMap = new Map<string, string>();
+      
+    const nodes: string[] = pinnedWrappers
+      .map(x => x.indexes
+          .map(x => 
+            x.ens.filter(ensInfo => !ensInfo.domain)
+              .map(ensInfo => ensInfo.node)
+          )
+          .flat()
+        )
+      .flat();
+
+    const chunks = splitArray([...new Set(nodes)], REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT);
+
+    const results = (
+      await Promise.all(
+        chunks.map(x => axios.post(`${REVERSE_NAMEHASH_ENDPOINT}/resolve`, x))
+      )
+    ).map(x => x.data);
+
+    for (let resultChunk of results) {
+      for (let result of resultChunk) {
+        nodeDomainMap.set(result.node, result.domain);
+      }
+    }
+
+    for (let wrapper of pinnedWrappers) {
+      for (let index of wrapper.indexes) {
+        for (let ensInfo of index.ens) {
+          if (ensInfo.domain) {
+            continue;
+          }
+
+          ensInfo.domain = nodeDomainMap.get(ensInfo.node);
+          if (ensInfo.domain) {
+            this.deps.ensDomainCache.cache(ensInfo.node, ensInfo.domain);
+          }
+        }
+      }
+    }
+  }
+
   buildIpfsError(message: string): IpfsErrorResponse {
     this.deps.logger.log("Gateway error: " + message);
 
@@ -523,4 +596,14 @@ export class GatewayServer {
       ...indexerResults
     ]);
   }
+}
+
+function splitArray(array: string[], chunkSize: number) {
+  const result = [];
+  let index = 0;
+  while (index < array.length) {
+    result.push(array.slice(index, index + chunkSize));
+    index += chunkSize;
+  }
+  return result;
 }

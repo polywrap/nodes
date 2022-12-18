@@ -2,6 +2,7 @@ import fs from "fs";
 import { PersistenceState } from "../types/PersistenceState";
 import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
 import path from "path";
+import { IndexWithEnsNodes } from "../types";
 
 const persistenceStateFilePath = "./persistence-state.json";
 
@@ -54,7 +55,24 @@ export class PersistenceStateManager {
       await this.save();
     }
 
-    this.state = JSON.parse(fs.readFileSync(this.stateFilePath, 'utf8'));
+    let state: PersistenceState = JSON.parse(fs.readFileSync(this.stateFilePath, 'utf8'));
+
+    let cids = Object.keys(state.trackedIpfsHashes);
+
+    for (let cid of cids) {
+      if (state.trackedIpfsHashes[cid].indexes.some(x => typeof x === "string")) {
+        state.trackedIpfsHashes[cid].indexes = (state.trackedIpfsHashes[cid].indexes as (IndexWithEnsNodes | string)[]).map(x => {
+          return typeof x === "string"
+            ? {
+              name: x as string,
+              ensNodes: new Set([])
+            } as IndexWithEnsNodes
+            : x as IndexWithEnsNodes;
+        });
+      }
+    }
+
+    this.state = state;
   }
 
   public async save(): Promise<void> {

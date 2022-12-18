@@ -1,5 +1,7 @@
+import { CIDWithEnsNodes } from "./CIDWithEnsNodes";
+
 export type IPFSIndex = {
   name: string;
-  cids: string[];
-  error: boolean;
+  cids: CIDWithEnsNodes[],
+  error: boolean
 };
