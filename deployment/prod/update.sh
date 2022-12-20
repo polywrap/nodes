@@ -25,9 +25,9 @@ pm2 delete ens-indexer-node-goerli
 set -e
 
 # rm $data/persistence-node/config.json
-# rm $data/persistence-node -rf
-# rm $data/ens-indexer-node/mainnet -rf
-# rm $data/ens-indexer-node/goerli -rf
+rm $data/persistence-node -rf
+rm $data/ens-indexer-node/mainnet -rf
+rm $data/ens-indexer-node/goerli -rf
 
 mkdir -p $hosting/$persistenceNode
 cd $hosting/$persistenceNode
