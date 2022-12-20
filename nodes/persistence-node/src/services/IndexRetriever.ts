@@ -2,6 +2,7 @@ import { Logger } from "./Logger";
 import { IndexerConfig } from "../config/IndexerConfig";
 import axios, { AxiosError } from "axios";
 import { URL } from 'url';
+import { CIDWithEnsNodes, IPFSIndex } from "../types";
 
 interface IDependencies {
   indexerConfig: IndexerConfig;
@@ -17,29 +18,21 @@ export class IndexRetriever {
     this.deps = deps;
   }
 
-  async getCIDs(): Promise<{
-    name: string;
-    cids: string[],
-    error: boolean
-  }[]> {
-    const indexes: {
-      name: string;
-      cids: string[],
-      error: boolean
-    }[] = [];
+  async getCIDsWithEnsNodes(): Promise<IPFSIndex[]> {
+    const indexes: IPFSIndex[] = [];
 
     for(const index of this.deps.indexerConfig.indexes) {
       try {
         const response = await axios({
           method: 'GET',
-          url: new URL('api/ipfs/ls', index.provider).href,
+          url: new URL('api/ipfs/list-with-ens-nodes', index.provider).href,
         });
         
         if(response.status === 200) {
           this.deps.logger.log(`Successfully retrieved CIDs from ${index.name} (${response.data.length})`);
           indexes.push({
             name: index.name,
-            cids: response.data,
+            cids: response.data as CIDWithEnsNodes[],
             error: false
           });
           this.lastIndexSync[index.name] = new Date();

@@ -49,6 +49,29 @@ export class EnsStateManager {
       .map(x => x as string);
   }
 
+  getIpfsCIDsWithEnsNodes(): {
+    cid: string,
+    ensNodes: string[]
+  }[] {
+    return Object.keys(this.state.contenthashEns)
+      .map(contenthash => {
+        let nodesMap = this.state.contenthashEns[contenthash];
+        let cid = getIpfsHashFromContenthash(contenthash);
+
+        return cid
+          ? {
+              cid,
+              ensNodes: Object.keys(nodesMap).filter(node => nodesMap[node])
+            }
+          : undefined;
+      })
+      .filter(x => !!x)
+      .map(x => x as {
+        cid: string,
+        ensNodes: string[]
+      });
+  }
+
   getState(): SavedEnsState {
     return {
       ensContenthash: this.state.ensContenthash,

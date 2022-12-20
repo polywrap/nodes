@@ -1,7 +1,7 @@
 import { IpfsConfig } from "../../config/IpfsConfig";
 import * as IPFS from "ipfs-core";
 import { Logger } from "../Logger";
-import { InMemoryFile, IpfsAddResult, TrackedIpfsHashInfo } from "../../types";
+import { InMemoryFile, IndexWithEnsNodes, TrackedIpfsHashInfo } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { addSeconds } from "../../utils/addSeconds";
 import { PersistenceStateManager } from "../PersistenceStateManager";
@@ -11,6 +11,8 @@ import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
 import { ValidationService } from "../ValidationService";
 import { addFilesToIpfs, tryIpfsRequestWithFallbacks, loadFilesFromIpfsOrThrow } from "../../ipfs";
+import { PinnedWrapperCache } from "../PinnedWrapperCache";
+import { getWrapperPinInfo } from "../gateway-server/getWrapperPinInfo";
 
 type ActionPromise = () => Promise<void>;
 
@@ -22,6 +24,7 @@ interface IDependencies {
   persistenceConfig: PersistenceConfig;
   indexRetriever: IndexRetriever;
   validationService: ValidationService;
+  pinnedWrapperCache: PinnedWrapperCache;
 }
 
 export class PersistenceService {
@@ -35,7 +38,7 @@ export class PersistenceService {
     while(true) {
       let timestamp = process.hrtime();
 
-      const indexes = await this.deps.indexRetriever.getCIDs(); 
+      const indexes = await this.deps.indexRetriever.getCIDsWithEnsNodes(); 
       const tracked = this.deps.persistenceStateManager.getTrackedIpfsHashInfos();
   
       const { toTrack, toUntrack } = await calculateCIDsToTrackAndUntrack(indexes, tracked, this.deps.persistenceStateManager);
@@ -50,7 +53,7 @@ export class PersistenceService {
     }
   }
 
-  async scheduleRetry(ipfsHash: string, retryCount: number, status: TrackedIpfsHashStatus, indexes: string[]): Promise<void> {
+  async scheduleRetry(ipfsHash: string, retryCount: number, status: TrackedIpfsHashStatus, indexes: IndexWithEnsNodes[]): Promise<void> {
     this.deps.logger.log(`Scheduling retry for ${ipfsHash} (${status})`);
    
     if(retryCount >= this.deps.persistenceConfig.wrapper.resolution.retries.max) {
@@ -77,7 +80,7 @@ export class PersistenceService {
     }
   }
 
-  async pinWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
+  async pinWrapper(ipfsHash: string, retryCount: number, indexes: IndexWithEnsNodes[]): Promise<void> {
     this.deps.logger.log(`Pinning ${ipfsHash}...`);
 
     try {
@@ -86,14 +89,20 @@ export class PersistenceService {
         timeout: this.deps.ipfsConfig.pinTimeout,
       });
 
-      this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+      const info = await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         status: TrackedIpfsHashStatus.Pinned,
         indexes
       });
-  
-      this.deps.logger.log(`Pinned ${ipfsHash}`);
-      
+
+      const pinnedWrapperInfo = await getWrapperPinInfo(info, this.deps.ipfsNode, this.deps.ipfsConfig.gatewayTimeout);
+
+      if (pinnedWrapperInfo) {
+        this.deps.pinnedWrapperCache.cache(pinnedWrapperInfo);
+        this.deps.logger.log(`Pinned ${ipfsHash}`);
+      } else {
+        throw new Error(`Failed to get pin info for ${ipfsHash}`);
+      }
     } catch (err) {
       this.deps.logger.log(JSON.stringify(err));
      
@@ -179,7 +188,7 @@ export class PersistenceService {
 
   private async tryTrackIpfsHash(ipfsHashToTrack: {
     ipfsHash: string,
-    indexes: string[]
+    indexes: IndexWithEnsNodes[]
   }): Promise<void> {
     const { ipfsHash, indexes } = ipfsHashToTrack;
 
@@ -209,7 +218,7 @@ export class PersistenceService {
     }
   }
 
-  private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: string[]): Promise<void> {
+  private async pinIfWrapper(ipfsHash: string, retryCount: number, indexes: IndexWithEnsNodes[]): Promise<void> {
     this.deps.logger.log(`Checking if valid wrapper: ${ipfsHash}...`);
    
     const { result, files } = await this.isValidWrapper(ipfsHash);

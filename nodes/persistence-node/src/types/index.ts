@@ -10,3 +10,6 @@ export * from "./MulterFile";
 export * from "./PersistenceState";
 export * from "./TrackedIpfsHashInfo";
 export * from "./UnresponsiveIpfsHashInfo";
+export * from "./CIDWithEnsNodes";
+export * from "./IndexWithEnsNodes";
+export * from "./DetailedPinnedWrapperModel";

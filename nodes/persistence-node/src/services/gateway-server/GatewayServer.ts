@@ -1,4 +1,3 @@
-import { WRAP_INFO } from "@polywrap/package-validation";
 import axios from "axios";
 import timeout from "connect-timeout";
 import cors from "cors";
@@ -13,20 +12,21 @@ import { GatewayConfig } from "../../config/GatewayConfig";
 import { IndexerConfig } from "../../config/IndexerConfig";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { VERSION } from "../../constants/version";
-import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
 import { handleError } from "../../http-server/handleError";
 import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
 import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
-import { InMemoryFile, IpfsAddResult, IpfsErrorResponse, IpfsPackageReader, MulterFile } from "../../types";
+import { DetailedPinnedWrapperModel, InMemoryFile, IpfsErrorResponse, MulterFile } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { formatFileSize } from "../../utils/formatFileSize";
 import { IndexRetriever } from "../IndexRetriever";
 import { Logger } from "../Logger";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { ValidationService } from "../ValidationService";
-import { WrapperWithFileList } from "./models/WrapperWithFileList";
-import { deserializeWrapManifest } from "@polywrap/wrap-manifest-types-js";
 import { PersistenceService } from "../persistence-service/PersistenceService";
+import { getWrapperPinInfo } from "./getWrapperPinInfo";
+import { PinnedWrapperModel } from "../../types/PinnedWrapperModel";
+import { PinnedWrapperCache } from "../PinnedWrapperCache";
+import { EnsDomainCache } from "../EnsDomainCache";
 
 interface IDependencies {
   logger: Logger;
@@ -38,6 +38,8 @@ interface IDependencies {
   indexerConfig: IndexerConfig;
   indexRetriever: IndexRetriever;
   persistenceService: PersistenceService;
+  pinnedWrapperCache: PinnedWrapperCache;
+  ensDomainCache: EnsDomainCache;
 }
 
 function prefix(words: string[]){
@@ -53,13 +55,16 @@ function prefix(words: string[]){
 }
 
 export const stripBasePath = (files: InMemoryFile[]) => {
-  let basePath = prefix(files.map(f => f.path));
+  if (files.length === 0 || files.length === 1) {
+    return files;
+  }
+  let basePath = prefix(files.map(f => f.path + "/"));
   const lastPathSeparator = Math.max(basePath.lastIndexOf("/"), basePath.lastIndexOf("\\"));
   basePath = basePath.slice(0, lastPathSeparator + 1);
 
   return files.map(file => ({
     path: basePath 
-      ? path.relative(basePath, file.path) ?? '.'
+      ? path.relative(basePath, file.path + "/") 
       : file.path,
     content: file.content
   })).filter(file => !!file.path);
@@ -215,71 +220,62 @@ export class GatewayServer {
         .filter(x => x.status === TrackedIpfsHashStatus.Pinned)
         .reverse();
       
-      const wrapperSizes = await Promise.all(infos.map(async info => {
-        const statResult = await ipfs.files.stat(`/ipfs/${info.ipfsHash}`, {
-          signal: controller.signal,
-          timeout: this.deps.gatewayConfig.ipfsTimeout
-        });
-
-        return formatFileSize(statResult.cumulativeSize);
-      }));
-
+      let cached = 0;
       const pinnedWrappers = (
         await Promise.all(infos.map(async (info, index) => {
-          const object = await ipfs.object.get(IPFS.CID.parse(info.ipfsHash), {
-            signal: controller.signal,
-            timeout: this.deps.gatewayConfig.ipfsTimeout
-          });
-
-          const wrapper = {
-            cid: info.ipfsHash,
-            files: object.Links
-              .filter(x => x.Name)
-              .map(x => {
-                return {
-                  name: x.Name as string,
-                  cid: x.Hash.toString()
-                };
-              })
-          } as WrapperWithFileList;
-
-          const wrapperSize = wrapperSizes[index];
-          const manifestFile = wrapper.files.find(x => WRAP_INFO === x.name);
-
-          if (!manifestFile) {
-            return undefined;
-          }
-
-          const reader = new IpfsPackageReader(this.deps.ipfsNode, wrapper.cid);
-          const manifestContent = await reader.readFile(manifestFile?.name);
-          const manifest = await deserializeWrapManifest(manifestContent);
-    
-          if(manifest.name) {
+          const cachedWrapper = this.deps.pinnedWrapperCache.get(info.ipfsHash);
+          if (cachedWrapper) {
+            cached++;
             return {
-              name: manifest.name,
-              version: manifest.version,
-              type: manifest.type,
-              size: wrapperSize,
-              cid: wrapper.cid,
-              indexes: info.indexes,
+              name: cachedWrapper.name,
+              version: cachedWrapper.version,
+              type: cachedWrapper.type,
+              size: cachedWrapper.size,
+              cid: info.ipfsHash,
+              indexes: info.indexes.map(x => ({
+                name: x.name,
+                ens: Array.from(x.ensNodes).map(x => ({
+                  node: x,
+                  domain: this.deps.ensDomainCache.get(x),
+                }))
+              })),
             };
           }
 
+          const pinInfo: PinnedWrapperModel | undefined = await getWrapperPinInfo(info, ipfs, this.deps.gatewayConfig.ipfsTimeout, controller);
+
+          if(pinInfo) {
+            this.deps.pinnedWrapperCache.cache(pinInfo);
+          } else {
+            return undefined;
+          }
+
           return {
-            name: WRAPPER_DEFAULT_NAME,
-            version: manifest.version,
-            type: manifest.type,
-            size: wrapperSize,
-            cid: infos[index].ipfsHash,
-            indexes: info.indexes,
+            name: pinInfo.name,
+            version: pinInfo.version,
+            type: pinInfo.type,
+            size: pinInfo.size,
+            cid: pinInfo.cid,
+            indexes: pinInfo.indexes.map(x => ({
+              name: x.name,
+              ens: Array.from(x.ensNodes).map(x => ({
+                node: x,
+                domain: this.deps.ensDomainCache.get(x),
+              }))
+            })),
           };
         }))
-      ).filter(x => !!x);
+      ).filter(x => !!x) as DetailedPinnedWrapperModel[];
 
+      console.log(`Pinned wrappers: ${pinnedWrappers.length} (cached: ${cached})`);
+     
       if (req.query.json) {
+        await this.addEnsDomainInfo(pinnedWrappers);
+      
         res.json(pinnedWrappers);
         return;
       }
+
       res.render('pins', {
         wrappers: pinnedWrappers,
         count: pinnedWrappers.length,
@@ -422,6 +418,7 @@ export class GatewayServer {
       });
 
       const sanitizedFiles = stripBasePath(filesToAdd);
+
       const result = await this.deps.validationService.validateInMemoryWrapper(sanitizedFiles);
      
       if(!result.valid) {
@@ -510,6 +507,52 @@ export class GatewayServer {
     server.listen(this.deps.gatewayConfig.port, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayConfig.port}`));
   }
 
+  async addEnsDomainInfo(pinnedWrappers: DetailedPinnedWrapperModel[]) {
+    const REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT = 100;
+    const REVERSE_NAMEHASH_ENDPOINT = "https://reverse-namehash.wrappers.dev";
+
+    const nodeDomainMap = new Map<string, string>();
+      
+    const nodes: string[] = pinnedWrappers
+      .map(x => x.indexes
+          .map(x => 
+            x.ens.filter(ensInfo => !ensInfo.domain)
+              .map(ensInfo => ensInfo.node)
+          )
+          .flat()
+        )
+      .flat();
+
+    const chunks = splitArray([...new Set(nodes)], REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT);
+
+    const results = (
+      await Promise.all(
+        chunks.map(x => axios.post(`${REVERSE_NAMEHASH_ENDPOINT}/resolve`, x))
+      )
+    ).map(x => x.data);
+
+    for (let resultChunk of results) {
+      for (let result of resultChunk) {
+        nodeDomainMap.set(result.node, result.domain);
+      }
+    }
+
+    for (let wrapper of pinnedWrappers) {
+      for (let index of wrapper.indexes) {
+        for (let ensInfo of index.ens) {
+          if (ensInfo.domain) {
+            continue;
+          }
+
+          ensInfo.domain = nodeDomainMap.get(ensInfo.node);
+          if (ensInfo.domain) {
+            this.deps.ensDomainCache.cache(ensInfo.node, ensInfo.domain);
+          }
+        }
+      }
+    }
+  }
+
   buildIpfsError(message: string): IpfsErrorResponse {
     this.deps.logger.log("Gateway error: " + message);
 
@@ -553,4 +596,14 @@ export class GatewayServer {
       ...indexerResults
     ]);
   }
+}
+
+function splitArray(array: string[], chunkSize: number) {
+  const result = [];
+  let index = 0;
+  while (index < array.length) {
+    result.push(array.slice(index, index + chunkSize));
+    index += chunkSize;
+  }
+  return result;
 }
