@@ -37,14 +37,6 @@ export const defaultConfig: Config = {
     {
       "name": "ens-mainnet",
       "provider": "http://localhost:8082"
-    },  
-    {
-      "name": "ens-ropsten",
-      "provider": "http://localhost:8083"
-    },
-    {
-      "name": "ens-rinkeby",
-      "provider": "http://localhost:8084"
     },
     {
       "name": "ens-goerli",

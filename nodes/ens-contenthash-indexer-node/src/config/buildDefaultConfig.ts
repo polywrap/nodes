@@ -8,16 +8,6 @@ export const buildDefaultConfig = (networkName: string = "mainnet"): Config => {
           network: defaultConfigs.network.mainnet,
           ...defaultConfigs.main
       };
-    case "rinkeby":
-      return {
-          network: defaultConfigs.network.rinkeby,
-          ...defaultConfigs.main
-      };
-    case "ropsten":
-      return {
-          network: defaultConfigs.network.ropsten,
-          ...defaultConfigs.main
-      };
     case "goerli":
       return {
           network: defaultConfigs.network.goerli,
