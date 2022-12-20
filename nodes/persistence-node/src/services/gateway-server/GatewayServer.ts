@@ -110,6 +110,7 @@ export class GatewayServer {
         res.send(200);
       } else {
         this.deps.logger.log(`Request:  ${req.method} --- ${req.url}`);
+        this.trackUrl(req.url);
         next();
       }
     }));
@@ -271,6 +272,7 @@ export class GatewayServer {
      
       if (req.query.json) {
         await this.addEnsDomainInfo(pinnedWrappers);
+        await this.addWrapperDownloadCount(pinnedWrappers);
       
         res.json(pinnedWrappers);
         return;
@@ -507,7 +509,7 @@ export class GatewayServer {
     server.listen(this.deps.gatewayConfig.port, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayConfig.port}`));
   }
 
-  async addEnsDomainInfo(pinnedWrappers: DetailedPinnedWrapperModel[]) {
+  private async addEnsDomainInfo(pinnedWrappers: DetailedPinnedWrapperModel[]) {
     const REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT = 100;
     const REVERSE_NAMEHASH_ENDPOINT = "https://reverse-namehash.wrappers.dev";
 
@@ -553,7 +555,34 @@ export class GatewayServer {
     }
   }
 
-  buildIpfsError(message: string): IpfsErrorResponse {
+  private async addWrapperDownloadCount(pinnedWrappers: DetailedPinnedWrapperModel[]) {
+    const WRAPPER_DOWNLOAD_COUNT_MAX_LIMIT = 100;
+    const WRAPPER_DOWNLOAD_COUNT_ENDPOINT = "https://tracking.wrappers.dev";
+
+    const cidDownloadCountMap = new Map<string, number>();
+      
+    const cids: string[] = pinnedWrappers.map(x => `/api/v0/cat?arg=${x.cid}/wrap.wasm`);
+
+    const chunks = splitArray([...new Set(cids)], WRAPPER_DOWNLOAD_COUNT_MAX_LIMIT);
+
+    const results = (
+      await Promise.all(
+        chunks.map(x => axios.post(`${WRAPPER_DOWNLOAD_COUNT_ENDPOINT}/count`, x))
+      )
+    ).map(x => x.data);
+
+    for (let resultChunk of results) {
+      for (let result of resultChunk) {
+        cidDownloadCountMap.set(result.endpoint, result.count);
+      }
+    }
+
+    for (let wrapper of pinnedWrappers) {
+      wrapper.downloadCount = cidDownloadCountMap.get(`/api/v0/cat?arg=${wrapper.cid}/wrap.wasm`) ?? 0;
+    }
+  }
+
+  private buildIpfsError(message: string): IpfsErrorResponse {
     this.deps.logger.log("Gateway error: " + message);
 
     return {
@@ -562,7 +591,7 @@ export class GatewayServer {
     };
   }
 
-  getTrackedIpfsHashesStatusCounts() {
+  private getTrackedIpfsHashesStatusCounts() {
     return this.deps.persistenceStateManager.getTrackedIpfsHashInfos().reduce((acc, info) => {
       if (!acc[info.status]) {
         acc[info.status] = 0;
@@ -574,7 +603,7 @@ export class GatewayServer {
     }, {} as any);
   }
 
-  async getIndexersInfo() {
+  private async getIndexersInfo() {
     const indexerResults = this.deps.indexerConfig.indexes.map(indexer => {
       return axios({
         method: 'GET',
@@ -595,6 +624,20 @@ export class GatewayServer {
     return await Promise.all([
       ...indexerResults
     ]);
+  }
+
+  private trackUrl(url: string) {
+    if (!process.env.WRAPPERS_GATEWAY_ADMIN_KEY) {
+        return;
+    }
+
+    axios.post(`https://tracking.wrappers.dev/track?api_key=${process.env.WRAPPERS_GATEWAY_ADMIN_KEY}`, url, {
+        headers: {
+            "Content-Type": "application/json"
+        }
+      }).catch(err => {
+        console.log("TRACKING ERROR: " + url, err);
+      });
   }
 }
 

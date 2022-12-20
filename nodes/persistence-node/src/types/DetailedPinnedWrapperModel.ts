@@ -5,6 +5,7 @@ export type DetailedPinnedWrapperModel = {
   type: string,
   size: string,
   indexes: IndexWithEnsInfo[],
+  downloadCount: number,
 };
 
 export type IndexWithEnsInfo = {
