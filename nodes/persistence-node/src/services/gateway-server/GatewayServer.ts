@@ -578,7 +578,7 @@ export class GatewayServer {
     }
 
     for (let wrapper of pinnedWrappers) {
-      wrapper.downloadCount = cidDownloadCountMap.get(`/api/v0/cat?arg=${wrapper.cid}/wrap.wasm`) ?? 0;
+      wrapper.downloadCount = cidDownloadCountMap.get(`/api/v0/resolve?arg=${wrapper.cid}%2Fwrap.wasm`) ?? 0;
     }
   }
 
