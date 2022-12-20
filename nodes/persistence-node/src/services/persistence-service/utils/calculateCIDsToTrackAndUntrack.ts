@@ -1,4 +1,4 @@
-import { IPFSIndex } from "../../../types/IPFSIndex";
+import { IPFSIndex, IndexWithEnsNodes } from "../../../types";
 import { TrackedIpfsHashInfo } from "../../../types/TrackedIpfsHashInfo";
 import { TrackedIpfsHashStatus } from "../../../types/TrackedIpfsHashStatus";
 import { PersistenceStateManager } from "../../PersistenceStateManager";
@@ -10,7 +10,7 @@ export const calculateCIDsToTrackAndUntrack = (
 ): {
   toTrack: {
     ipfsHash: string,
-    indexes: string[]
+    indexes: IndexWithEnsNodes[]
   }[], 
   toUntrack: TrackedIpfsHashInfo[]
 } => {
@@ -50,22 +50,28 @@ const buildUnresponsiveIndexMap = (indexes: IPFSIndex[]): Record<string, boolean
 //if they're not already being tracked
 const calculateTrackAndIndexesMapsForCIDs = (indexes: IPFSIndex[], persistenceStateManager: PersistenceStateManager) => {
   //Map of CID to set of index names that contain that CID
-  const cidIndexesMap: Record<string, Set<string>> = {};
+  const cidIndexesMap: Record<string, Set<IndexWithEnsNodes>> = {};
   //Map of CID to boolean indicating if the CID is to be tracked
   const cidToTrackMap: Record<string, boolean> = {};
 
   //Go through all CIDs of all indexes and add to "toTrack" 
   //if they're not already being tracked
   for(const index of indexes) {
-    for(const cid of index.cids) {
-      if(!persistenceStateManager.containsIpfsHash(cid)) {
-        cidToTrackMap[cid] = true;
+    for(const cidInfo of index.cids) {
+      if(!persistenceStateManager.containsIpfsHash(cidInfo.cid)) {
+        cidToTrackMap[cidInfo.cid] = true;
       }
 
       //Add to shorten lookup later
-      cidIndexesMap[cid] = !cidIndexesMap[cid]
-        ? new Set([index.name])
-        : new Set(cidIndexesMap[cid].add(index.name));
+      cidIndexesMap[cidInfo.cid] = !cidIndexesMap[cidInfo.cid]
+        ? new Set([{
+          name: index.name,
+          ensNodes: cidInfo.ensNodes
+        }])
+        : new Set(cidIndexesMap[cidInfo.cid].add({
+          name: index.name,
+          ensNodes: cidInfo.ensNodes
+        }));
     }
   }
 
@@ -78,7 +84,7 @@ const calculateTrackAndIndexesMapsForCIDs = (indexes: IPFSIndex[], persistenceSt
 const calculateCIDsToUntrack = (
   unresponsiveIndexMap: Record<string, boolean>, 
   trackedInfos: TrackedIpfsHashInfo[],
-  cidIndexesMap: Record<string, Set<string>>, 
+  cidIndexesMap: Record<string, Set<IndexWithEnsNodes>>, 
   persistenceStateManager: PersistenceStateManager
 ) => {
   const cidsToUntrack: TrackedIpfsHashInfo[] = [];
@@ -96,13 +102,13 @@ const calculateCIDsToUntrack = (
       info.status === TrackedIpfsHashStatus.Unpinning
     ) {
       //Add all indexes which contain this IPFS hash
-      const updatedIndexes: Set<string> = new Set(cidIndexesMap[info.ipfsHash]);
+      const updatedIndexes: Set<IndexWithEnsNodes> = new Set(cidIndexesMap[info.ipfsHash]);
       
       //Also add all unresponsive indexes which were present in the info before
       //If an index is unresponsive, it does not mean it does not have the IPFS hash
       //and for those cases we pretend it still does
       for(const index of info.indexes) {
-        if(unresponsiveIndexMap[index]) {
+        if(unresponsiveIndexMap[index.name]) {
           updatedIndexes.add(index);
         }
       }
@@ -116,7 +122,7 @@ const calculateCIDsToUntrack = (
     if(!cidIndexesMap[info.ipfsHash]) {
       //Untrack the IPFS hash unless the index for which it was previously logged for is not able to be retrieved
       // and if it's not considered lost
-      if(!info.indexes.some(x => unresponsiveIndexMap[x])) {
+      if(!info.indexes.some(x => unresponsiveIndexMap[x.name])) {
         if(info.unresponsiveInfo) {
           if(new Date(info.unresponsiveInfo.scheduledRetryDate) > new Date()) {
             continue;
@@ -133,13 +139,13 @@ const calculateCIDsToUntrack = (
       }
 
       //Add all indexes which contain this IPFS hash
-      const updatedIndexes: Set<string> = new Set(cidIndexesMap[info.ipfsHash]);
+      const updatedIndexes: Set<IndexWithEnsNodes> = new Set(cidIndexesMap[info.ipfsHash]);
       
       //Also add all unresponsive indexes which were present in the info before
       //If an index is unresponsive, it does not mean it does not have the IPFS hash
       //and for those cases we pretend it still does
       for(const index of info.indexes) {
-        if(unresponsiveIndexMap[index]) {
+        if(unresponsiveIndexMap[index.name]) {
           updatedIndexes.add(index);
         }
       }
@@ -158,7 +164,7 @@ const calculateCIDsToUntrack = (
 
 const calculateCIDsToTrack = (
   cidToTrackMap: Record<string, boolean>, 
-  cidIndexesMap: Record<string, Set<string>>, 
+  cidIndexesMap: Record<string, Set<IndexWithEnsNodes>>, 
   unresponsiveHashesToTrackMap: Record<string, boolean>
 ) => {
   const ipfsHashesToTrack = Object.keys(cidToTrackMap)

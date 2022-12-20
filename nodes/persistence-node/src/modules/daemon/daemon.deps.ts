@@ -17,6 +17,7 @@ import { ValidationService } from "../../services/ValidationService";
 import { GatewayServer } from "../../services/gateway-server/GatewayServer";
 import { WasmPackageValidator } from "@polywrap/package-validation";
 import { PinnedWrapperCache } from "../../services/PinnedWrapperCache";
+import { EnsDomainCache } from "../../services/EnsDomainCache";
 
 export interface MainDependencyContainer {
   dataDirPath: string;
@@ -39,6 +40,7 @@ export interface MainDependencyContainer {
   wasmPackageValidator: WasmPackageValidator;
   validationService: ValidationService;
   pinnedWrapperCache: PinnedWrapperCache;
+  ensDomainCache: EnsDomainCache;
 }
 
 export const buildMainDependencyContainer = async (
@@ -87,6 +89,7 @@ export const buildMainDependencyContainer = async (
       .singleton(),
     validationService: awilix.asClass(ValidationService).singleton(),
     pinnedWrapperCache: awilix.asClass(PinnedWrapperCache).singleton(),
+    ensDomainCache: awilix.asClass(EnsDomainCache).singleton(),
     ...extensionsAndOverrides,
   });
 

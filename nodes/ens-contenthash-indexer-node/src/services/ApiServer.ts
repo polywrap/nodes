@@ -80,6 +80,16 @@ export class ApiServer {
       }
     }));
 
+    app.get('/api/ipfs/list-with-ens-nodes', handleError(async (req, res) => {
+      if (this.deps.ensStateManager.getState().isFullySynced) {
+        res.json(this.deps.ensStateManager.getIpfsCIDsWithEnsNodes());  
+      } else {
+        res.status(503).send({
+          error: 'ENS indexer is not fully synced'
+        });
+      }
+    }));
+
     app.post('/api/fast-sync/upload', handleError(async (req, res) => {
       const syncState = this.deps.ensStateManager.getState();
 
