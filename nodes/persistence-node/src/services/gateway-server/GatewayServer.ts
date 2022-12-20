@@ -561,7 +561,7 @@ export class GatewayServer {
 
     const cidDownloadCountMap = new Map<string, number>();
       
-    const cids: string[] = pinnedWrappers.map(x => `/api/v0/cat?arg=${x.cid}/wrap.wasm`);
+    const cids: string[] = pinnedWrappers.map(x => `/api/v0/resolve?arg=${x.cid}%2Fwrap.wasm`);
 
     const chunks = splitArray([...new Set(cids)], WRAPPER_DOWNLOAD_COUNT_MAX_LIMIT);
 
@@ -578,7 +578,7 @@ export class GatewayServer {
     }
 
     for (let wrapper of pinnedWrappers) {
-      wrapper.downloadCount = cidDownloadCountMap.get(`/api/v0/cat?arg=${wrapper.cid}/wrap.wasm`) ?? 0;
+      wrapper.downloadCount = cidDownloadCountMap.get(`/api/v0/resolve?arg=${wrapper.cid}%2Fwrap.wasm`) ?? 0;
     }
   }
 
