@@ -1,11 +1,11 @@
 import * as IPFS from "ipfs-core";
-import { TrackedIpfsHashInfo } from "../../types/TrackedIpfsHashInfo";
-import { WrapperWithFileList } from "./models/WrapperWithFileList";
-import { formatFileSize } from "../../utils/formatFileSize";
-import { IpfsPackageReader } from "../../types";
+import { TrackedIpfsHashInfo } from "../types/TrackedIpfsHashInfo";
+import { WrapperWithFileList } from "../services/gateway-server/models/WrapperWithFileList";
+import { formatFileSize } from "./formatFileSize";
+import { IpfsPackageReader } from "../types";
 import { deserializeWrapManifest } from "@polywrap/wrap-manifest-types-js";
-import { WRAPPER_DEFAULT_NAME } from "../../constants/wrappers";
-import { PinnedWrapperModel } from "../../types/PinnedWrapperModel";
+import { WRAPPER_DEFAULT_NAME } from "../constants/wrappers";
+import { PinnedWrapperModel } from "../types/PinnedWrapperModel";
 import { WRAP_INFO } from "@polywrap/package-validation";
 
 export const getWrapperPinInfo = async (info: TrackedIpfsHashInfo, ipfs: IPFS.IPFS, timeout: number, controller?: AbortController): Promise<PinnedWrapperModel | undefined> => {
