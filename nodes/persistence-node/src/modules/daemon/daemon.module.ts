@@ -2,6 +2,7 @@ import { buildMainDependencyContainer, MainDependencyContainer } from "./daemon.
 import fs from "fs";
 import path from "path";
 import { Config } from "../../config/Config";
+import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 
 export class DaemonModule {
 
@@ -27,14 +28,25 @@ export class DaemonModule {
 
     async run(shouldPurgeInvalidWrappers: boolean) {
         if(shouldPurgeInvalidWrappers) {
-            await this.deps.validationService.purgeInvalidWrappers();
+          await this.deps.validationService.purgeInvalidWrappers();
         }
+
+        await this.processPinnedWrappers();
 
         Promise.all([
             this.deps.apiServer.run(),
             this.deps.gatewayServer.run(),
             this.deps.persistenceService.run()
         ]);
+    }
+
+    async processPinnedWrappers(): Promise<void> {
+      const wrappers = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
+        .filter(
+          x => x.status === TrackedIpfsHashStatus.Pinned
+        );
+  
+      await this.deps.wrapperProcessor.processMultipleWrappers(wrappers.map(x => x.ipfsHash));
     }
 
     static async setupDataDirectory(

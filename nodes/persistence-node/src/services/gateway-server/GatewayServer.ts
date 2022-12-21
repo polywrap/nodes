@@ -23,10 +23,11 @@ import { Logger } from "../Logger";
 import { PersistenceStateManager } from "../PersistenceStateManager";
 import { ValidationService } from "../ValidationService";
 import { PersistenceService } from "../persistence-service/PersistenceService";
-import { getWrapperPinInfo } from "./getWrapperPinInfo";
+import { getWrapperPinInfo } from "../../utils/getWrapperPinInfo";
 import { PinnedWrapperModel } from "../../types/PinnedWrapperModel";
 import { PinnedWrapperCache } from "../PinnedWrapperCache";
 import { EnsDomainCache } from "../EnsDomainCache";
+import { splitArrayIntoChunks } from "../../utils/splitArrayIntoChunks";
 
 interface IDependencies {
   logger: Logger;
@@ -525,7 +526,7 @@ export class GatewayServer {
         )
       .flat();
 
-    const chunks = splitArray([...new Set(nodes)], REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT);
+    const chunks = splitArrayIntoChunks([...new Set(nodes)], REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT);
 
     const results = (
       await Promise.all(
@@ -563,7 +564,7 @@ export class GatewayServer {
       
     const cids: string[] = pinnedWrappers.map(x => `/api/v0/resolve?arg=${x.cid}%2Fwrap.wasm`);
 
-    const chunks = splitArray([...new Set(cids)], WRAPPER_DOWNLOAD_COUNT_MAX_LIMIT);
+    const chunks = splitArrayIntoChunks([...new Set(cids)], WRAPPER_DOWNLOAD_COUNT_MAX_LIMIT);
 
     const results = (
       await Promise.all(
@@ -639,14 +640,4 @@ export class GatewayServer {
         console.log("TRACKING ERROR: " + url, err);
       });
   }
-}
-
-function splitArray(array: string[], chunkSize: number) {
-  const result = [];
-  let index = 0;
-  while (index < array.length) {
-    result.push(array.slice(index, index + chunkSize));
-    index += chunkSize;
-  }
-  return result;
 }
