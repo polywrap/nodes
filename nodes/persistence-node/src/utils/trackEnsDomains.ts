@@ -2,7 +2,7 @@ import axios from "axios";
 import { splitArrayIntoChunks } from "./splitArrayIntoChunks";
 
 const ENS_DOMAIN_TRACKING_URL = "https://reverse-namehash.wrappers.dev";
-const ENS_DOMAIN_TRACKING_MAX_ADD_LIMIT = 100;
+const ENS_DOMAIN_TRACKING_MAX_ADD_LIMIT = 25;
 
 export const trackEnsDomains = async (domains: string[]): Promise<void> => {
   const uniqueDomains = [...new Set(domains)];
