@@ -1,6 +1,6 @@
 {
   "name": "@polywrap/persistence-node",
-  "version": "0.14.2",
+  "version": "0.14.3",
   "main": "bin/main.js",
   "types": "bin/main.d.ts",
   "author": "nerfZael",
@@ -36,6 +36,7 @@
     "test:jest": "jest test --passWithNoTests"
   },
   "dependencies": {
+    "@polywrap/msgpack-js": "0.8.0",
     "@polywrap/package-validation": "0.8.0",
     "@polywrap/wrap-manifest-types-js": "0.8.0",
     "@types/connect-timeout": "0.0.36",

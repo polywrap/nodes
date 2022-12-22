@@ -10,9 +10,9 @@ import { IndexRetriever } from "../IndexRetriever";
 import { PersistenceConfig } from "../../config/PersistenceConfig";
 import { calculateCIDsToTrackAndUntrack } from "./utils/calculateCIDsToTrackAndUntrack";
 import { ValidationService } from "../ValidationService";
-import { addFilesToIpfs, tryIpfsRequestWithFallbacks, loadFilesFromIpfsOrThrow } from "../../ipfs";
+import { addFilesToIpfs, tryIpfsRequestWithFallbacks, loadFilesFromIpfsOrThrow, getIpfsFileContents } from "../../ipfs";
 import { PinnedWrapperCache } from "../PinnedWrapperCache";
-import { getWrapperPinInfo } from "../gateway-server/getWrapperPinInfo";
+import { WrapperProcessor } from "../WrapperProcessor";
 
 type ActionPromise = () => Promise<void>;
 
@@ -25,6 +25,7 @@ interface IDependencies {
   indexRetriever: IndexRetriever;
   validationService: ValidationService;
   pinnedWrapperCache: PinnedWrapperCache;
+  wrapperProcessor: WrapperProcessor;
 }
 
 export class PersistenceService {
@@ -89,20 +90,13 @@ export class PersistenceService {
         timeout: this.deps.ipfsConfig.pinTimeout,
       });
 
-      const info = await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
+      await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         status: TrackedIpfsHashStatus.Pinned,
         indexes
       });
 
-      const pinnedWrapperInfo = await getWrapperPinInfo(info, this.deps.ipfsNode, this.deps.ipfsConfig.gatewayTimeout);
-
-      if (pinnedWrapperInfo) {
-        this.deps.pinnedWrapperCache.cache(pinnedWrapperInfo);
-        this.deps.logger.log(`Pinned ${ipfsHash}`);
-      } else {
-        throw new Error(`Failed to get pin info for ${ipfsHash}`);
-      }
+      await this.deps.wrapperProcessor.processSingleWrapper(ipfsHash);
     } catch (err) {
       this.deps.logger.log(JSON.stringify(err));
      

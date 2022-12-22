@@ -1,0 +1,1 @@
+export const ENS_DOMAIN_REGEX = /[-a-zA-Z0-9@:%._\+~#=]{1,256}\.eth/g;
