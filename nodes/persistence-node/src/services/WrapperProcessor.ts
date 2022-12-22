@@ -77,8 +77,9 @@ export class WrapperProcessor {
     }
     const wrapInfo = JSON.stringify(msgpackDecode(wrapInfoBuffer));
 
-    const domains = [...(wrapInfo.match(ENS_DOMAIN_REGEX) as string[])];
+    const result = wrapInfo.match(ENS_DOMAIN_REGEX);
+    const domains = result ?? [];
 
-    return domains.filter(x => x.endsWith(".eth"));
+    return domains;
   }
 }
