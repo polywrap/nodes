@@ -32,7 +32,7 @@ export class EnsStateManager {
   }
 
   get prebuiltStateFilePath(): string {
-    return path.join(`${__dirname}/../prebuilt-state/ens-state.${this.deps.ethereumNetwork.name}.json`);
+    return path.join(`${__dirname}/../prebuilt-state/ens-state.${this.deps.ethereumNetwork.name}.prebuilt.json`);
   }
 
   get lastBlockNumber(): number {
