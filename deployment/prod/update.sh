@@ -26,7 +26,7 @@ set -e
 
 # rm $data/persistence-node/config.json
 # rm $data/persistence-node -rf
-# rm $data/ens-indexer-node/mainnet -rf
+rm $data/ens-indexer-node/mainnet -rf
 rm $data/ens-indexer-node/goerli -rf
 
 mkdir -p $hosting/$persistenceNode
@@ -39,7 +39,7 @@ cd $hosting/$ensIndexerNode
 cp -r $staging/$ensIndexerNode/bin ./
 cp -r $staging/$ensIndexerNode/node_modules ./
 
-node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
+# node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
 node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/mainnet --network mainnet --log
 node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/goerli --network goerli --log
 
