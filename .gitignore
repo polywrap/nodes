@@ -8,6 +8,8 @@ config.json
 persistence-state.json
 ens-state.*.json
 
+!ens-state.*.prebuilt.json
+
 # Environment
 .env
 
