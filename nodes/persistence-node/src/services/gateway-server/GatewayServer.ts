@@ -632,22 +632,24 @@ export class GatewayServer {
   }
 
   private async getIndexersInfo() {
-    const indexerResults = this.deps.indexerConfig.indexes.map(indexer => {
-      return axios({
-        method: 'GET',
-        url: new URL('status', indexer.provider).href,
-      }).then(response => {
-        return {
-          ...response.data,
-          lastSync: this.deps.indexRetriever.lastIndexSync[indexer.name] ?? "Unknown"
-        };
-      })
-        .catch(error => {
-          const message = `Error getting status for indexer ${indexer.provider}: ${error.message}`;
-          this.deps.logger.log(message);
-          return { error: message }
-        });
-    });
+    const indexerResults = this.deps.indexerConfig.indexes
+      .filter(indexer => !indexer.private)
+      .map(indexer => {
+        return axios({
+          method: 'GET',
+          url: new URL('status', indexer.provider).href,
+        }).then(response => {
+          return {
+            ...response.data,
+            lastSync: this.deps.indexRetriever.lastIndexSync[indexer.name] ?? "Unknown"
+          };
+        })
+          .catch(error => {
+            const message = `Error getting status for indexer ${indexer.provider}: ${error.message}`;
+            this.deps.logger.log(message);
+            return { error: message }
+          });
+      });
 
     return await Promise.all([
       ...indexerResults
