@@ -15,7 +15,7 @@ import { VERSION } from "../../constants/version";
 import { handleError } from "../../http-server/handleError";
 import { addFilesToIpfs, getIpfsFileContents } from "../../ipfs";
 import { addFilesAsDirToIpfs } from "../../ipfs/addFilesAsDirToIpfs";
-import { DetailedPinnedWrapperModel, InMemoryFile, IpfsErrorResponse, MulterFile } from "../../types";
+import { CIDWithEnsNodes, DetailedPinnedWrapperModel, InMemoryFile, IpfsErrorResponse, MulterFile, TrackedIpfsHashInfo } from "../../types";
 import { TrackedIpfsHashStatus } from "../../types/TrackedIpfsHashStatus";
 import { formatFileSize } from "../../utils/formatFileSize";
 import { IndexRetriever } from "../IndexRetriever";
@@ -208,7 +208,27 @@ export class GatewayServer {
       res.render('ipfs-pinned-files', {
         pinned: pinnedIpfsHashes,
         count: pinnedIpfsHashes.length,
-      })
+      });
+    }));
+
+    //TODO: Temporary solution so that the persistence-node can be used as an indexer for another persistence node
+    app.get('/api/ipfs/list-with-ens-nodes', handleError(async (req, res) => {
+      let pinnedWrappers: TrackedIpfsHashInfo[] = [];
+
+      for (const info of this.deps.persistenceStateManager.getTrackedIpfsHashInfos()) {
+        if (info.status !== TrackedIpfsHashStatus.Pinned) {
+          continue;
+        }
+
+        pinnedWrappers.push(info);
+      }
+
+      const result: CIDWithEnsNodes[] = pinnedWrappers.map(x => ({
+        cid: x.ipfsHash,
+        ensNodes: new Set()
+      }));
+
+      res.json(result);
     }));
 
     app.get('/pins', handleError(async (req, res) => {
@@ -220,7 +240,14 @@ export class GatewayServer {
 
       const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
         .filter(x => x.status === TrackedIpfsHashStatus.Pinned)
-        .reverse();
+        .reverse()
+        .map(x => ({
+          ipfsHash: x.ipfsHash,
+          status: x.status,
+          previousStatus: x.previousStatus,
+          unresponsiveInfo: x.unresponsiveInfo,
+          indexes: x.indexes.filter(index => this.deps.indexerConfig.indexes.some(x => x.name === index.name && !x.private))
+        }));
       
       let cached = 0;
       const pinnedWrappers = (
