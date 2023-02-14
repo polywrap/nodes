@@ -40,6 +40,7 @@ export class TextRecordProcessor {
       }
       if (bulk.length) {
         await this.processBulk(bulk);
+        await sleep(15);
       } else {
         await sleep(1000);
       }
@@ -59,5 +60,6 @@ export class TextRecordProcessor {
     records.forEach((record, index) => {
       this.deps.ensStateManager.updateValue(record.ensNode, record.key, toUtf8StringOrUndefined(values[index]));
     });
+    this.deps.ensStateManager.save();
   }
 }

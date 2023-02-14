@@ -49,10 +49,18 @@ export class EnsStateManager {
       .flatMap(x => Object.keys(x));
   }
 
-  getEnsRecordKeys(): { ensNode: string, keys: string[] }[] {
+  getEnsTextRecords(): { 
+    node: string, 
+    textRecords: { key: string, value: string }[] 
+  }[] {
     return Object.entries(this.state.ensRecordKeys)
       .filter(x => !!x)
-      .map(([ensNode, keys]) => ({ ensNode, keys: Object.keys(keys) }));
+      .map(([ensNode, keys]) => ({ 
+        node: ensNode, 
+        textRecords: Object.keys(keys)
+          .filter(key => keys[key].value)
+          .map(key => ({ key, value: keys[key].value as string }))
+      }));
   }
     
   getState(): SavedEnsState {
@@ -99,11 +107,9 @@ export class EnsStateManager {
         });
       }
     }
-  
-    this.save();
   }
 
-  updateValue(ensNode: string, key: string, value: string | undefined) {
+  async updateValue(ensNode: string, key: string, value: string | undefined) {
     const keys: Record<string, TextRecordValue> = this.state.ensRecordKeys[ensNode];
 
     if(keys) {
@@ -125,17 +131,15 @@ export class EnsStateManager {
         };
       }
     }
-  
-    this.save();
   }
 
-  async save(): Promise<void> {
+  save() {
     fs.writeFileSync(this.stateFilePath, JSON.stringify(this.state, null, 2));
   }
 
   async load(): Promise<void> {
     if (!fs.existsSync(this.stateFilePath)) {
-      await this.save();
+      this.save();
     }
 
     this.state = JSON.parse(fs.readFileSync(this.stateFilePath, 'utf8'));

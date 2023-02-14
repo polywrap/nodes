@@ -1,4 +1,4 @@
-import { IPFSIndexConfig } from "../types";
+import { IndexConfig } from "../types";
 import { WrapperConfig } from "./WrapperConfig";
 
 export type Config = {
@@ -21,5 +21,6 @@ export type Config = {
         }
     },
     loggerEnabled: boolean,
-    indexes: IPFSIndexConfig[],
+    indexes: IndexConfig[],
+    ensTextRecordIndexes: IndexConfig[],
 };

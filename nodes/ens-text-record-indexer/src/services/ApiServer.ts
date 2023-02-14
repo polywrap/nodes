@@ -67,7 +67,7 @@ export class ApiServer {
     }));
 
     app.get('/api/text-records', handleError(async (req, res) => {
-      res.json(this.deps.ensStateManager.getEnsRecordKeys());
+      res.json(this.deps.ensStateManager.getEnsTextRecords());
     }));
 
     app.get("/", handleError(async (req, res) => {

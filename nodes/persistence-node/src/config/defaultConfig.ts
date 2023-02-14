@@ -42,5 +42,15 @@ export const defaultConfig: Config = {
       "name": "ens-goerli",
       "provider": "http://localhost:8085"
     }
+  ],
+  "ensTextRecordIndexes": [
+    {
+      "name": "ensTextRecord-mainnet",
+      "provider": "http://localhost:8086"
+    },
+    {
+      "name": "ensTextRecord-goerli",
+      "provider": "http://localhost:8087"
+    },
   ]
 };

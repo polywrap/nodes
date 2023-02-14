@@ -1,4 +1,4 @@
-export type IPFSIndexConfig = {
+export type IndexConfig = {
   name: string;
   provider: string;
 };
