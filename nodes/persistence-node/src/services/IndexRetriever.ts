@@ -59,7 +59,6 @@ export class IndexRetriever {
 
     return indexes;
   }
-
   async getEnsNodesWithTextRecords(network: string): Promise<{
     node: string,
     textRecords: {
@@ -67,45 +66,33 @@ export class IndexRetriever {
       value: string
     }[]
   }[]> {
-    try {
-      const indexes = this.deps.indexerConfig.ensTextRecordIndexes.find(x => x.name === `ensTextRecord-${network}`);
-      const indexes: IPFSIndex[] = [];
+    const index = this.deps.indexerConfig.ensTextRecordIndexes.find(x => x.name === `ensTextRecord-${network}`);
 
-      for(const index of this.deps.indexerConfig.indexes) {
-        try {
-          const response = await axios({
-            method: 'GET',
-            url: new URL('api/ipfs/list-with-ens-nodes', index.provider).href,
-          });
-          
-          if(response.status === 200) {
-            this.deps.logger.log(`Successfully retrieved CIDs from ${index.name} (${response.data.length})`);
-            indexes.push({
-              name: index.name,
-              cids: response.data as CIDWithEnsNodes[],
-              error: false
-            });
-            this.lastIpfsIndexSync[index.name] = new Date();
-            continue;
-          } else {
-            this.deps.logger.log(`Failed to get CIDs from ${index.name}, status code: ${response.status}`);
-          }
-        }
-        catch(err) {
-          const error = (err as AxiosError).response?.data.error
-            ? (err as AxiosError).response?.data.error
-            : JSON.stringify(err);
-  
-          this.deps.logger.log(`Failed to get CIDs from ${index.name}, error: ${error}`);
-        }
-  
-        indexes.push({
-          name: index.name,
-          cids: [],
-          error: true
-        });
-      }
-  
-      return indexes;
+    if (!index) {
+      this.deps.logger.log(`Text record index not found for network: ${network}`);
+      return [];
     }
+    try {
+      const response = await axios({
+        method: 'GET',
+        url: new URL('api/text-records', index.provider).href,
+      });
+      
+      if(response.status === 200) {
+        this.deps.logger.log(`Successfully retrieved CIDs from ${index.name} (${response.data.length})`);
+        return response.data;
+      } else {
+        this.deps.logger.log(`Failed to get CIDs from ${index.name}, status code: ${response.status}`);
+      }
+    }
+    catch(err) {
+      const error = (err as AxiosError).response?.data.error
+        ? (err as AxiosError).response?.data.error
+        : JSON.stringify(err);
+
+      this.deps.logger.log(`Failed to get CIDs from ${index.name}, error: ${error}`);
+    }
+
+    return [];
+  }
 }

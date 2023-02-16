@@ -348,7 +348,7 @@ export class GatewayServer {
           }))
         );
       
-      const ens = await this.deps.indexRetriever.getEnsNodesWithTextRecords();
+      const ens = await this.deps.indexRetriever.getEnsNodesWithTextRecords(network);
 
       for (const node of ens) {
         const existingDomain = ensDomains.find(x => x.node === node.node);
@@ -740,7 +740,7 @@ export class GatewayServer {
         }).then(response => {
           return {
             ...response.data,
-            lastSync: this.deps.indexRetriever.lastIndexSync[indexer.name] ?? "Unknown"
+            lastSync: this.deps.indexRetriever.lastIpfsIndexSync[indexer.name] ?? "Unknown"
           };
         })
           .catch(error => {
