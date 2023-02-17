@@ -29,6 +29,7 @@
     "start": "node bin/main.js",
     "dev-init:goerli": "ts-node src/main.ts init --data ./.data/goerli --network goerli --log",
     "daemon:goerli": "ts-node src/main.ts daemon --data ./.data/goerli --log",
+    "daemon:mainnet": "ts-node src/main.ts daemon --data ./.data/mainnet --log",
     "test": "yarn test:jest",
     "test:jest": "jest test --passWithNoTests"
   },

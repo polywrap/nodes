@@ -32,6 +32,10 @@ export class EnsStateManager {
     return path.join(this.deps.dataDirPath, `./ens-state.${this.deps.ethereumNetwork.name}.json`);
   }
 
+  get prebuiltStateFilePath(): string {
+    return path.join(`${__dirname}/../prebuilt-state/ens-state.${this.deps.ethereumNetwork.name}.prebuilt.json`);
+  }
+
   get lastBlockNumber(): number {
     return this.state.lastBlockNumber;
   }
@@ -139,7 +143,11 @@ export class EnsStateManager {
 
   async load(): Promise<void> {
     if (!fs.existsSync(this.stateFilePath)) {
-      this.save();
+      if (fs.existsSync(this.prebuiltStateFilePath)) {
+        fs.copyFileSync(this.prebuiltStateFilePath, this.stateFilePath);
+      } else {
+        await this.save();
+      }
     }
 
     this.state = JSON.parse(fs.readFileSync(this.stateFilePath, 'utf8'));
