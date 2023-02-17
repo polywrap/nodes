@@ -1,6 +1,6 @@
 export * from "./EnsState";
 export * from "./IPFSIndex";
-export * from "./IPFSIndexConfig";
+export * from "./IndexConfig";
 export * from "./InMemoryFile";
 export * from "./InMemoryPackageReader";
 export * from "./IpfsAddResult";
