@@ -23,9 +23,10 @@
     "wrapper"
   ],
   "scripts": {
-    "build": "yarn build:persistence && yarn build:ens",
+    "build": "yarn build:persistence && yarn build:ens-contenthash && yarn build:ens-text-record",
     "build:persistence": "cd ./nodes/persistence-node && yarn build",
-    "build:ens": "cd ./nodes/ens-contenthash-indexer-node && yarn build",
+    "build:ens-contenthash": "cd ./nodes/ens-contenthash-indexer-node && yarn build",
+    "build:ens-text-record": "cd ./nodes/ens-text-record-indexer && yarn build",
     "install:ci": "yarn install:ci:persistence && yarn install:ci:ens",
     "install:ci:persistence": "cd ./nodes/persistence-node && yarn install --nonInteractive --frozen-lockfile --prefer-offline",
     "install:ci:ens": "cd ./nodes/ens-contenthash-indexer-node && yarn install --nonInteractive --frozen-lockfile --prefer-offline"

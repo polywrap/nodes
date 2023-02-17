@@ -45,7 +45,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME_PROD }}
           key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
           port: ${{ secrets.SSH_PORT_PROD }}
-          source: "./nodes/persistence-node/bin,./nodes/persistence-node/node_modules,./nodes/ens-contenthash-indexer-node/bin,./nodes/ens-contenthash-indexer-node/node_modules"
+          source: "./nodes/persistence-node/bin,./nodes/persistence-node/node_modules,./nodes/ens-contenthash-indexer-node/bin,./nodes/ens-contenthash-indexer-node/node_modules,./nodes/ens-text-record-indexer/bin,./nodes/ens-text-record-indexer/node_modules"
           target: "/home/ubuntu/staging/polywrap/nodes"
       
       - name: "Copy node build artifacts to production server 2"
@@ -55,7 +55,7 @@ jobs:
           username: ${{ secrets.SSH_USERNAME_PROD }}
           key: ${{ secrets.DEPLOYMENT_KEY_PROD }}
           port: ${{ secrets.SSH_PORT_PROD }}
-          source: "./nodes/persistence-node/bin,./nodes/persistence-node/node_modules,./nodes/ens-contenthash-indexer-node/bin,./nodes/ens-contenthash-indexer-node/node_modules"
+          source: "./nodes/persistence-node/bin,./nodes/persistence-node/node_modules,./nodes/ens-contenthash-indexer-node/bin,./nodes/ens-contenthash-indexer-node/node_modules,./nodes/ens-text-record-indexer/bin,./nodes/ens-text-record-indexer/node_modules"
           target: "/home/ubuntu/staging/polywrap/nodes"
 
       - name: "Copy node build artifacts to production server 3"
