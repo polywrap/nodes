@@ -51,13 +51,13 @@ cp -r $staging/$ensTextRecordIndexer/node_modules ./
 # node $hosting/$persistenceNode/bin/main.js init --data $data/persistence-node --log
 # node $hosting/$ensIndexerNode/bin/main.js init --data $data/ens-indexer-node/mainnet --network mainnet --log
 # node $hosting/$ensIndexerNode/bin/main.js init --sdata $data/ens-indexer-node/goerli --network goerli --log
-node $hosting/$ensTextRecordIndexer/bin/main.js init --data $data/ens-text-record-indexer/mainnet --network mainnet --log
-node $hosting/$ensTextRecordIndexer/bin/main.js init --data $data/ens-text-record-indexer/goerli --network goerli --log
+# node $hosting/$ensTextRecordIndexer/bin/main.js init --data $data/ens-text-record-indexer/mainnet --network mainnet --log
+# node $hosting/$ensTextRecordIndexer/bin/main.js init --data $data/ens-text-record-indexer/goerli --network goerli --log
 
 pm2 start $hosting/$persistenceNode/bin/main.js --name persistence-node -- daemon --data $data/persistence-node --gateway-port $persistenceNodePort --log --purge-invalid-wrappers
 pm2 start $hosting/$ensIndexerNode/bin/main.js --name ens-indexer-node-mainnet -- daemon --data $data/ens-indexer-node/mainnet --port $ensIndexerNodeMainnetPort -b $startingBlockMainnet --log
 pm2 start $hosting/$ensIndexerNode/bin/main.js --name ens-indexer-node-goerli -- daemon --data $data/ens-indexer-node/goerli --port $ensIndexerNodeGoerliPort -b $startingBlockGoerli --log
-pm2 start $hosting/$ensTextRecordIndexer/bin/main.js --name ens-text-record-indexer-mainnet -- daemon --data $data/ens-text-record-indexer/mainnet --port $ensTextRecordIndexerGoerliPort -b $startingBlockMainnet --log
+pm2 start $hosting/$ensTextRecordIndexer/bin/main.js --name ens-text-record-indexer-mainnet -- daemon --data $data/ens-text-record-indexer/mainnet --port $ensTextRecordIndexerMainnetPort -b $startingBlockMainnet --log
 pm2 start $hosting/$ensTextRecordIndexer/bin/main.js --name ens-text-record-indexer-goerli -- daemon --data $data/ens-text-record-indexer/goerli --port $ensTextRecordIndexerGoerliPort -b $startingBlockGoerli --log
 
 pm2 save

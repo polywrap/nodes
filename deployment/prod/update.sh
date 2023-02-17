@@ -8,6 +8,8 @@ ensIndexerNode=polywrap/nodes/nodes/ens-contenthash-indexer-node
 persistenceNodePort=8081
 ensIndexerNodeMainnetPort=8082
 ensIndexerNodeGoerliPort=8085
+ensTextRecordIndexerMainnetPort=8086
+ensTextRecordIndexerGoerliPort=8087
 startingBlockMainnet=0
 startingBlockGoerli=0
 
