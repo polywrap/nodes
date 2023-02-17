@@ -27,9 +27,10 @@
     "build:persistence": "cd ./nodes/persistence-node && yarn build",
     "build:ens-contenthash": "cd ./nodes/ens-contenthash-indexer-node && yarn build",
     "build:ens-text-record": "cd ./nodes/ens-text-record-indexer && yarn build",
-    "install:ci": "yarn install:ci:persistence && yarn install:ci:ens",
+    "install:ci": "yarn install:ci:persistence && yarn install:ci:ens-contenthash && yarn install:ci:ens-text-record",
     "install:ci:persistence": "cd ./nodes/persistence-node && yarn install --nonInteractive --frozen-lockfile --prefer-offline",
-    "install:ci:ens": "cd ./nodes/ens-contenthash-indexer-node && yarn install --nonInteractive --frozen-lockfile --prefer-offline"
+    "install:ci:ens-contenthash": "cd ./nodes/ens-contenthash-indexer-node && yarn install --nonInteractive --frozen-lockfile --prefer-offline",
+    "install:ci:ens-text-record": "cd ./nodes/ens-text-record-indexer && yarn install --nonInteractive --frozen-lockfile --prefer-offline"
   },
   "dependencies": {
   },
