@@ -646,7 +646,6 @@ export class GatewayServer {
   }
 
   private async addEnsDomainInfo(ensDomains: {node: string, domain?: string}[]) {
-    console.log("hahah");
     const REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT = 100;
     const REVERSE_NAMEHASH_ENDPOINT = "https://reverse-namehash.wrappers.dev";
 
@@ -657,7 +656,6 @@ export class GatewayServer {
 
     const chunks = splitArrayIntoChunks([...new Set(nodes)], REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT);
 
-    console.log(chunks)
     const results = (
       await Promise.all(
         chunks.map(x => axios.post(`${REVERSE_NAMEHASH_ENDPOINT}/resolve`, x))

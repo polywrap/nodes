@@ -67,6 +67,21 @@ export class EnsStateManager {
       }));
   }
     
+  getWrapEnsTextRecords(): { 
+    node: string, 
+    textRecords: { key: string, value: string }[] 
+  }[] {
+    return Object.entries(this.state.ensRecordKeys)
+      .filter(x => !!x)
+      .map(([ensNode, keys]) => ({ 
+        node: ensNode, 
+        textRecords: Object.keys(keys)
+          .filter(key => key.startsWith("wrap/"))
+          .filter(key => keys[key].value)
+          .map(key => ({ key, value: keys[key].value as string }))
+      })).filter(x => x.textRecords.length);
+  }
+
   getState(): SavedEnsState {
     return {
       ensRecordKeys: this.state.ensRecordKeys,
