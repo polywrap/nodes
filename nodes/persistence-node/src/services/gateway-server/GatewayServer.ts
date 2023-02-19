@@ -746,7 +746,26 @@ export class GatewayServer {
             this.deps.logger.log(message);
             return { error: message }
           });
-      });
+      }).concat(
+        this.deps.indexerConfig.ensTextRecordIndexes
+        .filter(indexer => !indexer.private)
+        .map(indexer => {
+          return axios({
+            method: 'GET',
+            url: new URL('status', indexer.provider).href,
+          }).then(response => {
+            return {
+              ...response.data,
+              lastSync: "Unknown"
+            };
+          })
+            .catch(error => {
+              const message = `Error getting status for indexer ${indexer.provider}: ${error.message}`;
+              this.deps.logger.log(message);
+              return { error: message }
+            });
+        })
+      );
 
     return await Promise.all([
       ...indexerResults
