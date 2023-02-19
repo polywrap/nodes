@@ -5,6 +5,7 @@ data=~/data
 
 persistenceNode=polywrap/nodes/nodes/persistence-node
 ensIndexerNode=polywrap/nodes/nodes/ens-contenthash-indexer-node
+ensTextRecordIndexer=polywrap/nodes/nodes/ens-text-record-indexer
 persistenceNodePort=8081
 ensIndexerNodeMainnetPort=8082
 ensIndexerNodeGoerliPort=8085
@@ -23,6 +24,8 @@ source ~/.profile
 pm2 delete persistence-node
 pm2 delete ens-indexer-node-mainnet
 pm2 delete ens-indexer-node-goerli
+pm2 delete ens-text-record-indexer-mainnet
+pm2 delete ens-text-record-indexer-goerli
 
 set -e
 
@@ -30,6 +33,8 @@ set -e
 # rm $data/persistence-node -rf
 # rm $data/ens-indexer-node/mainnet -rf
 # rm $data/ens-indexer-node/goerli -rf
+# rm $data/ens-text-record-indexer/mainnet -rf
+# rm $data/ens-text-record-indexer/goerli -rf
 
 mkdir -p $hosting/$persistenceNode
 cd $hosting/$persistenceNode

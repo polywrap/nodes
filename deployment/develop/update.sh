@@ -36,14 +36,17 @@ set -e
 # rm $data/ens-text-record-indexer/mainnet -rf
 # rm $data/ens-text-record-indexer/goerli -rf
 
+mkdir -p $hosting/$persistenceNode
 cd $hosting/$persistenceNode
 cp -r $staging/$persistenceNode/bin ./
 cp -r $staging/$persistenceNode/node_modules ./
 
+mkdir -p $hosting/$ensIndexerNode
 cd $hosting/$ensIndexerNode
 cp -r $staging/$ensIndexerNode/bin ./
 cp -r $staging/$ensIndexerNode/node_modules ./
 
+mkdir -p $hosting/$ensTextRecordIndexer
 cd $hosting/$ensTextRecordIndexer
 cp -r $staging/$ensTextRecordIndexer/bin ./
 cp -r $staging/$ensTextRecordIndexer/node_modules ./
