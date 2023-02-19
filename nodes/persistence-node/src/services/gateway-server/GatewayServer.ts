@@ -296,10 +296,8 @@ export class GatewayServer {
         }))
       ).filter(x => !!x) as DetailedPinnedWrapperModel[];
 
-      console.log(`Pinned wrappers: ${pinnedWrappers.length} (cached: ${cached})`);
-     
       if (req.query.json) {
-        await this.addEnsDomainInfo(pinnedWrappers);
+        await this.addEnsDomainInfoToWrappers(pinnedWrappers);
         await this.addWrapperDownloadCount(pinnedWrappers);
       
         res.json(pinnedWrappers);
@@ -310,6 +308,70 @@ export class GatewayServer {
         wrappers: pinnedWrappers,
         count: pinnedWrappers.length,
       });
+    }));
+
+    app.get('/ens/:network', handleError(async (req, res) => {
+      const network = (req.params as any).network as string;
+
+      if (!network) {
+        res.status(422).send("Network parameter missing.");
+        return;
+      }
+
+      const controller = new AbortController();
+
+      req.on('close', () => {
+        controller.abort();
+      });
+
+      const infos = this.deps.persistenceStateManager.getTrackedIpfsHashInfos()
+        .filter(x => x.status === TrackedIpfsHashStatus.Pinned)
+        .reverse();
+
+      const ensDomains: { 
+        node: string,
+        domain?: string,
+        cid?: string,
+        textRecords: {
+          key: string,
+          value: string,
+        }[]
+      }[] = infos
+        .flatMap(x => x.indexes
+          .filter(index => index.name === `ens-${network}`)
+          .flatMap(index => [...index.ensNodes])
+          .map(node => ({
+            node,
+            domain: this.deps.ensDomainCache.get(node),
+            cid: x.ipfsHash,
+            textRecords: [],
+          }))
+        );
+      
+      const ens = await this.deps.indexRetriever.getEnsNodesWithTextRecords(network);
+
+      for (const node of ens) {
+        const existingDomain = ensDomains.find(x => x.node === node.node);
+        if (existingDomain) {
+          existingDomain.textRecords = node.textRecords;
+        } else {
+          ensDomains.push({
+            node: node.node,
+            domain: this.deps.ensDomainCache.get(node.node),
+            cid: undefined,
+            textRecords: node.textRecords,
+          });
+        }
+      }
+
+      if (req.query.json) {
+        await this.addEnsDomainInfo(ensDomains);
+      
+        res.json(ensDomains);
+        return;
+      } else {
+        res.status(400).send('Invalid request');
+      }
     }));
 
     app.get("/view/ipfs/:path(*)", handleError(async (req, res) => {
@@ -537,7 +599,7 @@ export class GatewayServer {
     server.listen(this.deps.gatewayConfig.port, () => console.log(`Gateway listening on http://localhost:${this.deps.gatewayConfig.port}`));
   }
 
-  private async addEnsDomainInfo(pinnedWrappers: DetailedPinnedWrapperModel[]) {
+  private async addEnsDomainInfoToWrappers(pinnedWrappers: DetailedPinnedWrapperModel[]) {
     const REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT = 100;
     const REVERSE_NAMEHASH_ENDPOINT = "https://reverse-namehash.wrappers.dev";
 
@@ -579,6 +641,41 @@ export class GatewayServer {
             this.deps.ensDomainCache.cache(ensInfo.node, ensInfo.domain);
           }
         }
+      }
+    }
+  }
+
+  private async addEnsDomainInfo(ensDomains: {node: string, domain?: string}[]) {
+    const REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT = 100;
+    const REVERSE_NAMEHASH_ENDPOINT = "https://reverse-namehash.wrappers.dev";
+
+    const nodeDomainMap = new Map<string, string>();
+      
+    const nodes: string[] = ensDomains
+      .map(x => x.node);
+
+    const chunks = splitArrayIntoChunks([...new Set(nodes)], REVERSE_NAMEHASH_MAX_RESOLVE_LIMIT);
+
+    const results = (
+      await Promise.all(
+        chunks.map(x => axios.post(`${REVERSE_NAMEHASH_ENDPOINT}/resolve`, x))
+      )
+    ).map(x => x.data);
+
+    for (let resultChunk of results) {
+      for (let result of resultChunk) {
+        nodeDomainMap.set(result.node, result.domain);
+      }
+    }
+
+    for (let domainInfo of ensDomains) {
+      if (domainInfo.domain) {
+        continue;
+      }
+
+      domainInfo.domain = nodeDomainMap.get(domainInfo.node);
+      if (domainInfo.domain) {
+        this.deps.ensDomainCache.cache(domainInfo.node, domainInfo.domain);
       }
     }
   }
@@ -641,7 +738,7 @@ export class GatewayServer {
         }).then(response => {
           return {
             ...response.data,
-            lastSync: this.deps.indexRetriever.lastIndexSync[indexer.name] ?? "Unknown"
+            lastSync: this.deps.indexRetriever.lastIpfsIndexSync[indexer.name] ?? "Unknown"
           };
         })
           .catch(error => {
