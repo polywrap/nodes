@@ -16,7 +16,7 @@ export class IpfsConfig {
     this.gatewayTimeout = config.ipfs.timeouts.gatewayTimeout;
     this.pinTimeout = config.ipfs.timeouts.pinTimeout;
     this.unpinTimeout = config.ipfs.timeouts.unpinTimeout;
-    this.apis = config.ipfs.apis;
+    this.apis = config.ipfs.apis ?? [];
   }
 }
 
