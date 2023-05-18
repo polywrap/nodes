@@ -30,7 +30,8 @@ export const defaultConfig: Config = {
       "gatewayTimeout": 25000,
       "pinTimeout": 30000,
       "unpinTimeout": 30000
-    }
+    },
+    "apis": []
   },
   "loggerEnabled": true,
   "indexes": [
