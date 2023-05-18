@@ -13,6 +13,7 @@ import { ValidationService } from "../ValidationService";
 import { addFilesToIpfs, tryIpfsRequestWithFallbacks, loadFilesFromIpfsOrThrow, getIpfsFileContents } from "../../ipfs";
 import { PinnedWrapperCache } from "../PinnedWrapperCache";
 import { WrapperProcessor } from "../WrapperProcessor";
+import { create as createIpfsHttpClient } from "ipfs-http-client"
 
 type ActionPromise = () => Promise<void>;
 
@@ -90,6 +91,14 @@ export class PersistenceService {
         timeout: this.deps.ipfsConfig.pinTimeout,
       });
 
+      for (let api of this.deps.ipfsConfig.apis) {
+        const client = createIpfsHttpClient(api);
+
+        await client.pin.add(ipfsHash, {
+          recursive: true,
+        });
+      }
+
       await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {
         ipfsHash,
         status: TrackedIpfsHashStatus.Pinned,
@@ -98,6 +107,7 @@ export class PersistenceService {
 
       await this.deps.wrapperProcessor.processSingleWrapper(ipfsHash);
     } catch (err) {
+      console.error(err);
       this.deps.logger.log(JSON.stringify(err));
      
       await this.scheduleRetry(ipfsHash, retryCount, TrackedIpfsHashStatus.Pinning, indexes);
@@ -111,6 +121,14 @@ export class PersistenceService {
         timeout: this.deps.ipfsConfig.unpinTimeout,
       });
   
+      for (let api of this.deps.ipfsConfig.apis) {
+        const client = createIpfsHttpClient(api);
+       
+        await client.pin.rm(ipfsHash, {
+          recursive: true,
+        });
+      }
+
       this.deps.logger.log(`Unpinned ${ipfsHash}`);
       return true;
     } catch (err: any) {
@@ -223,9 +241,10 @@ export class PersistenceService {
         const { rootCid } = await addFilesToIpfs(
           filesToAdd,
           { onlyHash: false },
-          this.deps.ipfsNode
+          this.deps.ipfsNode,
+          this.deps.ipfsConfig.apis
         );
-  
+
         if(!rootCid) {
           this.deps.logger.log(`Local and remote hashes do not match: ${ipfsHash}, local hash is not a directory...`);
           await this.deps.persistenceStateManager.setIpfsHashInfo(ipfsHash, {

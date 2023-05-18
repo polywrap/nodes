@@ -1,3 +1,4 @@
+import * as IPFS from "ipfs-http-client";
 import { isValidUrl } from "../utils/isValidUrl";
 import { Config } from "./Config";
 
@@ -7,6 +8,7 @@ export class IpfsConfig {
   gatewayTimeout: number;
   pinTimeout: number;
   unpinTimeout: number;
+  apis: IpfsApi[] = [];
 
   constructor({ config }: { config: Config }) {
     this.externalIpfsProvider = getValidUrlOrUndefined(config.ipfs.provider);
@@ -14,8 +16,11 @@ export class IpfsConfig {
     this.gatewayTimeout = config.ipfs.timeouts.gatewayTimeout;
     this.pinTimeout = config.ipfs.timeouts.pinTimeout;
     this.unpinTimeout = config.ipfs.timeouts.unpinTimeout;
+    this.apis = config.ipfs.apis ?? [];
   }
 }
+
+export type IpfsApi = IPFS.Options & { name: string };
 
 function getValidUrlOrUndefined(url: string | undefined) {
   if (url?.length === 0) {

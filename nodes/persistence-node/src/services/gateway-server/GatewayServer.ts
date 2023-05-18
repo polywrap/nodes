@@ -28,12 +28,14 @@ import { PinnedWrapperModel } from "../../types/PinnedWrapperModel";
 import { PinnedWrapperCache } from "../PinnedWrapperCache";
 import { EnsDomainCache } from "../EnsDomainCache";
 import { splitArrayIntoChunks } from "../../utils/splitArrayIntoChunks";
+import { IpfsConfig } from "../../config/IpfsConfig";
 
 interface IDependencies {
   logger: Logger;
   persistenceStateManager: PersistenceStateManager;
   ipfsNode: IPFS.IPFS;
   gatewayConfig: GatewayConfig;
+  ipfsConfig: IpfsConfig;
   persistenceConfig: PersistenceConfig;
   validationService: ValidationService;
   indexerConfig: IndexerConfig;
@@ -416,7 +418,7 @@ export class GatewayServer {
           totalSizeInKb: formatFileSize(contentDescription.cumulativeSize)
         });
       } else {
-        res.status(500).json(this.buildIpfsError("Unsupported file type"));
+        throw new Error("Unsupported file type");
       }
     }));
 
@@ -449,8 +451,7 @@ export class GatewayServer {
 
     app.post('/add', upload.fields([{ name: "files" }, { name: "options", maxCount: 1 }]), handleError(async (req, res) => {
       if (!req.files) {
-        res.status(500).json(this.buildIpfsError("No files were uploaded"));
-        return;
+        throw new Error("No files were uploaded");
       }
 
       const options = req.body.options
@@ -468,8 +469,7 @@ export class GatewayServer {
       const result = await this.deps.validationService.validateInMemoryWrapper(filesToAdd);
 
       if (!result.valid) {
-        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
-        return;
+        throw new Error(`Upload is not a valid wrapper. Reason: ${result.failReason}`);
       }
 
       const cid = await addFilesAsDirToIpfs(
@@ -487,8 +487,7 @@ export class GatewayServer {
 
     app.post('/api/v0/add', upload.any(), handleError(async (req, res) => {
       if (!req.files) {
-        res.status(500).json(this.buildIpfsError("No files were uploaded"));
-        return;
+        throw new Error("No files were uploaded");
       }
 
       const files: MulterFile[] = req.files as MulterFile[];
@@ -514,32 +513,30 @@ export class GatewayServer {
       const result = await this.deps.validationService.validateInMemoryWrapper(sanitizedFiles);
      
       if(!result.valid) {
-        res.status(500).json(this.buildIpfsError(`Upload is not a valid wrapper. Reason: ${result.failReason}`));
-        return;
+        throw new Error(`Upload is not a valid wrapper. Reason: ${result.failReason}`);
       }
 
       const { rootCid, addedFiles } = await addFilesToIpfs(
         sanitizedFiles,
         { onlyHash: !!req.query["only-hash"] },
-        ipfs
+        ipfs,
+        this.deps.ipfsConfig.apis,
       );
 
       this.deps.logger.log(`Gateway add: ${rootCid}`);
 
       if(!rootCid) {
-        res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a directory`));
-        return;
+        throw new Error(`IPFS verification failed after upload. Upload is not a directory`);
       }
 
       const [validationError, ipfsResult] = await this.deps.validationService.validateIpfsWrapper(rootCid);
 
       if (validationError || !ipfsResult || !ipfsResult.valid) {
         if(ipfsResult && ipfsResult.valid) {
-          res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`));
+          throw new Error(`IPFS verification failed after upload. Upload is not a valid wrapper. Reason: ${ipfsResult.failReason}`);
         } else {
-          res.status(500).json(this.buildIpfsError(`IPFS verification failed after upload. Upload is not a valid wrapper`));
+          throw new Error(`IPFS verification failed after upload. Upload is not a valid wrapper`);
         }
-        return;
       }
 
       const ipfsHash = rootCid;
@@ -590,8 +587,9 @@ export class GatewayServer {
     }));
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-      res.status(500).json(this.buildIpfsError(err.message));
+      console.error(err);
       this.deps.logger.log(err.message);
+      res.status(500).json(this.buildIpfsError(err.message));
     });
 
     const server = http.createServer({}, app);
