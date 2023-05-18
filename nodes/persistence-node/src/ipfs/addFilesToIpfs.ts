@@ -26,7 +26,6 @@ export const addFilesToIpfs = async (
     addedFiles.push(file);
   }
 
-
   const rootDir = addedFiles.find((x: IpfsAddResult) => x.path === "");
   const rootCid = rootDir?.cid;
 
@@ -41,7 +40,6 @@ export const addFilesToIpfs = async (
         onlyHash: options.onlyHash
       }
     )) {
-      addedFiles.push(file);
     }
   }
 
