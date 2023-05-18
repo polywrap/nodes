@@ -587,6 +587,7 @@ export class GatewayServer {
     }));
 
     app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+      console.error(err);
       this.deps.logger.log(err.message);
       res.status(500).json(this.buildIpfsError(err.message));
     });

@@ -20,7 +20,7 @@ export class IpfsConfig {
   }
 }
 
-export type IpfsApi = IPFS.Options;
+export type IpfsApi = IPFS.Options & { name: string };
 
 function getValidUrlOrUndefined(url: string | undefined) {
   if (url?.length === 0) {
