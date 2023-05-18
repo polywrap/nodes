@@ -1,4 +1,5 @@
 import { IndexConfig } from "../types";
+import { IpfsApi } from "./IpfsConfig";
 import { WrapperConfig } from "./WrapperConfig";
 
 export type Config = {
@@ -18,7 +19,8 @@ export type Config = {
             gatewayTimeout: number,
             pinTimeout: number,
             unpinTimeout: number,
-        }
+        },
+        apis: IpfsApi[],
     },
     loggerEnabled: boolean,
     indexes: IndexConfig[],
