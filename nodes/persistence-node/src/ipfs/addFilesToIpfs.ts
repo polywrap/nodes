@@ -29,7 +29,11 @@ export const addFilesToIpfs = async (
   const rootDir = addedFiles.find((x: IpfsAddResult) => x.path === "");
   const rootCid = rootDir?.cid;
 
+  console.log(`Added ${addedFiles.length} files to IPFS`);
+  console.log(`Uploading with IPFS APIs`);
   for (let api of apis) {
+    console.log(`Uploading with IPFS API: ${api.name}`);
+    
     const client = createIpfsHttpClient(api);
 
     for await (const file of client.addAll(
