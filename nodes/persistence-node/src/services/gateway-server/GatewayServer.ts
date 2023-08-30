@@ -58,9 +58,19 @@ function prefix(words: string[]){
 }
 
 export const stripBasePath = (files: InMemoryFile[]) => {
-  if (files.length === 0 || files.length === 1) {
+  if (files.length === 0) {
     return files;
+  } else if (files.length === 1) {
+    // Strip any leading path seperators
+    const file = files[0];
+    const lastSeperator = file.path.lastIndexOf("/");
+    return [{
+      ...file,
+      path: file.path.substring(lastSeperator + 1)
+    }];
   }
+
+  // Strip the common base path
   let basePath = prefix(files.map(f => f.path + "/"));
   const lastPathSeparator = Math.max(basePath.lastIndexOf("/"), basePath.lastIndexOf("\\"));
   basePath = basePath.slice(0, lastPathSeparator + 1);
